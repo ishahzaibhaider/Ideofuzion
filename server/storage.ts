@@ -35,127 +35,24 @@ export class MemStorage implements IStorage {
     this.currentJobId = 1;
     this.currentCandidateId = 1;
 
-    // Initialize with sample data
-    this.initializeSampleData();
+    // Initialize with minimal sample data for basic functionality
+    this.initializeBasicData();
   }
 
-  private initializeSampleData() {
-    // Sample jobs
+  private initializeBasicData() {
+    // Create a basic job for demo purposes - real data should come from N8N
     const job1: Job = {
       id: this.currentJobId++,
-      title: "Senior Full-Stack Developer",
-      description: "Looking for an experienced developer with React and Node.js expertise",
-      requiredSkills: ["React", "Node.js", "TypeScript", "AWS"],
+      title: "Full-Stack Developer",
+      description: "Position will be populated via N8N integration",
+      requiredSkills: [],
       status: "Open",
       createdAt: new Date()
     };
     this.jobs.set(job1.id, job1);
-
-    const job2: Job = {
-      id: this.currentJobId++,
-      title: "UX Designer",
-      description: "Creative UX designer for our product team",
-      requiredSkills: ["Figma", "Sketch", "Prototyping", "User Research"],
-      status: "Open",
-      createdAt: new Date()
-    };
-    this.jobs.set(job2.id, job2);
-
-    // Sample candidates
-    const candidates: Omit<Candidate, 'id'>[] = [
-      {
-        name: "Sarah Johnson",
-        email: "sarah.johnson@email.com",
-        status: "Interview Scheduled",
-        jobAppliedFor: job1.id,
-        skills: ["React", "Node.js", "TypeScript", "AWS"],
-        experience: "8 years experience",
-        previousRole: "Lead Developer at TechCorp",
-        education: "B.S. Computer Science, Stanford University",
-        score: 85,
-        appliedDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-        interviewDetails: {
-          dateTime: new Date(Date.now() + 2 * 60 * 60 * 1000),
-          meetingLink: "https://meet.example.com/interview-1",
-          notes: ""
-        },
-        cvUrl: null,
-        analysis: null
-      },
-      {
-        name: "Michael Chen",
-        email: "michael.chen@email.com",
-        status: "Analysis Complete",
-        jobAppliedFor: job2.id,
-        skills: ["Strategy", "Analytics", "Leadership"],
-        experience: "6 years experience",
-        previousRole: "Product Manager at StartupXYZ",
-        education: "MBA, Harvard Business School",
-        score: 78,
-        appliedDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-        interviewDetails: null,
-        cvUrl: null,
-        analysis: {
-          technicalScore: 7.8,
-          summary: "Strong product management background with good technical understanding",
-          finalRecommendation: "Recommend for hire"
-        }
-      },
-      {
-        name: "Emma Rodriguez",
-        email: "emma.rodriguez@email.com",
-        status: "Hired",
-        jobAppliedFor: job2.id,
-        skills: ["Figma", "Sketch", "Prototyping", "User Research"],
-        experience: "5 years experience",
-        previousRole: "Senior UX Designer at DesignCo",
-        education: "B.A. Design, RISD",
-        score: 92,
-        appliedDate: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
-        interviewDetails: null,
-        cvUrl: null,
-        analysis: {
-          technicalScore: 9.2,
-          summary: "Exceptional design skills and strong portfolio",
-          finalRecommendation: "Strong hire"
-        }
-      },
-      {
-        name: "Alex Thompson",
-        email: "alex.thompson@email.com",
-        status: "New",
-        jobAppliedFor: job1.id,
-        skills: ["React", "Node.js", "Python"],
-        experience: "5 years experience",
-        previousRole: "Frontend Developer at WebCorp",
-        education: "B.S. Computer Science, MIT",
-        score: null,
-        appliedDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-        interviewDetails: null,
-        cvUrl: null,
-        analysis: null
-      },
-      {
-        name: "Jessica Martinez",
-        email: "jessica.martinez@email.com",
-        status: "New",
-        jobAppliedFor: job2.id,
-        skills: ["Figma", "Sketch", "Prototyping"],
-        experience: "4 years experience",
-        previousRole: "UX Designer at CreativeCo",
-        education: "B.A. Digital Design, Art Center",
-        score: null,
-        appliedDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-        interviewDetails: null,
-        cvUrl: null,
-        analysis: null
-      }
-    ];
-
-    candidates.forEach(candidate => {
-      const newCandidate: Candidate = { ...candidate, id: this.currentCandidateId++ };
-      this.candidates.set(newCandidate.id, newCandidate);
-    });
+    
+    // Real candidate data should come from N8N webhooks
+    // This is just to show the pipeline structure
   }
 
   async getUser(id: number): Promise<User | undefined> {

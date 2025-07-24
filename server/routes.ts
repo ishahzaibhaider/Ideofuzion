@@ -259,27 +259,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // N8N Webhook triggers
   app.post('/api/sync-cvs', authenticateToken, async (req: any, res) => {
     try {
-      // Trigger N8N webhook for CV sync
-      const webhookUrl = 'https://ali-shoaib.app.n8n.cloud/webhook-test/9f3916ff-5ef8-47e2-8170-fea53c456554';
+      // Trigger N8N webhook for CV sync using GET request with query params
+      const params = new URLSearchParams({
+        action: 'sync_cvs',
+        timestamp: new Date().toISOString(),
+        userId: req.user.userId.toString()
+      });
+      
+      const webhookUrl = `https://ali-shoaib.app.n8n.cloud/webhook-test/9f3916ff-5ef8-47e2-8170-fea53c456554?${params}`;
       
       const response = await fetch(webhookUrl, {
-        method: 'POST',
+        method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'sync_cvs',
-          timestamp: new Date().toISOString(),
-          userId: req.user.userId
-        })
+          'Accept': 'application/json',
+        }
       });
 
       if (!response.ok) {
-        throw new Error('Failed to trigger CV sync');
+        const errorText = await response.text();
+        console.error('N8N webhook error:', response.status, errorText);
+        
+        if (response.status === 404) {
+          throw new Error(`N8N webhook not active. Please activate your workflow in N8N by clicking 'Execute workflow' button first.`);
+        }
+        
+        throw new Error(`Failed to trigger CV sync: ${response.status} - ${errorText}`);
       }
 
-      res.json({ success: true, message: 'CV sync triggered successfully' });
+      const responseData = await response.json();
+      console.log('N8N CV sync response:', responseData);
+
+      res.json({ success: true, message: 'CV sync triggered successfully', data: responseData });
     } catch (error: any) {
+      console.error('CV sync error:', error);
       res.status(500).json({ message: 'Failed to sync CVs', error: error.message });
     }
   });
@@ -288,28 +300,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { meetingId, candidateId } = req.body;
       
-      // Trigger N8N webhook for interview bot
-      const webhookUrl = 'https://ali-shoaib.app.n8n.cloud/webhook-test/022f198b-9bb8-4ec8-8457-53df00516dbb';
+      // Trigger N8N webhook for interview bot using GET request with query params
+      const params = new URLSearchParams({
+        action: 'start_interview_bot',
+        meetingId: meetingId || `interview-${Date.now()}`,
+        candidateId: candidateId?.toString() || '',
+        timestamp: new Date().toISOString()
+      });
+      
+      const webhookUrl = `https://ali-shoaib.app.n8n.cloud/webhook-test/022f198b-9bb8-4ec8-8457-53df00516dbb?${params}`;
       
       const response = await fetch(webhookUrl, {
-        method: 'POST',
+        method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'start_interview_bot',
-          meetingId: meetingId || `interview-${Date.now()}`,
-          candidateId,
-          timestamp: new Date().toISOString()
-        })
+          'Accept': 'application/json',
+        }
       });
 
       if (!response.ok) {
-        throw new Error('Failed to start interview bot');
+        const errorText = await response.text();
+        console.error('N8N interview webhook error:', response.status, errorText);
+        
+        if (response.status === 404) {
+          throw new Error(`N8N interview webhook not active. Please activate your workflow in N8N by clicking 'Execute workflow' button first.`);
+        }
+        
+        throw new Error(`Failed to start interview bot: ${response.status} - ${errorText}`);
       }
 
-      res.json({ success: true, message: 'Interview bot started successfully' });
+      const responseData = await response.json();
+      console.log('N8N interview bot response:', responseData);
+
+      res.json({ success: true, message: 'Interview bot started successfully', data: responseData });
     } catch (error: any) {
+      console.error('Interview bot error:', error);
       res.status(500).json({ message: 'Failed to start interview bot', error: error.message });
     }
   });
