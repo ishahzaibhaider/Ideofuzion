@@ -44,9 +44,9 @@ A comprehensive hiring pipeline and intelligence platform built with modern web 
 - **RESTful API** design
 
 ### Database
-- **PostgreSQL** with Neon serverless driver
-- **Drizzle ORM** for type-safe database operations
-- **Drizzle Kit** for schema management
+- **MongoDB Atlas** cloud database
+- **Mongoose ODM** for MongoDB object modeling
+- **Mongoose Schema** with built-in validation
 - **Zod** for runtime validation
 
 ### External Integrations
@@ -58,7 +58,7 @@ A comprehensive hiring pipeline and intelligence platform built with modern web 
 
 ### Prerequisites
 - Node.js 18+ 
-- PostgreSQL database
+- MongoDB Atlas account and cluster
 - N8N workspace (for automation features)
 
 ### Installation
@@ -76,22 +76,18 @@ A comprehensive hiring pipeline and intelligence platform built with modern web 
 
 3. **Set up environment variables**
    ```bash
-   # Database configuration (automatically provided in Replit)
-   DATABASE_URL=your_postgresql_connection_string
-   PGHOST=your_host
-   PGPORT=your_port
-   PGDATABASE=your_database
-   PGUSER=your_username
-   PGPASSWORD=your_password
+   # MongoDB Atlas connection string
+   MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/dbname?retryWrites=true&w=majority
    
    # JWT Secret
    JWT_SECRET=your_jwt_secret_key
    ```
 
-4. **Initialize the database**
-   ```bash
-   npm run db:push
-   ```
+4. **Database Setup**
+   - Create a MongoDB Atlas account at https://www.mongodb.com/atlas
+   - Create a new cluster (free tier available)
+   - Get your connection string and add it as MONGODB_URI
+   - Database collections are created automatically when first used
 
 5. **Start the application**
    ```bash
@@ -100,20 +96,65 @@ A comprehensive hiring pipeline and intelligence platform built with modern web 
 
 The application will be available at `http://localhost:5000`
 
-## Database Schema
+## Recent Migration: PostgreSQL to MongoDB Atlas
 
-### Users Table
+This project was recently migrated from PostgreSQL with Drizzle ORM to MongoDB Atlas with Mongoose. Here are the key changes:
+
+### Files Modified/Created During Migration:
+
+#### `server/db.ts` - Database Connection
+- **Before**: PostgreSQL connection using Neon serverless driver
+- **After**: MongoDB Atlas connection using Mongoose
+- **New functionality**: `connectToDatabase()` and `disconnectFromDatabase()` functions
+- **Environment variable**: Now requires `MONGODB_URI` instead of `DATABASE_URL`
+
+#### `shared/schema.ts` - Database Schemas
+- **Before**: Drizzle pgTable definitions with PostgreSQL-specific types
+- **After**: Mongoose Schema definitions with MongoDB document structure
+- **New exports**: `UserModel`, `JobModel`, `CandidateModel` Mongoose models
+- **New interfaces**: `IUser`, `IJob`, `ICandidate` extending Mongoose Document
+- **ID format**: Changed from integer IDs to MongoDB ObjectId strings
+
+#### `server/storage.ts` - Database Storage Layer
+- **Before**: `DatabaseStorage` class using Drizzle ORM queries
+- **After**: `MongoStorage` class using Mongoose operations
+- **New methods**: Helper functions to convert MongoDB documents to application types
+- **ID handling**: Updated all methods to use string IDs instead of numbers
+- **Error handling**: Enhanced error logging for MongoDB operations
+
+#### `server/routes.ts` - API Routes
+- **Modified**: Updated ID parsing from `parseInt(req.params.id)` to `req.params.id`
+- **Compatibility**: All routes now handle MongoDB ObjectId strings
+- **No functional changes**: All endpoints work the same way for frontend
+
+#### Files Removed:
+- `drizzle.config.ts` - No longer needed (Drizzle configuration)
+- PostgreSQL dependencies removed from package.json
+
+### Migration Benefits:
+- **Scalability**: MongoDB Atlas provides automatic scaling
+- **Cloud-native**: Fully managed database service
+- **Flexibility**: Document-based structure for complex candidate data
+- **Global distribution**: Built-in replication and backup
+- **Performance**: Optimized for read-heavy workloads
+
+## Database Schema (MongoDB Collections)
+
+### Users Collection
 - User authentication and profile information
 - Stores admin and recruiter accounts
+- Fields: _id, name, email, password (hashed), createdAt
 
-### Jobs Table
+### Jobs Collection
 - Job postings and position details
 - Required skills and status tracking
+- Fields: _id, title, description, requiredSkills[], status, createdAt
 
-### Candidates Table
+### Candidates Collection
 - Complete candidate profiles
 - CV data, interview details, and analysis results
 - Skills assessment and scoring
+- Fields: _id, name, email, cvUrl, status, jobAppliedFor, interviewDetails{}, analysis{}, appliedDate, skills[], experience, previousRole, education, score
 
 ## API Endpoints
 
@@ -171,14 +212,13 @@ The platform integrates with N8N for workflow automation:
 │   │   └── App.tsx         # Main application component
 ├── server/                 # Backend Express application
 │   ├── index.ts           # Server entry point
-│   ├── routes.ts          # API route definitions
-│   ├── storage.ts         # Database storage layer
-│   ├── db.ts              # Database configuration
+│   ├── routes.ts          # API route definitions  
+│   ├── storage.ts         # MongoDB storage layer with MongoStorage class
+│   ├── db.ts              # MongoDB Atlas connection configuration
 │   └── vite.ts            # Vite integration
 ├── shared/                # Shared types and schemas
-│   └── schema.ts          # Database schema and validation
+│   └── schema.ts          # Mongoose schemas and Zod validation
 ├── package.json           # Dependencies and scripts
-├── drizzle.config.ts      # Database configuration
 ├── tailwind.config.ts     # Tailwind CSS configuration
 └── vite.config.ts         # Vite configuration
 ```
@@ -188,20 +228,20 @@ The platform integrates with N8N for workflow automation:
 ### Available Scripts
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
-- `npm run db:push` - Push schema changes to database
-- `npm run db:studio` - Open Drizzle Studio (database GUI)
+- `npm run check` - TypeScript type checking
 
 ### Database Operations
-- **Schema Changes**: Modify `shared/schema.ts` and run `npm run db:push`
-- **Data Queries**: Use the built-in SQL tool or Drizzle Studio
-- **Migrations**: Handled automatically by Drizzle Kit
+- **Schema Changes**: Modify Mongoose schemas in `shared/schema.ts`
+- **Data Queries**: Use MongoDB Atlas dashboard or connect with MongoDB Compass
+- **Collections**: Created automatically when first document is inserted
+- **Indexes**: Managed through MongoDB Atlas interface
 
 ## Deployment
 
 The application is designed for deployment on Replit with the following features:
 - Single build process for frontend and backend
 - Environment variable configuration
-- PostgreSQL database integration
+- MongoDB Atlas cloud database integration
 - WebSocket support for real-time features
 
 ### Production Build
@@ -223,11 +263,12 @@ This creates optimized production builds:
 
 ## Architecture Decisions
 
-### Why PostgreSQL + Drizzle?
-- Type-safe database operations
-- Excellent TypeScript integration
-- Flexible schema evolution
-- Production-ready performance
+### Why MongoDB Atlas + Mongoose?
+- Cloud-hosted database with automatic scaling
+- Flexible document-based data model
+- Built-in replication and backup
+- Excellent performance and reliability
+- Easy integration with JavaScript/TypeScript
 
 ### Why React + Express?
 - Proven full-stack JavaScript ecosystem
