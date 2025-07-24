@@ -1,4 +1,6 @@
 import { users, jobs, candidates, type User, type InsertUser, type Job, type InsertJob, type Candidate, type InsertCandidate } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -88,6 +90,7 @@ export class MemStorage implements IStorage {
       ...insertJob, 
       id,
       createdAt: new Date(),
+      status: insertJob.status || "Open",
       description: insertJob.description || null,
       requiredSkills: insertJob.requiredSkills || null
     };
@@ -109,7 +112,16 @@ export class MemStorage implements IStorage {
       ...insertCandidate, 
       id,
       appliedDate: new Date(),
-      status: insertCandidate.status || 'New'
+      status: insertCandidate.status || 'New',
+      cvUrl: insertCandidate.cvUrl || null,
+      jobAppliedFor: insertCandidate.jobAppliedFor || null,
+      interviewDetails: insertCandidate.interviewDetails as any || null,
+      analysis: insertCandidate.analysis as any || null,
+      skills: insertCandidate.skills || null,
+      experience: insertCandidate.experience || null,
+      previousRole: insertCandidate.previousRole || null,
+      education: insertCandidate.education || null,
+      score: insertCandidate.score || null
     };
     this.candidates.set(id, candidate);
     return candidate;
@@ -133,4 +145,71 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class DatabaseStorage implements IStorage {
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
+    return user;
+  }
+
+  async getJobs(): Promise<Job[]> {
+    return await db.select().from(jobs);
+  }
+
+  async getJob(id: number): Promise<Job | undefined> {
+    const [job] = await db.select().from(jobs).where(eq(jobs.id, id));
+    return job || undefined;
+  }
+
+  async createJob(insertJob: InsertJob): Promise<Job> {
+    const [job] = await db
+      .insert(jobs)
+      .values(insertJob)
+      .returning();
+    return job;
+  }
+
+  async getCandidates(): Promise<Candidate[]> {
+    return await db.select().from(candidates);
+  }
+
+  async getCandidate(id: number): Promise<Candidate | undefined> {
+    const [candidate] = await db.select().from(candidates).where(eq(candidates.id, id));
+    return candidate || undefined;
+  }
+
+  async createCandidate(insertCandidate: InsertCandidate): Promise<Candidate> {
+    const [candidate] = await db
+      .insert(candidates)
+      .values(insertCandidate as any)
+      .returning();
+    return candidate;
+  }
+
+  async updateCandidate(id: number, updates: Partial<Candidate>): Promise<Candidate | undefined> {
+    const [updatedCandidate] = await db
+      .update(candidates)
+      .set(updates)
+      .where(eq(candidates.id, id))
+      .returning();
+    return updatedCandidate || undefined;
+  }
+
+  async deleteCandidatesByStatus(status: string): Promise<void> {
+    await db.delete(candidates).where(eq(candidates.status, status));
+  }
+}
+
+export const storage = new DatabaseStorage();
