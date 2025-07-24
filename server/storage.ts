@@ -1,215 +1,203 @@
-import { users, jobs, candidates, type User, type InsertUser, type Job, type InsertJob, type Candidate, type InsertCandidate } from "@shared/schema";
-import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { UserModel, JobModel, CandidateModel, type User, type InsertUser, type Job, type InsertJob, type Candidate, type InsertCandidate } from "@shared/schema";
+import { connectToDatabase } from "./db";
 
 export interface IStorage {
   // Users
-  getUser(id: number): Promise<User | undefined>;
+  getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   
   // Jobs
   getJobs(): Promise<Job[]>;
-  getJob(id: number): Promise<Job | undefined>;
+  getJob(id: string): Promise<Job | undefined>;
   createJob(job: InsertJob): Promise<Job>;
   
   // Candidates
   getCandidates(): Promise<Candidate[]>;
-  getCandidate(id: number): Promise<Candidate | undefined>;
+  getCandidate(id: string): Promise<Candidate | undefined>;
   createCandidate(candidate: InsertCandidate): Promise<Candidate>;
-  updateCandidate(id: number, updates: Partial<Candidate>): Promise<Candidate | undefined>;
+  updateCandidate(id: string, updates: Partial<Candidate>): Promise<Candidate | undefined>;
   deleteCandidatesByStatus(status: string): Promise<void>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private jobs: Map<number, Job>;
-  private candidates: Map<number, Candidate>;
-  private currentUserId: number;
-  private currentJobId: number;
-  private currentCandidateId: number;
-
+export class MongoStorage implements IStorage {
   constructor() {
-    this.users = new Map();
-    this.jobs = new Map();
-    this.candidates = new Map();
-    this.currentUserId = 1;
-    this.currentJobId = 1;
-    this.currentCandidateId = 1;
-
-    // Initialize with minimal sample data for basic functionality
+    // Ensure database connection
+    connectToDatabase();
+    
+    // Initialize with basic data if needed
     this.initializeBasicData();
   }
 
-  private initializeBasicData() {
-    // Create a basic job for demo purposes - real data should come from N8N
-    const job1: Job = {
-      id: this.currentJobId++,
-      title: "Full-Stack Developer",
-      description: "Position will be populated via N8N integration",
-      requiredSkills: [],
-      status: "Open",
-      createdAt: new Date()
-    };
-    this.jobs.set(job1.id, job1);
-    
-    // Real candidate data should come from N8N webhooks
-    // This is just to show the pipeline structure
+  private async initializeBasicData() {
+    try {
+      const jobCount = await JobModel.countDocuments();
+      if (jobCount === 0) {
+        await JobModel.create({
+          title: "Full-Stack Developer",
+          description: "Position will be populated via N8N integration",
+          requiredSkills: [],
+          status: "Open"
+        });
+      }
+    } catch (error) {
+      console.log('Unable to initialize basic data, database may not be connected yet');
+    }
   }
 
-  async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+  // Helper function to convert MongoDB document to our type format
+  private mongoDocToUser(doc: any): User {
+    return {
+      id: doc._id.toString(),
+      name: doc.name,
+      email: doc.email,
+      password: doc.password,
+      createdAt: doc.createdAt
+    };
+  }
+
+  private mongoDocToJob(doc: any): Job {
+    return {
+      id: doc._id.toString(),
+      title: doc.title,
+      description: doc.description,
+      requiredSkills: doc.requiredSkills,
+      status: doc.status,
+      createdAt: doc.createdAt
+    };
+  }
+
+  private mongoDocToCandidate(doc: any): Candidate {
+    return {
+      id: doc._id.toString(),
+      name: doc.name,
+      email: doc.email,
+      cvUrl: doc.cvUrl,
+      status: doc.status,
+      jobAppliedFor: doc.jobAppliedFor,
+      interviewDetails: doc.interviewDetails,
+      analysis: doc.analysis,
+      appliedDate: doc.appliedDate,
+      skills: doc.skills,
+      experience: doc.experience,
+      previousRole: doc.previousRole,
+      education: doc.education,
+      score: doc.score
+    };
+  }
+
+  async getUser(id: string): Promise<User | undefined> {
+    try {
+      const user = await UserModel.findById(id);
+      return user ? this.mongoDocToUser(user) : undefined;
+    } catch (error) {
+      console.error('Error getting user:', error);
+      return undefined;
+    }
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.email === email);
+    try {
+      const user = await UserModel.findOne({ email });
+      return user ? this.mongoDocToUser(user) : undefined;
+    } catch (error) {
+      console.error('Error getting user by email:', error);
+      return undefined;
+    }
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentUserId++;
-    const user: User = { 
-      ...insertUser, 
-      id,
-      createdAt: new Date()
-    };
-    this.users.set(id, user);
-    return user;
+    try {
+      const user = await UserModel.create(insertUser);
+      return this.mongoDocToUser(user);
+    } catch (error) {
+      console.error('Error creating user:', error);
+      throw error;
+    }
   }
 
   async getJobs(): Promise<Job[]> {
-    return Array.from(this.jobs.values());
+    try {
+      const jobs = await JobModel.find();
+      return jobs.map(job => this.mongoDocToJob(job));
+    } catch (error) {
+      console.error('Error getting jobs:', error);
+      return [];
+    }
   }
 
-  async getJob(id: number): Promise<Job | undefined> {
-    return this.jobs.get(id);
-  }
-
-  async createJob(insertJob: InsertJob): Promise<Job> {
-    const id = this.currentJobId++;
-    const job: Job = { 
-      ...insertJob, 
-      id,
-      createdAt: new Date(),
-      status: insertJob.status || "Open",
-      description: insertJob.description || null,
-      requiredSkills: insertJob.requiredSkills || null
-    };
-    this.jobs.set(id, job);
-    return job;
-  }
-
-  async getCandidates(): Promise<Candidate[]> {
-    return Array.from(this.candidates.values());
-  }
-
-  async getCandidate(id: number): Promise<Candidate | undefined> {
-    return this.candidates.get(id);
-  }
-
-  async createCandidate(insertCandidate: InsertCandidate): Promise<Candidate> {
-    const id = this.currentCandidateId++;
-    const candidate: Candidate = { 
-      ...insertCandidate, 
-      id,
-      appliedDate: new Date(),
-      status: insertCandidate.status || 'New',
-      cvUrl: insertCandidate.cvUrl || null,
-      jobAppliedFor: insertCandidate.jobAppliedFor || null,
-      interviewDetails: insertCandidate.interviewDetails as any || null,
-      analysis: insertCandidate.analysis as any || null,
-      skills: insertCandidate.skills || null,
-      experience: insertCandidate.experience || null,
-      previousRole: insertCandidate.previousRole || null,
-      education: insertCandidate.education || null,
-      score: insertCandidate.score || null
-    };
-    this.candidates.set(id, candidate);
-    return candidate;
-  }
-
-  async updateCandidate(id: number, updates: Partial<Candidate>): Promise<Candidate | undefined> {
-    const candidate = this.candidates.get(id);
-    if (!candidate) return undefined;
-    
-    const updatedCandidate = { ...candidate, ...updates };
-    this.candidates.set(id, updatedCandidate);
-    return updatedCandidate;
-  }
-
-  async deleteCandidatesByStatus(status: string): Promise<void> {
-    const toDelete = Array.from(this.candidates.entries())
-      .filter(([_, candidate]) => candidate.status === status)
-      .map(([id, _]) => id);
-    
-    toDelete.forEach(id => this.candidates.delete(id));
-  }
-}
-
-export class DatabaseStorage implements IStorage {
-  async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user || undefined;
-  }
-
-  async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
-    return user || undefined;
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(insertUser)
-      .returning();
-    return user;
-  }
-
-  async getJobs(): Promise<Job[]> {
-    return await db.select().from(jobs);
-  }
-
-  async getJob(id: number): Promise<Job | undefined> {
-    const [job] = await db.select().from(jobs).where(eq(jobs.id, id));
-    return job || undefined;
+  async getJob(id: string): Promise<Job | undefined> {
+    try {
+      const job = await JobModel.findById(id);
+      return job ? this.mongoDocToJob(job) : undefined;
+    } catch (error) {
+      console.error('Error getting job:', error);
+      return undefined;
+    }
   }
 
   async createJob(insertJob: InsertJob): Promise<Job> {
-    const [job] = await db
-      .insert(jobs)
-      .values(insertJob)
-      .returning();
-    return job;
+    try {
+      const job = await JobModel.create(insertJob);
+      return this.mongoDocToJob(job);
+    } catch (error) {
+      console.error('Error creating job:', error);
+      throw error;
+    }
   }
 
   async getCandidates(): Promise<Candidate[]> {
-    return await db.select().from(candidates);
+    try {
+      const candidates = await CandidateModel.find();
+      return candidates.map(candidate => this.mongoDocToCandidate(candidate));
+    } catch (error) {
+      console.error('Error getting candidates:', error);
+      return [];
+    }
   }
 
-  async getCandidate(id: number): Promise<Candidate | undefined> {
-    const [candidate] = await db.select().from(candidates).where(eq(candidates.id, id));
-    return candidate || undefined;
+  async getCandidate(id: string): Promise<Candidate | undefined> {
+    try {
+      const candidate = await CandidateModel.findById(id);
+      return candidate ? this.mongoDocToCandidate(candidate) : undefined;
+    } catch (error) {
+      console.error('Error getting candidate:', error);
+      return undefined;
+    }
   }
 
   async createCandidate(insertCandidate: InsertCandidate): Promise<Candidate> {
-    const [candidate] = await db
-      .insert(candidates)
-      .values(insertCandidate as any)
-      .returning();
-    return candidate;
+    try {
+      const candidate = await CandidateModel.create(insertCandidate);
+      return this.mongoDocToCandidate(candidate);
+    } catch (error) {
+      console.error('Error creating candidate:', error);
+      throw error;
+    }
   }
 
-  async updateCandidate(id: number, updates: Partial<Candidate>): Promise<Candidate | undefined> {
-    const [updatedCandidate] = await db
-      .update(candidates)
-      .set(updates)
-      .where(eq(candidates.id, id))
-      .returning();
-    return updatedCandidate || undefined;
+  async updateCandidate(id: string, updates: Partial<Candidate>): Promise<Candidate | undefined> {
+    try {
+      const candidate = await CandidateModel.findByIdAndUpdate(
+        id,
+        updates,
+        { new: true }
+      );
+      return candidate ? this.mongoDocToCandidate(candidate) : undefined;
+    } catch (error) {
+      console.error('Error updating candidate:', error);
+      return undefined;
+    }
   }
 
   async deleteCandidatesByStatus(status: string): Promise<void> {
-    await db.delete(candidates).where(eq(candidates.status, status));
+    try {
+      await CandidateModel.deleteMany({ status });
+    } catch (error) {
+      console.error('Error deleting candidates by status:', error);
+      throw error;
+    }
   }
 }
 
-export const storage = new DatabaseStorage();
+export const storage = new MongoStorage();

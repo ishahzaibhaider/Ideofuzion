@@ -147,7 +147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/candidates/:id', authenticateToken, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.params.id;
       const candidate = await storage.getCandidate(id);
       if (!candidate) {
         return res.status(404).json({ message: 'Candidate not found' });
@@ -160,7 +160,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/candidates/:id', authenticateToken, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.params.id;
       const updates = req.body;
       
       const candidate = await storage.updateCandidate(id, updates);
@@ -238,7 +238,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/n8n/final-report/:candidateId', async (req, res) => {
     try {
-      const candidateId = parseInt(req.params.candidateId);
+      const candidateId = req.params.candidateId;
       const { analysis } = req.body;
 
       const candidate = await storage.updateCandidate(candidateId, {

@@ -6,12 +6,14 @@ This is a full-stack hiring pipeline and intelligence platform built with React,
 
 ## Recent Changes
 
-**January 24, 2025 - Database Integration Complete**
-- Added PostgreSQL database with Drizzle ORM integration
-- Replaced in-memory storage (MemStorage) with DatabaseStorage class
-- Successfully deployed database schema with users, jobs, and candidates tables
-- All LSP errors resolved and database connectivity confirmed
-- System now persists data permanently and ready for production use
+**January 24, 2025 - Migration to MongoDB Atlas Complete**
+- Migrated from PostgreSQL to MongoDB Atlas
+- Replaced Drizzle ORM with Mongoose for MongoDB operations
+- Updated all schemas from Drizzle pgTable to Mongoose Schema
+- Modified storage layer to use MongoDB ObjectIds instead of integer IDs
+- Updated all API routes to handle string-based MongoDB IDs
+- Removed PostgreSQL dependencies and added MongoDB/Mongoose packages
+- System now requires MONGODB_URI environment variable for connection
 
 ## User Preferences
 
@@ -34,11 +36,11 @@ Preferred communication style: Simple, everyday language.
 - **Authentication**: JWT-based stateless authentication
 
 ### Database Architecture
-- **Database**: PostgreSQL with Neon serverless driver (ACTIVE)
-- **ORM**: Drizzle ORM for type-safe database operations
-- **Schema Management**: Drizzle Kit for migrations and schema management
+- **Database**: MongoDB Atlas cloud database (ACTIVE)
+- **ODM**: Mongoose for MongoDB object modeling and operations
+- **Schema Management**: Mongoose schemas with built-in validation
 - **Validation**: Zod schemas for runtime type validation
-- **Storage**: DatabaseStorage implementation using live PostgreSQL database
+- **Storage**: MongoStorage implementation using live MongoDB Atlas database
 
 ## Key Components
 
@@ -84,7 +86,7 @@ Preferred communication style: Simple, everyday language.
 ### Core Framework Dependencies
 - React 18 with TypeScript support
 - Express.js for backend API
-- Drizzle ORM with PostgreSQL driver
+- Mongoose ODM with MongoDB driver
 - TanStack Query for data fetching
 - Wouter for routing
 
@@ -117,14 +119,14 @@ Preferred communication style: Simple, everyday language.
 - Single build command handles both frontend and backend
 
 ### Environment Configuration
-- Database URL from environment variables
+- MongoDB Atlas connection string (MONGODB_URI) from environment variables
 - JWT secret configuration
 - Development vs production mode handling
 - Replit-specific optimizations and integrations
 
 ### Hosting Requirements
 - Node.js runtime environment
-- PostgreSQL database (Neon serverless recommended)
+- MongoDB Atlas cloud database connection
 - WebSocket support for real-time features
 - Static file serving for frontend assets
 

@@ -1,71 +1,183 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
+import mongoose, { Schema, Document } from 'mongoose';
 import { z } from "zod";
 
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  email: text("email").notNull().unique(),
-  password: text("password").notNull(),
-  createdAt: timestamp("created_at").defaultNow()
+// MongoDB User Schema
+export interface IUser extends Document {
+  _id: string;
+  name: string;
+  email: string;
+  password: string;
+  createdAt: Date;
+}
+
+const userSchema = new Schema<IUser>({
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now }
 });
 
-export const jobs = pgTable("jobs", {
-  id: serial("id").primaryKey(),
-  title: text("title").notNull(),
-  description: text("description"),
-  requiredSkills: text("required_skills").array(),
-  status: text("status").notNull().default("Open"),
-  createdAt: timestamp("created_at").defaultNow()
+export const UserModel = mongoose.model<IUser>('User', userSchema);
+
+// MongoDB Job Schema
+export interface IJob extends Document {
+  _id: string;
+  title: string;
+  description?: string;
+  requiredSkills?: string[];
+  status: string;
+  createdAt: Date;
+}
+
+const jobSchema = new Schema<IJob>({
+  title: { type: String, required: true },
+  description: { type: String },
+  requiredSkills: [{ type: String }],
+  status: { type: String, required: true, default: "Open" },
+  createdAt: { type: Date, default: Date.now }
 });
 
-export const candidates = pgTable("candidates", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  email: text("email").notNull(),
-  cvUrl: text("cv_url"),
-  status: text("status").notNull().default("New"),
-  jobAppliedFor: integer("job_applied_for").references(() => jobs.id),
-  interviewDetails: jsonb("interview_details").$type<{
+export const JobModel = mongoose.model<IJob>('Job', jobSchema);
+
+// MongoDB Candidate Schema
+export interface ICandidate extends Document {
+  _id: string;
+  name: string;
+  email: string;
+  cvUrl?: string;
+  status: string;
+  jobAppliedFor?: string;
+  interviewDetails?: {
     dateTime?: Date;
     meetingLink?: string;
     notes?: string;
-  }>(),
-  analysis: jsonb("analysis").$type<{
+  };
+  analysis?: {
     transcript?: string;
     summary?: string;
     technicalScore?: number;
     psychometricAnalysis?: string;
     finalRecommendation?: string;
-  }>(),
-  appliedDate: timestamp("applied_date").defaultNow(),
-  skills: text("skills").array(),
-  experience: text("experience"),
-  previousRole: text("previous_role"),
-  education: text("education"),
-  score: integer("score")
+  };
+  appliedDate: Date;
+  skills?: string[];
+  experience?: string;
+  previousRole?: string;
+  education?: string;
+  score?: number;
+}
+
+const candidateSchema = new Schema<ICandidate>({
+  name: { type: String, required: true },
+  email: { type: String, required: true },
+  cvUrl: { type: String },
+  status: { type: String, required: true, default: "New" },
+  jobAppliedFor: { type: String },
+  interviewDetails: {
+    dateTime: { type: Date },
+    meetingLink: { type: String },
+    notes: { type: String }
+  },
+  analysis: {
+    transcript: { type: String },
+    summary: { type: String },
+    technicalScore: { type: Number },
+    psychometricAnalysis: { type: String },
+    finalRecommendation: { type: String }
+  },
+  appliedDate: { type: Date, default: Date.now },
+  skills: [{ type: String }],
+  experience: { type: String },
+  previousRole: { type: String },
+  education: { type: String },
+  score: { type: Number }
 });
 
-export const insertUserSchema = createInsertSchema(users).omit({
-  id: true,
-  createdAt: true
+export const CandidateModel = mongoose.model<ICandidate>('Candidate', candidateSchema);
+
+// Zod validation schemas
+export const insertUserSchema = z.object({
+  name: z.string(),
+  email: z.string().email(),
+  password: z.string()
 });
 
-export const insertJobSchema = createInsertSchema(jobs).omit({
-  id: true,
-  createdAt: true
+export const insertJobSchema = z.object({
+  title: z.string(),
+  description: z.string().optional(),
+  requiredSkills: z.array(z.string()).optional(),
+  status: z.string().optional()
 });
 
-export const insertCandidateSchema = createInsertSchema(candidates).omit({
-  id: true,
-  appliedDate: true
+export const insertCandidateSchema = z.object({
+  name: z.string(),
+  email: z.string().email(),
+  cvUrl: z.string().optional(),
+  status: z.string().optional(),
+  jobAppliedFor: z.string().optional(),
+  interviewDetails: z.object({
+    dateTime: z.date().optional(),
+    meetingLink: z.string().optional(),
+    notes: z.string().optional()
+  }).optional(),
+  analysis: z.object({
+    transcript: z.string().optional(),
+    summary: z.string().optional(),
+    technicalScore: z.number().optional(),
+    psychometricAnalysis: z.string().optional(),
+    finalRecommendation: z.string().optional()
+  }).optional(),
+  skills: z.array(z.string()).optional(),
+  experience: z.string().optional(),
+  previousRole: z.string().optional(),
+  education: z.string().optional(),
+  score: z.number().optional()
 });
 
+// Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+export type User = {
+  id: string;
+  name: string;
+  email: string;
+  password: string;
+  createdAt: Date;
+};
 
 export type InsertJob = z.infer<typeof insertJobSchema>;
-export type Job = typeof jobs.$inferSelect;
+export type Job = {
+  id: string;
+  title: string;
+  description?: string;
+  requiredSkills?: string[];
+  status: string;
+  createdAt: Date;
+};
 
 export type InsertCandidate = z.infer<typeof insertCandidateSchema>;
-export type Candidate = typeof candidates.$inferSelect;
+export type Candidate = {
+  id: string;
+  name: string;
+  email: string;
+  cvUrl?: string;
+  status: string;
+  jobAppliedFor?: string;
+  interviewDetails?: {
+    dateTime?: Date;
+    meetingLink?: string;
+    notes?: string;
+  };
+  analysis?: {
+    transcript?: string;
+    summary?: string;
+    technicalScore?: number;
+    psychometricAnalysis?: string;
+    finalRecommendation?: string;
+  };
+  appliedDate: Date;
+  skills?: string[];
+  experience?: string;
+  previousRole?: string;
+  education?: string;
+  score?: number;
+};
