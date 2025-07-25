@@ -9,8 +9,10 @@ if (!process.env.MONGODB_URI) {
 export const connectToDatabase = async () => {
   try {
     if (mongoose.connection.readyState === 0) {
-      await mongoose.connect(process.env.MONGODB_URI!);
-      console.log('Connected to MongoDB Atlas');
+      await mongoose.connect(process.env.MONGODB_URI!, {
+        dbName: 'ideofuzion'
+      });
+      console.log('Connected to MongoDB Atlas - ideofuzion database');
     }
   } catch (error) {
     console.error('Failed to connect to MongoDB Atlas:', error);

@@ -17,41 +17,35 @@ const userSchema = new Schema<IUser>({
   createdAt: { type: Date, default: Date.now }
 });
 
-export const UserModel = mongoose.model<IUser>('User', userSchema);
+export const UserModel = mongoose.model<IUser>('User', userSchema, 'users');
 
-// MongoDB Job Schema
-export interface IJob extends Document {
+// MongoDB Job Criteria Schema (matching your existing data structure)
+export interface IJobCriteria extends Document {
   _id: string;
-  title: string;
-  description?: string;
-  requiredSkills?: string[];
-  status: string;
-  createdAt: Date;
+  "Job ID": string;
+  "Job Title": string;
+  "Required Skills": string[];
 }
 
-const jobSchema = new Schema<IJob>({
-  title: { type: String, required: true },
-  description: { type: String },
-  requiredSkills: [{ type: String }],
-  status: { type: String, required: true, default: "Open" },
-  createdAt: { type: Date, default: Date.now }
-});
+const jobCriteriaSchema = new Schema<IJobCriteria>({
+  "Job ID": { type: String, required: true },
+  "Job Title": { type: String, required: true },
+  "Required Skills": [{ type: String, required: true }]
+}, { collection: 'jobCriteria' });
 
-export const JobModel = mongoose.model<IJob>('Job', jobSchema);
+export const JobCriteriaModel = mongoose.model<IJobCriteria>('JobCriteria', jobCriteriaSchema);
 
-// MongoDB Candidate Schema
+// MongoDB Candidate Schema (matching your existing data structure)
 export interface ICandidate extends Document {
   _id: string;
-  name: string;
-  email: string;
+  "Candidate Name": string;
+  Email: string;
+  "Job Title": string;
+  "Interview Date": string;
+  "Interview Time": string;
+  "Calendar Event ID": string;
+  status?: string;
   cvUrl?: string;
-  status: string;
-  jobAppliedFor?: string;
-  interviewDetails?: {
-    dateTime?: Date;
-    meetingLink?: string;
-    notes?: string;
-  };
   analysis?: {
     transcript?: string;
     summary?: string;
@@ -59,25 +53,22 @@ export interface ICandidate extends Document {
     psychometricAnalysis?: string;
     finalRecommendation?: string;
   };
-  appliedDate: Date;
+  appliedDate?: Date;
   skills?: string[];
   experience?: string;
-  previousRole?: string;
   education?: string;
   score?: number;
 }
 
 const candidateSchema = new Schema<ICandidate>({
-  name: { type: String, required: true },
-  email: { type: String, required: true },
+  "Candidate Name": { type: String, required: true },
+  Email: { type: String, required: true },
+  "Job Title": { type: String, required: true },
+  "Interview Date": { type: String, required: true },
+  "Interview Time": { type: String, required: true },
+  "Calendar Event ID": { type: String, required: true },
+  status: { type: String, default: "New" },
   cvUrl: { type: String },
-  status: { type: String, required: true, default: "New" },
-  jobAppliedFor: { type: String },
-  interviewDetails: {
-    dateTime: { type: Date },
-    meetingLink: { type: String },
-    notes: { type: String }
-  },
   analysis: {
     transcript: { type: String },
     summary: { type: String },
@@ -88,10 +79,9 @@ const candidateSchema = new Schema<ICandidate>({
   appliedDate: { type: Date, default: Date.now },
   skills: [{ type: String }],
   experience: { type: String },
-  previousRole: { type: String },
   education: { type: String },
   score: { type: Number }
-});
+}, { collection: 'candidates' });
 
 export const CandidateModel = mongoose.model<ICandidate>('Candidate', candidateSchema);
 
@@ -102,24 +92,21 @@ export const insertUserSchema = z.object({
   password: z.string()
 });
 
-export const insertJobSchema = z.object({
-  title: z.string(),
-  description: z.string().optional(),
-  requiredSkills: z.array(z.string()).optional(),
-  status: z.string().optional()
+export const insertJobCriteriaSchema = z.object({
+  "Job ID": z.string(),
+  "Job Title": z.string(),
+  "Required Skills": z.array(z.string())
 });
 
 export const insertCandidateSchema = z.object({
-  name: z.string(),
-  email: z.string().email(),
-  cvUrl: z.string().optional(),
+  "Candidate Name": z.string(),
+  Email: z.string().email(),
+  "Job Title": z.string(),
+  "Interview Date": z.string(),
+  "Interview Time": z.string(),
+  "Calendar Event ID": z.string(),
   status: z.string().optional(),
-  jobAppliedFor: z.string().optional(),
-  interviewDetails: z.object({
-    dateTime: z.date().optional(),
-    meetingLink: z.string().optional(),
-    notes: z.string().optional()
-  }).optional(),
+  cvUrl: z.string().optional(),
   analysis: z.object({
     transcript: z.string().optional(),
     summary: z.string().optional(),
@@ -129,7 +116,6 @@ export const insertCandidateSchema = z.object({
   }).optional(),
   skills: z.array(z.string()).optional(),
   experience: z.string().optional(),
-  previousRole: z.string().optional(),
   education: z.string().optional(),
   score: z.number().optional()
 });
@@ -144,29 +130,25 @@ export type User = {
   createdAt: Date;
 };
 
-export type InsertJob = z.infer<typeof insertJobSchema>;
-export type Job = {
+export type InsertJobCriteria = z.infer<typeof insertJobCriteriaSchema>;
+export type JobCriteria = {
   id: string;
-  title: string;
-  description?: string;
-  requiredSkills?: string[];
-  status: string;
-  createdAt: Date;
+  "Job ID": string;
+  "Job Title": string;
+  "Required Skills": string[];
 };
 
 export type InsertCandidate = z.infer<typeof insertCandidateSchema>;
 export type Candidate = {
   id: string;
-  name: string;
-  email: string;
+  "Candidate Name": string;
+  Email: string;
+  "Job Title": string;
+  "Interview Date": string;
+  "Interview Time": string;
+  "Calendar Event ID": string;
+  status?: string;
   cvUrl?: string;
-  status: string;
-  jobAppliedFor?: string;
-  interviewDetails?: {
-    dateTime?: Date;
-    meetingLink?: string;
-    notes?: string;
-  };
   analysis?: {
     transcript?: string;
     summary?: string;
@@ -174,10 +156,9 @@ export type Candidate = {
     psychometricAnalysis?: string;
     finalRecommendation?: string;
   };
-  appliedDate: Date;
+  appliedDate?: Date;
   skills?: string[];
   experience?: string;
-  previousRole?: string;
   education?: string;
   score?: number;
 };

@@ -139,26 +139,26 @@ export default function CandidatesPage() {
                         <div className="flex items-center">
                           <div className="h-10 w-10 bg-gray-200 rounded-full flex items-center justify-center">
                             <span className="text-xs font-medium text-gray-600">
-                              {candidate.name.split(' ').map(n => n[0]).join('')}
+                              {candidate["Candidate Name"].split(' ').map(n => n[0]).join('')}
                             </span>
                           </div>
                           <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">{candidate.name}</div>
-                            <div className="text-sm text-gray-500">{candidate.email}</div>
+                            <div className="text-sm font-medium text-gray-900">{candidate["Candidate Name"]}</div>
+                            <div className="text-sm text-gray-500">{candidate.Email}</div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{candidate.previousRole || 'N/A'}</div>
-                        <div className="text-sm text-gray-500">{candidate.experience}</div>
+                        <div className="text-sm text-gray-900">{candidate["Job Title"]}</div>
+                        <div className="text-sm text-gray-500">{candidate["Interview Date"]} | {candidate["Interview Time"]}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <Badge className={getStatusBadge(candidate.status)}>
-                          {candidate.status}
+                        <Badge className={getStatusBadge(candidate.status || "New")}>
+                          {candidate.status || "New"}
                         </Badge>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {formatDate(candidate.appliedDate)}
+                        {candidate["Interview Date"]}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">

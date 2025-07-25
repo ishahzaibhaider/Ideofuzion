@@ -1,4 +1,4 @@
-import { UserModel, JobModel, CandidateModel, type User, type InsertUser, type Job, type InsertJob, type Candidate, type InsertCandidate } from "@shared/schema";
+import { UserModel, JobCriteriaModel, CandidateModel, type User, type InsertUser, type JobCriteria, type InsertJobCriteria, type Candidate, type InsertCandidate } from "@shared/schema";
 import { connectToDatabase } from "./db";
 
 export interface IStorage {
@@ -7,10 +7,10 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   
-  // Jobs
-  getJobs(): Promise<Job[]>;
-  getJob(id: string): Promise<Job | undefined>;
-  createJob(job: InsertJob): Promise<Job>;
+  // Job Criteria
+  getJobCriteria(): Promise<JobCriteria[]>;
+  getJobCriteriaById(id: string): Promise<JobCriteria | undefined>;
+  createJobCriteria(jobCriteria: InsertJobCriteria): Promise<JobCriteria>;
   
   // Candidates
   getCandidates(): Promise<Candidate[]>;
@@ -31,15 +31,8 @@ export class MongoStorage implements IStorage {
 
   private async initializeBasicData() {
     try {
-      const jobCount = await JobModel.countDocuments();
-      if (jobCount === 0) {
-        await JobModel.create({
-          title: "Full-Stack Developer",
-          description: "Position will be populated via N8N integration",
-          requiredSkills: [],
-          status: "Open"
-        });
-      }
+      // No initialization needed - using existing data from ideofuzion database
+      console.log('Connected to existing ideofuzion database with candidates and jobCriteria collections');
     } catch (error) {
       console.log('Unable to initialize basic data, database may not be connected yet');
     }
@@ -56,31 +49,30 @@ export class MongoStorage implements IStorage {
     };
   }
 
-  private mongoDocToJob(doc: any): Job {
+  private mongoDocToJobCriteria(doc: any): JobCriteria {
     return {
       id: doc._id.toString(),
-      title: doc.title,
-      description: doc.description,
-      requiredSkills: doc.requiredSkills,
-      status: doc.status,
-      createdAt: doc.createdAt
+      "Job ID": doc["Job ID"],
+      "Job Title": doc["Job Title"],
+      "Required Skills": doc["Required Skills"]
     };
   }
 
   private mongoDocToCandidate(doc: any): Candidate {
     return {
       id: doc._id.toString(),
-      name: doc.name,
-      email: doc.email,
+      "Candidate Name": doc["Candidate Name"],
+      Email: doc.Email,
+      "Job Title": doc["Job Title"],
+      "Interview Date": doc["Interview Date"],
+      "Interview Time": doc["Interview Time"],
+      "Calendar Event ID": doc["Calendar Event ID"],
+      status: doc.status || "New",
       cvUrl: doc.cvUrl,
-      status: doc.status,
-      jobAppliedFor: doc.jobAppliedFor,
-      interviewDetails: doc.interviewDetails,
       analysis: doc.analysis,
       appliedDate: doc.appliedDate,
       skills: doc.skills,
       experience: doc.experience,
-      previousRole: doc.previousRole,
       education: doc.education,
       score: doc.score
     };
@@ -116,32 +108,32 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async getJobs(): Promise<Job[]> {
+  async getJobCriteria(): Promise<JobCriteria[]> {
     try {
-      const jobs = await JobModel.find();
-      return jobs.map(job => this.mongoDocToJob(job));
+      const jobCriteria = await JobCriteriaModel.find();
+      return jobCriteria.map(criteria => this.mongoDocToJobCriteria(criteria));
     } catch (error) {
-      console.error('Error getting jobs:', error);
+      console.error('Error getting job criteria:', error);
       return [];
     }
   }
 
-  async getJob(id: string): Promise<Job | undefined> {
+  async getJobCriteriaById(id: string): Promise<JobCriteria | undefined> {
     try {
-      const job = await JobModel.findById(id);
-      return job ? this.mongoDocToJob(job) : undefined;
+      const jobCriteria = await JobCriteriaModel.findById(id);
+      return jobCriteria ? this.mongoDocToJobCriteria(jobCriteria) : undefined;
     } catch (error) {
-      console.error('Error getting job:', error);
+      console.error('Error getting job criteria:', error);
       return undefined;
     }
   }
 
-  async createJob(insertJob: InsertJob): Promise<Job> {
+  async createJobCriteria(insertJobCriteria: InsertJobCriteria): Promise<JobCriteria> {
     try {
-      const job = await JobModel.create(insertJob);
-      return this.mongoDocToJob(job);
+      const jobCriteria = await JobCriteriaModel.create(insertJobCriteria);
+      return this.mongoDocToJobCriteria(jobCriteria);
     } catch (error) {
-      console.error('Error creating job:', error);
+      console.error('Error creating job criteria:', error);
       throw error;
     }
   }

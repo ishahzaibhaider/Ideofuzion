@@ -4,7 +4,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { storage } from "./storage";
-import { insertUserSchema, insertCandidateSchema } from "@shared/schema";
+import { insertUserSchema, insertCandidateSchema, insertJobCriteriaSchema } from "@shared/schema";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
@@ -184,13 +184,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Jobs routes
-  app.get('/api/jobs', authenticateToken, async (req, res) => {
+  // Job Criteria routes
+  app.get('/api/job-criteria', authenticateToken, async (req, res) => {
     try {
-      const jobs = await storage.getJobs();
-      res.json(jobs);
+      const jobCriteria = await storage.getJobCriteria();
+      res.json(jobCriteria);
     } catch (error) {
       res.status(500).json({ message: 'Server error', error });
+    }
+  });
+
+  app.get('/api/job-criteria/:id', authenticateToken, async (req, res) => {
+    try {
+      const id = req.params.id;
+      const jobCriteria = await storage.getJobCriteriaById(id);
+      if (!jobCriteria) {
+        return res.status(404).json({ message: 'Job criteria not found' });
+      }
+      res.json(jobCriteria);
+    } catch (error) {
+      res.status(500).json({ message: 'Server error', error });
+    }
+  });
+
+  app.post('/api/job-criteria', authenticateToken, async (req, res) => {
+    try {
+      const jobCriteriaData = insertJobCriteriaSchema.parse(req.body);
+      const jobCriteria = await storage.createJobCriteria(jobCriteriaData);
+      res.status(201).json(jobCriteria);
+    } catch (error) {
+      res.status(400).json({ message: 'Invalid input data', error });
     }
   });
 
@@ -342,7 +365,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/dashboard/metrics', authenticateToken, async (req, res) => {
     try {
       const candidates = await storage.getCandidates();
-      const jobs = await storage.getJobs();
+      const jobCriteria = await storage.getJobCriteria();
       
       const totalCandidates = candidates.length;
       const activeInterviews = candidates.filter(c => c.status === 'Interview Scheduled').length;
@@ -364,13 +387,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Upcoming interviews
       const upcomingInterviews = candidates
-        .filter(c => c.status === 'Interview Scheduled' && c.interviewDetails?.dateTime)
+        .filter(c => (c.status === 'Interview Scheduled' || !c.status) && c["Interview Date"])
         .map(c => ({
           id: c.id,
-          candidateName: c.name,
-          position: c.previousRole || 'N/A',
-          time: c.interviewDetails?.dateTime ? new Date(c.interviewDetails.dateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
-          date: c.interviewDetails?.dateTime ? new Date(c.interviewDetails.dateTime).toLocaleDateString() : ''
+          candidateName: c["Candidate Name"],
+          position: c["Job Title"] || 'N/A',
+          time: c["Interview Time"] || '',
+          date: c["Interview Date"] || ''
         }))
         .slice(0, 4);
 
