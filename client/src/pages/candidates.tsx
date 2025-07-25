@@ -1,14 +1,26 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { authenticatedApiRequest } from "@/lib/auth";
+import { queryClient } from "@/lib/queryClient";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Search } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Search, Edit2, Eye } from "lucide-react";
 import { Candidate } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
 
 export default function CandidatesPage() {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
+  const [editingCandidate, setEditingCandidate] = useState<Candidate | null>(null);
+  const [editForm, setEditForm] = useState<Partial<Candidate>>({});
+  const { toast } = useToast();
+
   const { data: candidates, isLoading } = useQuery({
     queryKey: ["/api/candidates"],
     queryFn: async () => {
@@ -16,6 +28,41 @@ export default function CandidatesPage() {
       return response.json();
     },
   });
+
+  const updateCandidateMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Candidate> }) => {
+      const response = await authenticatedApiRequest("PUT", `/api/candidates/${id}`, updates);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/candidates"] });
+      setEditingCandidate(null);
+      setEditForm({});
+      toast({
+        title: "Success",
+        description: "Candidate updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update candidate",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Filter candidates based on search and status
+  const filteredCandidates = candidates?.filter((candidate: Candidate) => {
+    const matchesSearch = searchTerm === "" || 
+      candidate["Candidate Name"].toLowerCase().includes(searchTerm.toLowerCase()) ||
+      candidate.Email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      candidate["Job Title"].toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === "all" || candidate.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  }) || [];
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
@@ -86,20 +133,22 @@ export default function CandidatesPage() {
                 <Input
                   placeholder="Search candidates..."
                   className="pl-10 w-64"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              <Select defaultValue="all">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-48">
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="new">New Applications</SelectItem>
-                  <SelectItem value="qualified">Qualified</SelectItem>
-                  <SelectItem value="interview">Interview Scheduled</SelectItem>
-                  <SelectItem value="analysis">Analysis Complete</SelectItem>
-                  <SelectItem value="hired">Hired</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
+                  <SelectItem value="New">New Applications</SelectItem>
+                  <SelectItem value="Qualified">Qualified</SelectItem>
+                  <SelectItem value="Interview Scheduled">Interview Scheduled</SelectItem>
+                  <SelectItem value="Analysis Complete">Analysis Complete</SelectItem>
+                  <SelectItem value="Hired">Hired</SelectItem>
+                  <SelectItem value="Rejected">Rejected</SelectItem>
                 </SelectContent>
               </Select>
               <Button>Add Candidate</Button>
@@ -124,16 +173,14 @@ export default function CandidatesPage() {
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Applied
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Score
-                    </th>
+
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {candidates?.map((candidate: Candidate) => (
+                  {filteredCandidates?.map((candidate: Candidate) => (
                     <tr key={candidate.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
@@ -160,24 +207,206 @@ export default function CandidatesPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {candidate["Interview Date"]}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <span className="text-sm font-medium text-gray-900">
-                            {candidate.score || '-'}
-                          </span>
-                          {candidate.score && <span className="text-sm text-gray-500 ml-1">/100</span>}
-                        </div>
-                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                        <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80">
-                          View
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80">
-                          Edit
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-900">
-                          Archive
-                        </Button>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-primary hover:text-primary/80"
+                              onClick={() => setSelectedCandidate(candidate)}
+                            >
+                              <Eye className="w-4 h-4 mr-1" />
+                              View
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-2xl">
+                            <DialogHeader>
+                              <DialogTitle>Candidate Details</DialogTitle>
+                            </DialogHeader>
+                            {selectedCandidate && (
+                              <div className="grid grid-cols-2 gap-4 py-4">
+                                <div>
+                                  <Label className="text-sm font-medium text-gray-500">Name</Label>
+                                  <p className="text-sm text-gray-900">{selectedCandidate["Candidate Name"]}</p>
+                                </div>
+                                <div>
+                                  <Label className="text-sm font-medium text-gray-500">Email</Label>
+                                  <p className="text-sm text-gray-900">{selectedCandidate.Email}</p>
+                                </div>
+                                <div>
+                                  <Label className="text-sm font-medium text-gray-500">Job Title</Label>
+                                  <p className="text-sm text-gray-900">{selectedCandidate["Job Title"]}</p>
+                                </div>
+                                <div>
+                                  <Label className="text-sm font-medium text-gray-500">Interview Date</Label>
+                                  <p className="text-sm text-gray-900">{selectedCandidate["Interview Date"]}</p>
+                                </div>
+                                <div>
+                                  <Label className="text-sm font-medium text-gray-500">Interview Time</Label>
+                                  <p className="text-sm text-gray-900">{selectedCandidate["Interview Time"]}</p>
+                                </div>
+                                <div>
+                                  <Label className="text-sm font-medium text-gray-500">Status</Label>
+                                  <Badge className={getStatusBadge(selectedCandidate.status || "New")}>
+                                    {selectedCandidate.status || "New"}
+                                  </Badge>
+                                </div>
+                                <div className="col-span-2">
+                                  <Label className="text-sm font-medium text-gray-500">Calendar Event ID</Label>
+                                  <p className="text-sm text-gray-900">{selectedCandidate["Calendar Event ID"]}</p>
+                                </div>
+                                {selectedCandidate.skills && selectedCandidate.skills.length > 0 && (
+                                  <div className="col-span-2">
+                                    <Label className="text-sm font-medium text-gray-500">Skills</Label>
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                      {selectedCandidate.skills.map((skill, index) => (
+                                        <Badge key={index} variant="secondary">{skill}</Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                {selectedCandidate.experience && (
+                                  <div className="col-span-2">
+                                    <Label className="text-sm font-medium text-gray-500">Experience</Label>
+                                    <p className="text-sm text-gray-900">{selectedCandidate.experience}</p>
+                                  </div>
+                                )}
+                                {selectedCandidate.analysis && (
+                                  <div className="col-span-2">
+                                    <Label className="text-sm font-medium text-gray-500">Analysis</Label>
+                                    <div className="text-sm text-gray-900 space-y-2">
+                                      {selectedCandidate.analysis.summary && (
+                                        <div>
+                                          <p className="font-medium">Summary:</p>
+                                          <p>{selectedCandidate.analysis.summary}</p>
+                                        </div>
+                                      )}
+                                      {selectedCandidate.analysis.technicalScore && (
+                                        <div>
+                                          <p className="font-medium">Technical Score: {selectedCandidate.analysis.technicalScore}/100</p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </DialogContent>
+                        </Dialog>
+                        
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-primary hover:text-primary/80"
+                              onClick={() => {
+                                setEditingCandidate(candidate);
+                                setEditForm({
+                                  "Candidate Name": candidate["Candidate Name"],
+                                  Email: candidate.Email,
+                                  "Job Title": candidate["Job Title"],
+                                  "Interview Date": candidate["Interview Date"],
+                                  "Interview Time": candidate["Interview Time"],
+                                  status: candidate.status || "New"
+                                });
+                              }}
+                            >
+                              <Edit2 className="w-4 h-4 mr-1" />
+                              Edit
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Edit Candidate</DialogTitle>
+                            </DialogHeader>
+                            {editingCandidate && (
+                              <div className="grid grid-cols-1 gap-4 py-4">
+                                <div>
+                                  <Label htmlFor="name">Candidate Name</Label>
+                                  <Input
+                                    id="name"
+                                    value={editForm["Candidate Name"] || ""}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, "Candidate Name": e.target.value }))}
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor="email">Email</Label>
+                                  <Input
+                                    id="email"
+                                    type="email"
+                                    value={editForm.Email || ""}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, Email: e.target.value }))}
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor="jobTitle">Job Title</Label>
+                                  <Input
+                                    id="jobTitle"
+                                    value={editForm["Job Title"] || ""}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, "Job Title": e.target.value }))}
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor="interviewDate">Interview Date</Label>
+                                  <Input
+                                    id="interviewDate"
+                                    type="date"
+                                    value={editForm["Interview Date"] || ""}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, "Interview Date": e.target.value }))}
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor="interviewTime">Interview Time</Label>
+                                  <Input
+                                    id="interviewTime"
+                                    value={editForm["Interview Time"] || ""}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, "Interview Time": e.target.value }))}
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor="status">Status</Label>
+                                  <Select value={editForm.status || "New"} onValueChange={(value) => setEditForm(prev => ({ ...prev, status: value }))}>
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="New">New</SelectItem>
+                                      <SelectItem value="Qualified">Qualified</SelectItem>
+                                      <SelectItem value="Interview Scheduled">Interview Scheduled</SelectItem>
+                                      <SelectItem value="Analysis Complete">Analysis Complete</SelectItem>
+                                      <SelectItem value="Hired">Hired</SelectItem>
+                                      <SelectItem value="Rejected">Rejected</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="flex justify-end space-x-2">
+                                  <Button
+                                    variant="outline"
+                                    onClick={() => {
+                                      setEditingCandidate(null);
+                                      setEditForm({});
+                                    }}
+                                  >
+                                    Cancel
+                                  </Button>
+                                  <Button
+                                    onClick={() => {
+                                      updateCandidateMutation.mutate({
+                                        id: editingCandidate.id,
+                                        updates: editForm
+                                      });
+                                    }}
+                                    disabled={updateCandidateMutation.isPending}
+                                  >
+                                    {updateCandidateMutation.isPending ? "Saving..." : "Save Changes"}
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+                          </DialogContent>
+                        </Dialog>
                       </td>
                     </tr>
                   ))}
@@ -195,7 +424,7 @@ export default function CandidatesPage() {
                 <div>
                   <p className="text-sm text-gray-700">
                     Showing <span className="font-medium">1</span> to{" "}
-                    <span className="font-medium">{candidates?.length || 0}</span> of{" "}
+                    <span className="font-medium">{filteredCandidates?.length || 0}</span> of{" "}
                     <span className="font-medium">{candidates?.length || 0}</span> results
                   </p>
                 </div>

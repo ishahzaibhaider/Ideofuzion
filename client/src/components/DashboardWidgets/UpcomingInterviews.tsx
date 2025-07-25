@@ -4,6 +4,7 @@ interface Interview {
   position: string;
   time: string;
   date: string;
+  calendarLink?: string;
 }
 
 interface UpcomingInterviewsProps {
@@ -39,6 +40,16 @@ export default function UpcomingInterviews({ interviews }: UpcomingInterviewsPro
               <div className="text-right">
                 <p className="text-sm font-medium text-gray-900">{interview.time}</p>
                 <p className="text-sm text-gray-500">{interview.date}</p>
+                {interview.calendarLink && (
+                  <a 
+                    href={interview.calendarLink} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-xs text-primary hover:text-primary/80 underline"
+                  >
+                    Open Calendar
+                  </a>
+                )}
               </div>
             </div>
           ))

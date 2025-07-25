@@ -376,24 +376,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hiredCandidates = candidates.filter(c => c.status === 'Hired');
       const avgTimeToHire = hiredCandidates.length > 0 ? '14d' : '0d';
 
-      // Funnel data
+      // Funnel data - removed Applications, moved future interviews to Interview Scheduled
+      const today = new Date();
+      const pakistanOffset = 5 * 60; // Pakistan is UTC+5
+      const pakistanTime = new Date(today.getTime() + pakistanOffset * 60 * 1000);
+      
+      // Filter candidates with future interview dates for Interview Scheduled
+      const interviewScheduledCount = candidates.filter(c => {
+        if (!c["Interview Date"]) return false;
+        const interviewDate = new Date(c["Interview Date"]);
+        return interviewDate >= pakistanTime;
+      }).length;
+      
       const funnelStages = [
-        { name: 'Applications', count: candidates.filter(c => c.status === 'New').length, color: 'blue' },
         { name: 'Qualified', count: candidates.filter(c => c.status === 'Qualified').length, color: 'green' },
-        { name: 'Interview Scheduled', count: candidates.filter(c => c.status === 'Interview Scheduled').length, color: 'yellow' },
+        { name: 'Interview Scheduled', count: interviewScheduledCount, color: 'yellow' },
         { name: 'Analysis Complete', count: candidates.filter(c => c.status === 'Analysis Complete').length, color: 'purple' },
         { name: 'Hired', count: hiredCount, color: 'success' }
       ];
 
-      // Upcoming interviews
+      // Upcoming interviews for next 7 days (Pakistan time)
+      const next7Days = new Date(pakistanTime.getTime() + 7 * 24 * 60 * 60 * 1000);
+      
       const upcomingInterviews = candidates
-        .filter(c => (c.status === 'Interview Scheduled' || !c.status) && c["Interview Date"])
+        .filter(c => {
+          if (!c["Interview Date"]) return false;
+          const interviewDate = new Date(c["Interview Date"]);
+          return interviewDate >= pakistanTime && interviewDate <= next7Days;
+        })
         .map(c => ({
           id: c.id,
           candidateName: c["Candidate Name"],
           position: c["Job Title"] || 'N/A',
           time: c["Interview Time"] || '',
-          date: c["Interview Date"] || ''
+          date: c["Interview Date"] || '',
+          calendarLink: `https://calendar.google.com/calendar/event?eid=${c["Calendar Event ID"]}` // Google Calendar link
         }))
         .slice(0, 4);
 

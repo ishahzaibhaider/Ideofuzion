@@ -23,7 +23,6 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={LoginPage} />
-      <Route path="/signup" component={SignupPage} />
       <Route path="/">
         <ProtectedRoute>
           <Redirect to="/dashboard" />
