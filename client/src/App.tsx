@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { auth } from "./lib/auth";
 import NotFound from "@/pages/not-found";
 import LoginPage from "@/pages/login";
-import SignupPage from "@/pages/signup";
+
 import DashboardPage from "@/pages/dashboard";
 import PipelinePage from "@/pages/pipeline";
 import LiveInterviewPage from "@/pages/live-interview";

@@ -1,23 +1,26 @@
 # Hiring Pipeline & Intelligence Platform
 
-A comprehensive hiring pipeline and intelligence platform built with modern web technologies. This application streamlines the entire hiring process from candidate sourcing to final decision-making, featuring automated workflows, real-time collaboration, and intelligent analytics.
+A comprehensive hiring pipeline and intelligence platform built with React, Node.js/Express, and MongoDB Atlas. This application streamlines the entire hiring process from candidate sourcing to final decision-making, featuring Kanban-style pipeline management, real-time interviews, search functionality, and automated workflows using N8N integration.
 
 ## Features
 
 ### 🎯 Core Functionality
-- **Kanban Pipeline Board** - Visual drag-and-drop candidate management across hiring stages
-- **Live Interview Hub** - Real-time interview sessions with transcript capture and analysis
-- **Dashboard Analytics** - Comprehensive hiring metrics and performance tracking
-- **Candidate Management** - Complete candidate profiles with CV analysis and scoring
+- **Dashboard Analytics** - Comprehensive hiring metrics with upcoming interviews (7-day view with Pakistani time)
+- **Candidate Management** - Complete candidate profiles with search, view details modal, and edit functionality
+- **Kanban Pipeline Board** - Visual drag-and-drop candidate management across hiring stages  
+- **Live Interview Hub** - Real-time interview sessions with N8N bot integration
+- **Search & Filter** - Real-time candidate search by name, email, and job title with status filtering
+- **Calendar Integration** - Direct links to Google Calendar events using stored Calendar Event IDs
 - **N8N Integration** - Automated CV syncing and interview bot workflows
-- **User Authentication** - Secure JWT-based authentication system
+- **User Authentication** - Secure JWT-based authentication (manual user creation)
 
 ### 🔄 Hiring Pipeline Stages
-1. **New** - Incoming candidates from various sources
-2. **Qualified** - Candidates who meet initial requirements
-3. **Interview Scheduled** - Candidates with confirmed interview appointments
-4. **Analysis Complete** - Post-interview evaluation and scoring
-5. **Hired** - Successful candidates ready for onboarding
+1. **Qualified** - Candidates who meet initial requirements
+2. **Interview Scheduled** - Candidates with future interviews (based on Pakistani time zone)
+3. **Analysis Complete** - Post-interview evaluation and scoring
+4. **Hired** - Successful candidates ready for onboarding
+
+Note: "Applications" stage has been removed from the pipeline funnel as requested.
 
 ### 🤖 Automation Features
 - **CV Sync Automation** - Automatic candidate data import via N8N webhooks
@@ -44,9 +47,10 @@ A comprehensive hiring pipeline and intelligence platform built with modern web 
 - **RESTful API** design
 
 ### Database
-- **MongoDB Atlas** cloud database
-- **Mongoose ODM** for MongoDB object modeling
-- **Mongoose Schema** with built-in validation
+- **MongoDB Atlas** cloud database (ideofuzion database)
+- **Mongoose ODM** for MongoDB object modeling with existing data structure
+- **Candidate Data Structure**: Candidate Name, Email, Job Title, Interview Date, Interview Time, Calendar Event ID
+- **Job Criteria Collection**: Job ID, Job Title, Required Skills array
 - **Zod** for runtime validation
 
 ### External Integrations
@@ -96,9 +100,11 @@ A comprehensive hiring pipeline and intelligence platform built with modern web 
 
 The application will be available at `http://localhost:5000`
 
-## Recent Migration: PostgreSQL to MongoDB Atlas
+## Recent Migration & Updates
 
-This project was recently migrated from PostgreSQL with Drizzle ORM to MongoDB Atlas with Mongoose. Here are the key changes:
+### January 25, 2025 - Complete Platform Overhaul
+
+This project was migrated from PostgreSQL to MongoDB Atlas and updated with comprehensive new features:
 
 ### Files Modified/Created During Migration:
 
@@ -131,46 +137,67 @@ This project was recently migrated from PostgreSQL with Drizzle ORM to MongoDB A
 - `drizzle.config.ts` - No longer needed (Drizzle configuration)
 - PostgreSQL dependencies removed from package.json
 
+### New Features Added:
+- **Real-time Search**: Instant candidate filtering by name, email, and job title
+- **Candidate Details Modal**: Comprehensive view of all candidate information
+- **Edit Functionality**: In-line editing of candidate details with MongoDB persistence
+- **Pakistani Time Zone Support**: Interview scheduling and upcoming interviews in PKT
+- **Calendar Integration**: Direct Google Calendar links using stored event IDs
+- **Enhanced Dashboard**: Upcoming interviews for next 7 days with calendar access
+- **Removed Score Column**: Streamlined candidate table view
+- **Manual User Management**: Signup removed, users added directly to database
+- **Updated Pipeline Funnel**: Removed "Applications" stage as requested
+
 ### Migration Benefits:
 - **Scalability**: MongoDB Atlas provides automatic scaling
-- **Cloud-native**: Fully managed database service
+- **Cloud-native**: Fully managed database service  
 - **Flexibility**: Document-based structure for complex candidate data
 - **Global distribution**: Built-in replication and backup
 - **Performance**: Optimized for read-heavy workloads
+- **Real-time Updates**: Enhanced responsiveness with live data filtering
 
 ## Database Schema (MongoDB Collections)
 
 ### Users Collection
 - User authentication and profile information
-- Stores admin and recruiter accounts
+- Stores admin and recruiter accounts (manually added)
 - Fields: _id, name, email, password (hashed), createdAt
 
-### Jobs Collection
-- Job postings and position details
-- Required skills and status tracking
-- Fields: _id, title, description, requiredSkills[], status, createdAt
+### JobCriteria Collection
+- Job requirements and criteria definitions
+- Skills assessment templates
+- Fields: _id, "Job ID", "Job Title", "Required Skills" (array)
 
-### Candidates Collection
-- Complete candidate profiles
-- CV data, interview details, and analysis results
-- Skills assessment and scoring
-- Fields: _id, name, email, cvUrl, status, jobAppliedFor, interviewDetails{}, analysis{}, appliedDate, skills[], experience, previousRole, education, score
+### Candidates Collection (ideofuzion database)
+- **Primary Fields** (from existing data):
+  - _id (MongoDB ObjectId)
+  - "Candidate Name" - Full name of the candidate
+  - Email - Contact email address
+  - "Job Title" - Position being applied for
+  - "Interview Date" - Scheduled interview date
+  - "Interview Time" - Scheduled interview time
+  - "Calendar Event ID" - Google Calendar event identifier
+- **Optional Fields** (extended functionality):
+  - status - Pipeline stage (New, Qualified, Interview Scheduled, Analysis Complete, Hired, Rejected)
+  - skills - Array of candidate skills
+  - experience - Work experience details
+  - analysis - Interview analysis and scoring data
+  - cvUrl - Resume/CV file location
 
 ## API Endpoints
 
 ### Authentication
-- `POST /api/auth/login` - User login
-- `POST /api/auth/signup` - User registration
+- `POST /api/auth/login` - User login (signup functionality removed - users added manually)
 - `GET /api/auth/me` - Get current user
 
 ### Dashboard
-- `GET /api/dashboard/metrics` - Get hiring metrics
-- `GET /api/dashboard/upcoming-interviews` - Get scheduled interviews
+- `GET /api/dashboard/metrics` - Get hiring metrics with updated funnel (no Applications), upcoming interviews for next 7 days with calendar links
 
 ### Candidates
-- `GET /api/candidates` - List all candidates
+- `GET /api/candidates` - List all candidates with search and filter support
+- `GET /api/candidates/:id` - Get specific candidate details
+- `PUT /api/candidates/:id` - Update candidate information (name, email, job title, interview details, status)
 - `POST /api/candidates` - Create new candidate
-- `PUT /api/candidates/:id` - Update candidate
 - `DELETE /api/candidates/status/:status` - Bulk delete by status
 
 ### Jobs
