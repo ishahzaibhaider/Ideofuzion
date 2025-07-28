@@ -1,17 +1,27 @@
 import { UserModel, JobCriteriaModel, CandidateModel, type User, type InsertUser, type JobCriteria, type InsertJobCriteria, type Candidate, type InsertCandidate } from "@shared/schema";
 import { connectToDatabase } from "./db";
 
+// Define the structure for the data coming from the frontend form
+interface JobFormData {
+  jobId: string;
+  jobTitle: string;
+  requiredSkills: string[];
+}
+
+
 export interface IStorage {
   // Users
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  
+
   // Job Criteria
   getJobCriteria(): Promise<JobCriteria[]>;
   getJobCriteriaById(id: string): Promise<JobCriteria | undefined>;
-  createJobCriteria(jobCriteria: InsertJobCriteria): Promise<JobCriteria>;
-  
+  createJobCriteria(jobCriteria: JobFormData): Promise<JobCriteria>;
+  // ✨ Method to update a job
+  updateJobCriteria(id: string, updates: Partial<InsertJobCriteria>): Promise<JobCriteria | undefined>;
+
   // Candidates
   getCandidates(): Promise<Candidate[]>;
   getCandidate(id: string): Promise<Candidate | undefined>;
@@ -24,7 +34,7 @@ export class MongoStorage implements IStorage {
   constructor() {
     // Ensure database connection
     connectToDatabase();
-    
+
     // Initialize with basic data if needed
     this.initializeBasicData();
   }
@@ -61,12 +71,13 @@ export class MongoStorage implements IStorage {
   private mongoDocToCandidate(doc: any): Candidate {
     return {
       id: doc._id.toString(),
-      "Candidate Name": doc["Candidate Name"],
-      Email: doc.Email,
-      "Job Title": doc["Job Title"],
-      "Interview Date": doc["Interview Date"],
-      "Interview Time": doc["Interview Time"],
-      "Calendar Event ID": doc["Calendar Event ID"],
+      // Normalize field names to match frontend expectations
+      name: doc["Candidate Name"],           // Map "Candidate Name" to "name"
+      email: doc.Email,                     // Map "Email" to "email"  
+      previousRole: doc["Job Title"],       // Map "Job Title" to "previousRole"
+      interviewDate: doc["Interview Date"],
+      interviewTime: doc["Interview Time"],
+      calendarEventId: doc["Calendar Event ID"],
       status: doc.status || "New",
       cvUrl: doc.cvUrl,
       analysis: doc.analysis,
@@ -128,13 +139,34 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async createJobCriteria(insertJobCriteria: InsertJobCriteria): Promise<JobCriteria> {
+  async createJobCriteria(jobData: JobFormData): Promise<JobCriteria> {
     try {
-      const jobCriteria = await JobCriteriaModel.create(insertJobCriteria);
+      // Map the frontend field names (jobId) to the database field names ("Job ID")
+      const jobToCreate: InsertJobCriteria = {
+        "Job ID": jobData.jobId,
+        "Job Title": jobData.jobTitle,
+        "Required Skills": jobData.requiredSkills
+      };
+      const jobCriteria = await JobCriteriaModel.create(jobToCreate);
       return this.mongoDocToJobCriteria(jobCriteria);
     } catch (error) {
       console.error('Error creating job criteria:', error);
       throw error;
+    }
+  }
+
+  // ✨ Implementation for updating a job
+  async updateJobCriteria(id: string, updates: Partial<InsertJobCriteria>): Promise<JobCriteria | undefined> {
+    try {
+      const updatedJob = await JobCriteriaModel.findByIdAndUpdate(
+        id,
+        updates,
+        { new: true } // Return the updated document
+      );
+      return updatedJob ? this.mongoDocToJobCriteria(updatedJob) : undefined;
+    } catch (error) {
+      console.error('Error updating job criteria:', error);
+      return undefined;
     }
   }
 

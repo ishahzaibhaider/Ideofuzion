@@ -11,6 +11,7 @@ import DashboardPage from "@/pages/dashboard";
 import PipelinePage from "@/pages/pipeline";
 import LiveInterviewPage from "@/pages/live-interview";
 import CandidatesPage from "@/pages/candidates";
+import CreateJobsPage from "@/pages/create-jobs"; // ✨ Import the new page
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (!auth.isAuthenticated()) {
@@ -31,6 +32,12 @@ function Router() {
       <Route path="/dashboard">
         <ProtectedRoute>
           <DashboardPage />
+        </ProtectedRoute>
+      </Route>
+      {/* ✨ Add route for Create Jobs page */}
+      <Route path="/create-jobs">
+        <ProtectedRoute>
+          <CreateJobsPage />
         </ProtectedRoute>
       </Route>
       <Route path="/pipeline">

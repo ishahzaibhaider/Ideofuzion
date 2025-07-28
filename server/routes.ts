@@ -3,10 +3,19 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
+import { z } from "zod"; // Import Zod for validation
 import { storage } from "./storage";
-import { insertUserSchema, insertCandidateSchema, insertJobCriteriaSchema } from "@shared/schema";
+import { insertUserSchema, insertCandidateSchema } from "@shared/schema";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
+
+// Define a schema for the incoming job form data to validate the request body
+const jobFormDataSchema = z.object({
+  jobId: z.string().min(1, { message: "Job ID is required" }),
+  jobTitle: z.string().min(1, { message: "Job Title is required" }),
+  requiredSkills: z.array(z.string()).min(1, { message: "At least one skill is required" }),
+});
+
 
 // Authentication middleware
 const authenticateToken = (req: any, res: any, next: any) => {
@@ -26,29 +35,29 @@ const authenticateToken = (req: any, res: any, next: any) => {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
-  
+
   // WebSocket server for real-time updates
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
-  
+
   // Store active WebSocket connections
   const activeConnections = new Map<string, WebSocket>();
-  
+
   wss.on('connection', (ws: WebSocket, req) => {
     const url = new URL(req.url!, `http://${req.headers.host}`);
     const interviewId = url.searchParams.get('interviewId');
-    
+
     if (interviewId) {
       activeConnections.set(interviewId, ws);
       console.log(`WebSocket connected for interview: ${interviewId}`);
     }
-    
+
     ws.on('close', () => {
       if (interviewId) {
         activeConnections.delete(interviewId);
         console.log(`WebSocket disconnected for interview: ${interviewId}`);
       }
     });
-    
+
     ws.on('error', (error) => {
       console.error('WebSocket error:', error);
     });
@@ -66,7 +75,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/register', async (req, res) => {
     try {
       const userData = insertUserSchema.parse(req.body);
-      
+
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(userData.email);
       if (existingUser) {
@@ -75,7 +84,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Hash password
       const hashedPassword = await bcrypt.hash(userData.password, 10);
-      
+
       // Create user
       const user = await storage.createUser({
         ...userData,
@@ -162,12 +171,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = req.params.id;
       const updates = req.body;
-      
+
       const candidate = await storage.updateCandidate(id, updates);
       if (!candidate) {
         return res.status(404).json({ message: 'Candidate not found' });
       }
-      
+
       res.json(candidate);
     } catch (error) {
       res.status(500).json({ message: 'Server error', error });
@@ -184,7 +193,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Job Criteria routes
+  // Job routes
   app.get('/api/job-criteria', authenticateToken, async (req, res) => {
     try {
       const jobCriteria = await storage.getJobCriteria();
@@ -207,21 +216,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/job-criteria', authenticateToken, async (req, res) => {
+  // ✨ New route to handle job creation from the frontend form
+  app.post('/api/jobs', authenticateToken, async (req, res) => {
     try {
-      const jobCriteriaData = insertJobCriteriaSchema.parse(req.body);
-      const jobCriteria = await storage.createJobCriteria(jobCriteriaData);
+      // Validate the incoming data against our new schema
+      const jobData = jobFormDataSchema.parse(req.body);
+      // Call the storage method which now expects this data structure
+      const jobCriteria = await storage.createJobCriteria(jobData);
       res.status(201).json(jobCriteria);
+    } catch (error) {
+      // Handle validation errors from Zod or other errors
+      res.status(400).json({ message: 'Invalid input data', error });
+    }
+  });
+
+  // Add this inside your registerRoutes function in server/services/routes.ts
+
+  app.put('/api/jobs/:id', authenticateToken, async (req, res) => {
+    try {
+      const id = req.params.id;
+      // Validate the incoming data
+      const jobData = jobFormDataSchema.parse(req.body);
+
+      // The storage layer expects the DB format, so we map it here
+      const updates = {
+        "Job ID": jobData.jobId,
+        "Job Title": jobData.jobTitle,
+        "Required Skills": jobData.requiredSkills
+      };
+
+      // You will need to add an `updateJobCriteria` method to your storage class
+      const jobCriteria = await storage.updateJobCriteria(id, updates);
+
+      if (!jobCriteria) {
+        return res.status(404).json({ message: 'Job not found' });
+      }
+
+      res.status(200).json(jobCriteria);
     } catch (error) {
       res.status(400).json({ message: 'Invalid input data', error });
     }
   });
 
+
   // N8N Integration routes
   app.post('/api/n8n/update-candidate', async (req, res) => {
     try {
       const { candidateId, updates } = req.body;
-      
+
       if (!candidateId) {
         return res.status(400).json({ message: 'candidateId is required' });
       }
@@ -288,9 +330,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp: new Date().toISOString(),
         userId: req.user.userId.toString()
       });
-      
+
       const webhookUrl = `https://ali-shoaib.app.n8n.cloud/webhook-test/9f3916ff-5ef8-47e2-8170-fea53c456554?${params}`;
-      
+
       const response = await fetch(webhookUrl, {
         method: 'GET',
         headers: {
@@ -301,11 +343,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('N8N webhook error:', response.status, errorText);
-        
+
         if (response.status === 404) {
           throw new Error(`N8N webhook not active. Please activate your workflow in N8N by clicking 'Execute workflow' button first.`);
         }
-        
+
         throw new Error(`Failed to trigger CV sync: ${response.status} - ${errorText}`);
       }
 
@@ -322,7 +364,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/start-interview-bot', authenticateToken, async (req, res) => {
     try {
       const { meetingId, candidateId } = req.body;
-      
+
       // Trigger N8N webhook for interview bot using GET request with query params
       const params = new URLSearchParams({
         action: 'start_interview_bot',
@@ -330,9 +372,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         candidateId: candidateId?.toString() || '',
         timestamp: new Date().toISOString()
       });
-      
+
       const webhookUrl = `https://ali-shoaib.app.n8n.cloud/webhook-test/022f198b-9bb8-4ec8-8457-53df00516dbb?${params}`;
-      
+
       const response = await fetch(webhookUrl, {
         method: 'GET',
         headers: {
@@ -343,11 +385,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('N8N interview webhook error:', response.status, errorText);
-        
+
         if (response.status === 404) {
           throw new Error(`N8N interview webhook not active. Please activate your workflow in N8N by clicking 'Execute workflow' button first.`);
         }
-        
+
         throw new Error(`Failed to start interview bot: ${response.status} - ${errorText}`);
       }
 
@@ -366,12 +408,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const candidates = await storage.getCandidates();
       const jobCriteria = await storage.getJobCriteria();
-      
+
       const totalCandidates = candidates.length;
       const activeInterviews = candidates.filter(c => c.status === 'Interview Scheduled').length;
       const hiredCount = candidates.filter(c => c.status === 'Hired').length;
       const hireRate = totalCandidates > 0 ? Math.round((hiredCount / totalCandidates) * 100) : 0;
-      
+
       // Calculate average time to hire (simplified)
       const hiredCandidates = candidates.filter(c => c.status === 'Hired');
       const avgTimeToHire = hiredCandidates.length > 0 ? '14d' : '0d';
@@ -380,14 +422,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const today = new Date();
       const pakistanOffset = 5 * 60; // Pakistan is UTC+5
       const pakistanTime = new Date(today.getTime() + pakistanOffset * 60 * 1000);
-      
+
       // Filter candidates with future interview dates for Interview Scheduled
       const interviewScheduledCount = candidates.filter(c => {
-        if (!c["Interview Date"]) return false;
-        const interviewDate = new Date(c["Interview Date"]);
+        if (!c.interviewDate) return false;
+        const interviewDate = new Date(c.interviewDate);
         return interviewDate >= pakistanTime;
       }).length;
-      
+
       const funnelStages = [
         { name: 'Qualified', count: candidates.filter(c => c.status === 'Qualified').length, color: 'green' },
         { name: 'Interview Scheduled', count: interviewScheduledCount, color: 'yellow' },
@@ -397,20 +439,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Upcoming interviews for next 7 days (Pakistan time)
       const next7Days = new Date(pakistanTime.getTime() + 7 * 24 * 60 * 60 * 1000);
-      
+
       const upcomingInterviews = candidates
         .filter(c => {
-          if (!c["Interview Date"]) return false;
-          const interviewDate = new Date(c["Interview Date"]);
+          if (!c.interviewDate) return false;
+          const interviewDate = new Date(c.interviewDate);
           return interviewDate >= pakistanTime && interviewDate <= next7Days;
         })
         .map(c => ({
           id: c.id,
-          candidateName: c["Candidate Name"],
-          position: c["Job Title"] || 'N/A',
-          time: c["Interview Time"] || '',
-          date: c["Interview Date"] || '',
-          calendarLink: `https://calendar.google.com/calendar/event?eid=${c["Calendar Event ID"]}` // Google Calendar link
+          candidateName: c.name,
+          position: c.previousRole || 'N/A',
+          time: c.interviewTime || '',
+          date: c.interviewDate || '',
+          calendarLink: `https://calendar.google.com/calendar/event?eid=${c.calendarEventId}` // Google Calendar link
         }))
         .slice(0, 4);
 

@@ -1,21 +1,26 @@
+import { Link } from "wouter"; // Corrected import
 import { useQuery } from "@tanstack/react-query";
 import { authenticatedApiRequest } from "@/lib/auth";
 import Navbar from "@/components/Navbar";
 import MetricCard from "@/components/DashboardWidgets/MetricCard";
 import HiringFunnel from "@/components/DashboardWidgets/HiringFunnel";
 import UpcomingInterviews from "@/components/DashboardWidgets/UpcomingInterviews";
-import { Users, Video, BarChart3, Clock } from "lucide-react";
+import { Users, Video, BarChart3, Clock, Plus } from "lucide-react";
 
 export default function DashboardPage() {
   const { data: metrics, isLoading } = useQuery({
     queryKey: ["/api/dashboard/metrics"],
     queryFn: async () => {
-      const response = await authenticatedApiRequest("GET", "/api/dashboard/metrics");
+      const response = await authenticatedApiRequest(
+        "GET",
+        "/api/dashboard/metrics"
+      );
       return response.json();
     },
   });
 
   if (isLoading) {
+    // The loading state remains the same...
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
@@ -46,9 +51,24 @@ export default function DashboardPage() {
       <div className="pt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold text-gray-900">Hiring Dashboard</h1>
-            <p className="text-gray-600">Monitor your recruitment pipeline and key metrics</p>
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">
+                Hiring Dashboard
+              </h1>
+              <p className="text-gray-600">
+                Monitor your recruitment pipeline and key metrics
+              </p>
+            </div>
+            {/* ✨ Create New Job Button (using wouter's Link) */}
+            <div>
+              <Link href="/create-jobs">
+                <a className="bg-primary text-white font-bold py-2 px-4 rounded-lg flex items-center space-x-2 hover:bg-primary/90 transition-colors">
+                  <Plus className="w-5 h-5" />
+                  <span>Create New Job</span>
+                </a>
+              </Link>
+            </div>
           </div>
 
           {/* Metrics Cards */}
@@ -76,7 +96,7 @@ export default function DashboardPage() {
             />
             <MetricCard
               title="Avg. Time to Hire"
-              value={metrics?.avgTimeToHire || '0d'}
+              value={metrics?.avgTimeToHire || "0d"}
               change="-2d"
               trend="down"
               icon={<Clock className="w-6 h-6 text-orange-600" />}
@@ -86,10 +106,7 @@ export default function DashboardPage() {
 
           {/* Main Content Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Hiring Funnel */}
             <HiringFunnel stages={metrics?.funnelStages || []} />
-
-            {/* Upcoming Interviews */}
             <UpcomingInterviews interviews={metrics?.upcomingInterviews || []} />
           </div>
         </div>
