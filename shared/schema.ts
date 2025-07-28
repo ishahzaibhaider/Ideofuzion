@@ -44,6 +44,8 @@ export interface ICandidate extends Document {
   "Interview Date": string;
   "Interview Time": string;
   "Calendar Event ID": string;
+  "Calender Event Link"?: string;
+  "Google Meet Id"?: string;
   status?: string;
   cvUrl?: string;
   analysis?: {
@@ -67,6 +69,8 @@ const candidateSchema = new Schema<ICandidate>({
   "Interview Date": { type: String, required: true },
   "Interview Time": { type: String, required: true },
   "Calendar Event ID": { type: String, required: true },
+  "Calender Event Link": { type: String },
+  "Google Meet Id": { type: String },
   status: { type: String, default: "New" },
   cvUrl: { type: String },
   analysis: {
@@ -147,6 +151,8 @@ export type Candidate = {
   "Interview Date": string;
   "Interview Time": string;
   "Calendar Event ID": string;
+  "Calender Event Link"?: string;
+  "Google Meet Id"?: string;
   status?: string;
   cvUrl?: string;
   analysis?: {
@@ -168,4 +174,6 @@ export type Candidate = {
   interviewDate: string;
   interviewTime: string;
   calendarEventId: string;
+  calenderEventLink?: string;
+  googleMeetId?: string;
 };

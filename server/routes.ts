@@ -452,7 +452,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           position: c["Job Title"] || 'N/A',
           time: c["Interview Time"] || '',
           date: c["Interview Date"] || '',
-          calendarLink: `https://calendar.google.com/calendar/event?eid=${c["Calendar Event ID"]}` // Google Calendar link
+          calendarLink: c["Calender Event Link"] || `https://calendar.google.com/calendar/event?eid=${c["Calendar Event ID"]}` // Use provided link or fallback
         }))
         .slice(0, 4);
 

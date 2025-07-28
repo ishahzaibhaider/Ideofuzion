@@ -78,6 +78,8 @@ export class MongoStorage implements IStorage {
       "Interview Date": doc["Interview Date"],
       "Interview Time": doc["Interview Time"],
       "Calendar Event ID": doc["Calendar Event ID"],
+      "Calender Event Link": doc["Calender Event Link"],
+      "Google Meet Id": doc["Google Meet Id"],
       status: doc.status || "New",
       cvUrl: doc.cvUrl,
       analysis: doc.analysis,
@@ -92,7 +94,9 @@ export class MongoStorage implements IStorage {
       previousRole: doc["Job Title"],
       interviewDate: doc["Interview Date"],
       interviewTime: doc["Interview Time"],
-      calendarEventId: doc["Calendar Event ID"]
+      calendarEventId: doc["Calendar Event ID"],
+      calenderEventLink: doc["Calender Event Link"],
+      googleMeetId: doc["Google Meet Id"]
     };
   }
 

@@ -166,7 +166,7 @@ export default function CandidatesPage() {
                   <SelectItem value="Rejected">Rejected</SelectItem>
                 </SelectContent>
               </Select>
-              <Button>Add Candidate</Button>
+
             </div>
           </div>
 
@@ -239,26 +239,18 @@ export default function CandidatesPage() {
                               <DialogTitle>Candidate Details</DialogTitle>
                             </DialogHeader>
                             {selectedCandidate && (
-                              <div className="grid grid-cols-2 gap-4 py-4">
+                              <div className="grid grid-cols-2 gap-4 py-4 max-h-96 overflow-y-auto">
                                 <div>
-                                  <Label className="text-sm font-medium text-gray-500">Name</Label>
-                                  <p className="text-sm text-gray-900">{selectedCandidate.name || 'N/A'}</p>
+                                  <Label className="text-sm font-medium text-gray-500">Candidate Name</Label>
+                                  <p className="text-sm text-gray-900">{selectedCandidate["Candidate Name"] || 'N/A'}</p>
                                 </div>
                                 <div>
                                   <Label className="text-sm font-medium text-gray-500">Email</Label>
-                                  <p className="text-sm text-gray-900">{selectedCandidate.email || 'N/A'}</p>
+                                  <p className="text-sm text-gray-900">{selectedCandidate.Email || 'N/A'}</p>
                                 </div>
                                 <div>
                                   <Label className="text-sm font-medium text-gray-500">Job Title</Label>
-                                  <p className="text-sm text-gray-900">{selectedCandidate.previousRole || 'N/A'}</p>
-                                </div>
-                                <div>
-                                  <Label className="text-sm font-medium text-gray-500">Interview Date</Label>
-                                  <p className="text-sm text-gray-900">{selectedCandidate.interviewDate || 'N/A'}</p>
-                                </div>
-                                <div>
-                                  <Label className="text-sm font-medium text-gray-500">Interview Time</Label>
-                                  <p className="text-sm text-gray-900">{selectedCandidate.interviewTime || 'N/A'}</p>
+                                  <p className="text-sm text-gray-900">{selectedCandidate["Job Title"] || 'N/A'}</p>
                                 </div>
                                 <div>
                                   <Label className="text-sm font-medium text-gray-500">Status</Label>
@@ -266,10 +258,44 @@ export default function CandidatesPage() {
                                     {selectedCandidate.status || "New"}
                                   </Badge>
                                 </div>
+                                <div>
+                                  <Label className="text-sm font-medium text-gray-500">Interview Date</Label>
+                                  <p className="text-sm text-gray-900">{selectedCandidate["Interview Date"] || 'N/A'}</p>
+                                </div>
+                                <div>
+                                  <Label className="text-sm font-medium text-gray-500">Interview Time</Label>
+                                  <p className="text-sm text-gray-900">{selectedCandidate["Interview Time"] || 'N/A'}</p>
+                                </div>
                                 <div className="col-span-2">
                                   <Label className="text-sm font-medium text-gray-500">Calendar Event ID</Label>
-                                  <p className="text-sm text-gray-900">{selectedCandidate.calendarEventId || 'N/A'}</p>
+                                  <p className="text-sm text-gray-900">{selectedCandidate["Calendar Event ID"] || 'N/A'}</p>
                                 </div>
+                                {selectedCandidate["Calender Event Link"] && (
+                                  <div className="col-span-2">
+                                    <Label className="text-sm font-medium text-gray-500">Calendar Event Link</Label>
+                                    <a 
+                                      href={selectedCandidate["Calender Event Link"]} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="text-sm text-blue-600 hover:text-blue-800 underline break-all"
+                                    >
+                                      {selectedCandidate["Calender Event Link"]}
+                                    </a>
+                                  </div>
+                                )}
+                                {selectedCandidate["Google Meet Id"] && (
+                                  <div className="col-span-2">
+                                    <Label className="text-sm font-medium text-gray-500">Google Meet ID</Label>
+                                    <a 
+                                      href={`https://${selectedCandidate["Google Meet Id"]}`}
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="text-sm text-blue-600 hover:text-blue-800 underline"
+                                    >
+                                      {selectedCandidate["Google Meet Id"]}
+                                    </a>
+                                  </div>
+                                )}
                                 {selectedCandidate.skills && selectedCandidate.skills.length > 0 && (
                                   <div className="col-span-2">
                                     <Label className="text-sm font-medium text-gray-500">Skills</Label>
@@ -286,6 +312,25 @@ export default function CandidatesPage() {
                                     <p className="text-sm text-gray-900">{selectedCandidate.experience}</p>
                                   </div>
                                 )}
+                                {selectedCandidate.education && (
+                                  <div className="col-span-2">
+                                    <Label className="text-sm font-medium text-gray-500">Education</Label>
+                                    <p className="text-sm text-gray-900">{selectedCandidate.education}</p>
+                                  </div>
+                                )}
+                                {selectedCandidate.cvUrl && (
+                                  <div className="col-span-2">
+                                    <Label className="text-sm font-medium text-gray-500">CV/Resume</Label>
+                                    <a 
+                                      href={selectedCandidate.cvUrl}
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="text-sm text-blue-600 hover:text-blue-800 underline"
+                                    >
+                                      View CV/Resume
+                                    </a>
+                                  </div>
+                                )}
                                 {selectedCandidate.analysis && (
                                   <div className="col-span-2">
                                     <Label className="text-sm font-medium text-gray-500">Analysis</Label>
@@ -299,6 +344,18 @@ export default function CandidatesPage() {
                                       {selectedCandidate.analysis.technicalScore && (
                                         <div>
                                           <p className="font-medium">Technical Score: {selectedCandidate.analysis.technicalScore}/100</p>
+                                        </div>
+                                      )}
+                                      {selectedCandidate.analysis.psychometricAnalysis && (
+                                        <div>
+                                          <p className="font-medium">Psychometric Analysis:</p>
+                                          <p>{selectedCandidate.analysis.psychometricAnalysis}</p>
+                                        </div>
+                                      )}
+                                      {selectedCandidate.analysis.finalRecommendation && (
+                                        <div>
+                                          <p className="font-medium">Final Recommendation:</p>
+                                          <p>{selectedCandidate.analysis.finalRecommendation}</p>
                                         </div>
                                       )}
                                     </div>

@@ -23,7 +23,7 @@ export default function KanbanBoard({ candidates }: KanbanBoardProps) {
   const { toast } = useToast();
 
   const updateCandidateMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: number; status: string }) => {
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const response = await authenticatedApiRequest("PUT", `/api/candidates/${id}`, { status });
       return response.json();
     },

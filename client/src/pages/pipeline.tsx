@@ -69,7 +69,7 @@ export default function PipelinePage() {
                   <SelectItem value="ux-designer">UX Designer</SelectItem>
                 </SelectContent>
               </Select>
-              <Button>Add Candidate</Button>
+
             </div>
           </div>
 

@@ -1,13 +1,20 @@
+import { useState } from "react";
 import { Candidate } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { MoreHorizontal, Eye, Edit, Calendar, Video } from "lucide-react";
 
 interface CandidateCardProps {
   candidate: Candidate;
   onDragStart?: (e: React.DragEvent, candidate: Candidate) => void;
-  onDragEnd?: (e: React.DragEvent) => void;
+  onDragEnd?: () => void;
 }
 
 export default function CandidateCard({ candidate, onDragStart, onDragEnd }: CandidateCardProps) {
+  const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'New':
@@ -25,6 +32,16 @@ export default function CandidateCard({ candidate, onDragStart, onDragEnd }: Can
       default:
         return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const getInitials = (name: string) => {
+    if (!name) return 'UN';
+    return name.split(' ')
+      .filter(n => n.length > 0)
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   const formatDate = (date: Date | null) => {
@@ -48,19 +65,105 @@ export default function CandidateCard({ candidate, onDragStart, onDragEnd }: Can
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
             <span className="text-xs font-medium text-gray-600">
-              {candidate.name.split(' ').map(n => n[0]).join('')}
+              {getInitials(candidate["Candidate Name"] || '')}
             </span>
           </div>
           <div>
-            <p className="font-medium text-gray-900">{candidate.name}</p>
-            <p className="text-sm text-gray-500">{candidate.previousRole || 'N/A'}</p>
+            <p className="font-medium text-gray-900">{candidate["Candidate Name"]}</p>
+            <p className="text-sm text-gray-500">{candidate["Job Title"] || 'N/A'}</p>
           </div>
         </div>
-        <button className="text-gray-400 hover:text-gray-600">
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"></path>
-          </svg>
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger className="text-gray-400 hover:text-gray-600">
+            <MoreHorizontal className="w-5 h-5" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <Dialog>
+              <DialogTrigger asChild>
+                <DropdownMenuItem onSelect={(e) => {
+                  e.preventDefault();
+                  setSelectedCandidate(candidate);
+                }}>
+                  <Eye className="w-4 h-4 mr-2" />
+                  View Details
+                </DropdownMenuItem>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Candidate Details</DialogTitle>
+                </DialogHeader>
+                {selectedCandidate && (
+                  <div className="grid grid-cols-2 gap-4 py-4 max-h-96 overflow-y-auto">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Candidate Name</Label>
+                      <p className="text-sm text-gray-900">{selectedCandidate["Candidate Name"] || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Email</Label>
+                      <p className="text-sm text-gray-900">{selectedCandidate.Email || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Job Title</Label>
+                      <p className="text-sm text-gray-900">{selectedCandidate["Job Title"] || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Status</Label>
+                      <Badge className={getStatusColor(selectedCandidate.status || "New")}>
+                        {selectedCandidate.status || "New"}
+                      </Badge>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Interview Date</Label>
+                      <p className="text-sm text-gray-900">{selectedCandidate["Interview Date"] || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Interview Time</Label>
+                      <p className="text-sm text-gray-900">{selectedCandidate["Interview Time"] || 'N/A'}</p>
+                    </div>
+                    {selectedCandidate["Calender Event Link"] && (
+                      <div className="col-span-2">
+                        <Label className="text-sm font-medium text-gray-500">Calendar Event Link</Label>
+                        <a 
+                          href={selectedCandidate["Calender Event Link"]} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 hover:text-blue-800 underline break-all"
+                        >
+                          {selectedCandidate["Calender Event Link"]}
+                        </a>
+                      </div>
+                    )}
+                    {selectedCandidate["Google Meet Id"] && (
+                      <div className="col-span-2">
+                        <Label className="text-sm font-medium text-gray-500">Google Meet ID</Label>
+                        <a 
+                          href={`https://${selectedCandidate["Google Meet Id"]}`}
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 hover:text-blue-800 underline"
+                        >
+                          {selectedCandidate["Google Meet Id"]}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
+            {candidate["Calender Event Link"] && (
+              <DropdownMenuItem onClick={() => window.open(candidate["Calender Event Link"], '_blank')}>
+                <Calendar className="w-4 h-4 mr-2" />
+                Open Calendar
+              </DropdownMenuItem>
+            )}
+            {candidate["Google Meet Id"] && (
+              <DropdownMenuItem onClick={() => window.open(`https://${candidate["Google Meet Id"]}`, '_blank')}>
+                <Video className="w-4 h-4 mr-2" />
+                Join Meeting
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
       
       <div className="space-y-2">
@@ -77,34 +180,21 @@ export default function CandidateCard({ candidate, onDragStart, onDragEnd }: Can
           )}
         </div>
         
-        <p className="text-sm text-gray-600">{candidate.experience}</p>
-        <p className="text-xs text-gray-500">{formatDate(candidate.appliedDate)}</p>
+        <p className="text-sm text-gray-600">{candidate.Email}</p>
+        <p className="text-xs text-gray-500">{formatDate(candidate.appliedDate || null)}</p>
         
-        {candidate.status === 'Interview Scheduled' && candidate.interviewDetails?.dateTime && (
+        {candidate.status === 'Interview Scheduled' && candidate["Interview Date"] && candidate["Interview Time"] && (
           <div className="mt-2">
             <Badge className={getStatusColor(candidate.status)}>
-              {new Date(candidate.interviewDetails.dateTime).toLocaleDateString()} at{' '}
-              {new Date(candidate.interviewDetails.dateTime).toLocaleTimeString([], { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-              })}
+              {candidate["Interview Date"]} | {candidate["Interview Time"]}
             </Badge>
           </div>
         )}
         
         {candidate.status === 'Analysis Complete' && candidate.score && (
-          <div className="mt-2 flex items-center justify-between">
-            <span className="text-sm font-medium text-success">Score: {candidate.score}/100</span>
-            <button className="text-primary hover:text-primary/80 font-medium text-sm">
-              View Report
-            </button>
+          <div className="mt-2">
+            <span className="text-sm font-medium text-green-600">Score: {candidate.score}/100</span>
           </div>
-        )}
-        
-        {candidate.status === 'Interview Scheduled' && (
-          <button className="text-primary hover:text-primary/80 font-medium text-sm">
-            Join Interview
-          </button>
         )}
       </div>
     </div>
