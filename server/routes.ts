@@ -425,8 +425,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Filter candidates with future interview dates for Interview Scheduled
       const interviewScheduledCount = candidates.filter(c => {
-        if (!c.interviewDate) return false;
-        const interviewDate = new Date(c.interviewDate);
+        if (!c["Interview Date"]) return false;
+        const interviewDate = new Date(c["Interview Date"]);
         return interviewDate >= pakistanTime;
       }).length;
 
@@ -442,17 +442,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const upcomingInterviews = candidates
         .filter(c => {
-          if (!c.interviewDate) return false;
-          const interviewDate = new Date(c.interviewDate);
+          if (!c["Interview Date"]) return false;
+          const interviewDate = new Date(c["Interview Date"]);
           return interviewDate >= pakistanTime && interviewDate <= next7Days;
         })
         .map(c => ({
           id: c.id,
-          candidateName: c.name,
-          position: c.previousRole || 'N/A',
-          time: c.interviewTime || '',
-          date: c.interviewDate || '',
-          calendarLink: `https://calendar.google.com/calendar/event?eid=${c.calendarEventId}` // Google Calendar link
+          candidateName: c["Candidate Name"],
+          position: c["Job Title"] || 'N/A',
+          time: c["Interview Time"] || '',
+          date: c["Interview Date"] || '',
+          calendarLink: `https://calendar.google.com/calendar/event?eid=${c["Calendar Event ID"]}` // Google Calendar link
         }))
         .slice(0, 4);
 

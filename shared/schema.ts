@@ -161,4 +161,11 @@ export type Candidate = {
   experience?: string;
   education?: string;
   score?: number;
+  // Frontend-friendly mapped fields
+  name: string;
+  email: string;
+  previousRole: string;
+  interviewDate: string;
+  interviewTime: string;
+  calendarEventId: string;
 };

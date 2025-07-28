@@ -71,13 +71,13 @@ export class MongoStorage implements IStorage {
   private mongoDocToCandidate(doc: any): Candidate {
     return {
       id: doc._id.toString(),
-      // Normalize field names to match frontend expectations
-      name: doc["Candidate Name"],           // Map "Candidate Name" to "name"
-      email: doc.Email,                     // Map "Email" to "email"  
-      previousRole: doc["Job Title"],       // Map "Job Title" to "previousRole"
-      interviewDate: doc["Interview Date"],
-      interviewTime: doc["Interview Time"],
-      calendarEventId: doc["Calendar Event ID"],
+      // Database field names (required)
+      "Candidate Name": doc["Candidate Name"],
+      Email: doc.Email,
+      "Job Title": doc["Job Title"],
+      "Interview Date": doc["Interview Date"],
+      "Interview Time": doc["Interview Time"],
+      "Calendar Event ID": doc["Calendar Event ID"],
       status: doc.status || "New",
       cvUrl: doc.cvUrl,
       analysis: doc.analysis,
@@ -85,7 +85,14 @@ export class MongoStorage implements IStorage {
       skills: doc.skills,
       experience: doc.experience,
       education: doc.education,
-      score: doc.score
+      score: doc.score,
+      // Frontend-friendly mapped fields
+      name: doc["Candidate Name"],
+      email: doc.Email,
+      previousRole: doc["Job Title"],
+      interviewDate: doc["Interview Date"],
+      interviewTime: doc["Interview Time"],
+      calendarEventId: doc["Calendar Event ID"]
     };
   }
 
