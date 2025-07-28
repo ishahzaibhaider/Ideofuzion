@@ -437,14 +437,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { name: 'Hired', count: hiredCount, color: 'success' }
       ];
 
-      // Upcoming interviews for next 7 days (Pakistan time)
-      const next7Days = new Date(pakistanTime.getTime() + 7 * 24 * 60 * 60 * 1000);
-
+      // Since you mentioned your candidate has interview date "2025-07-28", let's show all interviews regardless of date for now
+      // This will help us see what's happening with the data
       const upcomingInterviews = candidates
         .filter(c => {
-          if (!c["Interview Date"]) return false;
-          const interviewDate = new Date(c["Interview Date"]);
-          return interviewDate >= pakistanTime && interviewDate <= next7Days;
+          // Show all candidates that have interview date and time
+          return c["Interview Date"] && c["Interview Time"];
         })
         .map(c => ({
           id: c.id,
@@ -455,6 +453,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           calendarLink: c["Calender Event Link"] || `https://calendar.google.com/calendar/event?eid=${c["Calendar Event ID"]}` // Use provided link or fallback
         }))
         .slice(0, 4);
+
+      console.log('All interviews found:', upcomingInterviews.length);
+      console.log('Interview data:', upcomingInterviews);
 
       res.json({
         totalCandidates,
