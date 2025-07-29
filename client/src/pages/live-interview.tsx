@@ -60,9 +60,9 @@ export default function LiveInterviewPage() {
 
   // ✨ New handler function to open the resume link
   const handleViewResume = () => {
-    if (currentCandidate?.resumeUrl) {
+    if (currentCandidate?.["Resume Link"]) {
       // Opens the link in a new tab with security best practices
-      window.open(currentCandidate.resumeUrl, '_blank', 'noopener,noreferrer');
+      window.open(currentCandidate["Resume Link"], '_blank', 'noopener,noreferrer');
     } else {
       toast({
         title: "No Resume",
@@ -105,9 +105,9 @@ export default function LiveInterviewPage() {
               <Button
                 variant="outline"
                 onClick={handleViewResume}
-                disabled={!currentCandidate?.resumeUrl}
+                disabled={!currentCandidate?.["Resume Link"]}
               >
-                View Resume
+                View Full Resume
               </Button>
               <Button
                 variant="destructive"

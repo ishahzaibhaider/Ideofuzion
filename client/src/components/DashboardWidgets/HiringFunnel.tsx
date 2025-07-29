@@ -22,7 +22,7 @@ export default function HiringFunnel({ stages }: HiringFunnelProps) {
       case 'purple':
         return 'bg-purple-500 text-purple-500';
       case 'success':
-        return 'bg-success text-success';
+        return 'bg-emerald-500 text-emerald-500';
       default:
         return 'bg-gray-500 text-gray-500';
     }
@@ -41,13 +41,25 @@ export default function HiringFunnel({ stages }: HiringFunnelProps) {
             const colorClasses = getColorClasses(stage.color);
             
             return (
-              <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div key={index} className={`flex items-center justify-between p-4 rounded-lg ${
+                stage.name === 'Hired' 
+                  ? 'bg-emerald-50 border-2 border-emerald-200' 
+                  : 'bg-gray-50'
+              }`}>
                 <div className="flex items-center space-x-3">
                   <div className={`w-3 h-3 rounded-full ${colorClasses.split(' ')[0]}`}></div>
-                  <span className="font-medium text-gray-900">{stage.name}</span>
+                  <span className={`font-medium ${
+                    stage.name === 'Hired' ? 'text-emerald-900' : 'text-gray-900'
+                  }`}>
+                    {stage.name}
+                  </span>
                 </div>
                 <div className="flex items-center space-x-4">
-                  <span className="text-2xl font-bold text-gray-900">{stage.count}</span>
+                  <span className={`text-2xl font-bold ${
+                    stage.name === 'Hired' ? 'text-emerald-700' : 'text-gray-900'
+                  }`}>
+                    {stage.count}
+                  </span>
                   <div className="w-24 bg-gray-200 rounded-full h-2">
                     <div 
                       className={`h-2 rounded-full ${colorClasses.split(' ')[0]}`}

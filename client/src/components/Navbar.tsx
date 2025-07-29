@@ -10,25 +10,7 @@ export default function Navbar() {
   const { toast } = useToast();
   const user = auth.getUser();
 
-  const syncCVsMutation = useMutation({
-    mutationFn: async () => {
-      const response = await authenticatedApiRequest("POST", "/api/sync-cvs");
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "CV sync triggered successfully",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to sync CVs",
-        variant: "destructive",
-      });
-    },
-  });
+
 
   const handleLogout = () => {
     auth.logout();
@@ -82,13 +64,6 @@ export default function Navbar() {
             </div>
           </div>
           <div className="flex items-center space-x-4">
-            <Button 
-              className="bg-success hover:bg-success/90 text-success-foreground"
-              onClick={() => syncCVsMutation.mutate()}
-              disabled={syncCVsMutation.isPending}
-            >
-              {syncCVsMutation.isPending ? "Syncing..." : "Sync New CVs"}
-            </Button>
             <div className="relative">
               <Button
                 variant="ghost"

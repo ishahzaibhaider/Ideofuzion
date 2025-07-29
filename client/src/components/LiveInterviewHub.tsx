@@ -105,13 +105,13 @@ export default function LiveInterviewHub({
   }, [isSessionActive]);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-12rem)]">
+    <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 lg:gap-6 min-h-[calc(100vh-12rem)]">
       {/* Left Panel: Candidate Info */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="p-6 border-b border-gray-200">
+        <div className="p-4 lg:p-6 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900">Candidate Profile</h3>
         </div>
-        <div className="p-6">
+        <div className="p-4 lg:p-6">
           <div className="text-center mb-6">
             <div className="w-24 h-24 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center">
               <span className="text-xl font-bold text-gray-600">
@@ -148,7 +148,18 @@ export default function LiveInterviewHub({
             </div>
             
             <div className="pt-4 border-t border-gray-200">
-              <Button className="w-full" variant="outline">
+              <Button 
+                className="w-full" 
+                variant="outline"
+                onClick={() => {
+                  if (candidate["Resume Link"]) {
+                    window.open(candidate["Resume Link"], '_blank', 'noopener,noreferrer');
+                  } else {
+                    console.log('No resume link available for this candidate');
+                  }
+                }}
+                disabled={!candidate["Resume Link"]}
+              >
                 View Full Resume
               </Button>
             </div>
@@ -158,7 +169,7 @@ export default function LiveInterviewHub({
 
       {/* Center Panel: Live Transcript */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="p-6 border-b border-gray-200">
+        <div className="p-4 lg:p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">Live Transcript</h3>
             <div className="flex items-center space-x-2">
@@ -169,7 +180,7 @@ export default function LiveInterviewHub({
             </div>
           </div>
         </div>
-        <div className="p-6 h-96 overflow-y-auto">
+        <div className="p-4 lg:p-6 h-64 md:h-80 lg:h-96 overflow-y-auto">
           {transcript.length === 0 ? (
             <div className="text-center py-8 text-gray-400">
               <p className="text-sm">Transcript will appear here when the session starts</p>
@@ -208,11 +219,11 @@ export default function LiveInterviewHub({
 
       {/* Right Panel: AI Suggestions */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="p-6 border-b border-gray-200">
+        <div className="p-4 lg:p-6 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900">AI Interview Assistant</h3>
           <p className="text-sm text-gray-600">Real-time suggestions and insights</p>
         </div>
-        <div className="p-6 space-y-6">
+        <div className="p-4 lg:p-6 space-y-4 lg:space-y-6">
           {/* Current Analysis */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <h4 className="font-medium text-blue-900 mb-2">Current Analysis</h4>
