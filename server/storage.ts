@@ -6,6 +6,7 @@ interface JobFormData {
   jobId: string;
   jobTitle: string;
   requiredSkills: string[];
+  optionalSkills: string[]; // Add optional skills support
 }
 
 
@@ -21,6 +22,8 @@ export interface IStorage {
   createJobCriteria(jobCriteria: JobFormData): Promise<JobCriteria>;
   // ✨ Method to update a job
   updateJobCriteria(id: string, updates: Partial<InsertJobCriteria>): Promise<JobCriteria | undefined>;
+  // ✨ Method to delete a job
+  deleteJobCriteria(id: string): Promise<boolean>;
 
   // Candidates
   getCandidates(): Promise<Candidate[]>;
@@ -64,9 +67,12 @@ export class MongoStorage implements IStorage {
       id: doc._id.toString(),
       "Job ID": doc["Job ID"],
       "Job Title": doc["Job Title"],
-      "Required Skills": doc["Required Skills"]
+      "Required Skills": doc["Required Skills"],
+      "Optional Skills": doc["Optional Skills"] || [] // Add optional skills with fallback
     };
   }
+
+  // In storage.ts
 
   private mongoDocToCandidate(doc: any): Candidate {
     return {
@@ -80,6 +86,7 @@ export class MongoStorage implements IStorage {
       "Calendar Event ID": doc["Calendar Event ID"],
       "Calender Event Link": doc["Calender Event Link"],
       "Google Meet Id": doc["Google Meet Id"],
+      "Resume Link": doc["Resume Link"], // <--- This is the line I added
       status: doc.status || "New",
       cvUrl: doc.cvUrl,
       analysis: doc.analysis,
@@ -152,11 +159,12 @@ export class MongoStorage implements IStorage {
 
   async createJobCriteria(jobData: JobFormData): Promise<JobCriteria> {
     try {
-      // Map the frontend field names (jobId) to the database field names ("Job ID")
+      // Map the frontend field names to the database field names
       const jobToCreate: InsertJobCriteria = {
         "Job ID": jobData.jobId,
         "Job Title": jobData.jobTitle,
-        "Required Skills": jobData.requiredSkills
+        "Required Skills": jobData.requiredSkills,
+        "Optional Skills": jobData.optionalSkills || [] // Add optional skills support
       };
       const jobCriteria = await JobCriteriaModel.create(jobToCreate);
       return this.mongoDocToJobCriteria(jobCriteria);
@@ -178,6 +186,17 @@ export class MongoStorage implements IStorage {
     } catch (error) {
       console.error('Error updating job criteria:', error);
       return undefined;
+    }
+  }
+
+  // ✨ Implementation for deleting a job
+  async deleteJobCriteria(id: string): Promise<boolean> {
+    try {
+      const result = await JobCriteriaModel.findByIdAndDelete(id);
+      return result !== null; // Return true if deletion was successful
+    } catch (error) {
+      console.error('Error deleting job criteria:', error);
+      return false;
     }
   }
 

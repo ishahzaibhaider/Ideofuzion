@@ -5,17 +5,17 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { z } from "zod"; // Import Zod for validation
 import { storage } from "./storage";
-import { insertUserSchema, insertCandidateSchema } from "@shared/schema";
+import { insertUserSchema, insertCandidateSchema, type Candidate } from "@shared/schema";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
-// Define a schema for the incoming job form data to validate the request body
+// ✨ Enhanced schema for job form data with optional skills support
 const jobFormDataSchema = z.object({
   jobId: z.string().min(1, { message: "Job ID is required" }),
   jobTitle: z.string().min(1, { message: "Job Title is required" }),
-  requiredSkills: z.array(z.string()).min(1, { message: "At least one skill is required" }),
+  requiredSkills: z.array(z.string()).min(1, { message: "At least one required skill is necessary" }),
+  optionalSkills: z.array(z.string()).optional().default([]), // Add optional skills support
 });
-
 
 // Authentication middleware
 const authenticateToken = (req: any, res: any, next: any) => {
@@ -32,6 +32,40 @@ const authenticateToken = (req: any, res: any, next: any) => {
     next();
   });
 };
+
+// ✨ HELPER FUNCTION to parse date and time strings into a proper Date object in PKT
+const parsePakistanTime = (dateStr?: string, timeStr?: string): Date | null => {
+  if (!dateStr || !timeStr) return null;
+
+  // Match time parts (e.g., "3:00 PM")
+  const timeParts = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!timeParts) return null; // Invalid time format
+
+  let [_, hours, minutes, modifier] = timeParts;
+  let hour = parseInt(hours, 10);
+
+  // Convert to 24-hour format
+  if (modifier.toUpperCase() === 'PM' && hour < 12) {
+    hour += 12;
+  }
+  if (modifier.toUpperCase() === 'AM' && hour === 12) { // Handle midnight case (12 AM is 00 hours)
+    hour = 0;
+  }
+
+  // Construct a timezone-aware ISO 8601 string for PKT (UTC+05:00)
+  // This creates a reliable Date object regardless of the server's timezone
+  const isoString = `${dateStr}T${String(hour).padStart(2, '0')}:${minutes}:00.000+05:00`;
+
+  try {
+      const d = new Date(isoString);
+      if (isNaN(d.getTime())) return null; // Check for invalid date
+      return d;
+  } catch (e) {
+      console.error("Invalid date string:", isoString);
+      return null;
+  }
+};
+
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -216,36 +250,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ✨ New route to handle job creation from the frontend form
+  // ✨ Enhanced route to handle job creation with optional skills
   app.post('/api/jobs', authenticateToken, async (req, res) => {
     try {
-      // Validate the incoming data against our new schema
+      // Validate the incoming data against our enhanced schema
       const jobData = jobFormDataSchema.parse(req.body);
-      // Call the storage method which now expects this data structure
+      // Call the storage method which now expects both required and optional skills
       const jobCriteria = await storage.createJobCriteria(jobData);
       res.status(201).json(jobCriteria);
     } catch (error) {
       // Handle validation errors from Zod or other errors
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          message: 'Validation failed',
+          errors: error.errors.map(e => ({
+            field: e.path.join('.'),
+            message: e.message
+          }))
+        });
+      }
       res.status(400).json({ message: 'Invalid input data', error });
     }
   });
 
-  // Add this inside your registerRoutes function in server/services/routes.ts
-
+  // ✨ Enhanced PUT route with optional skills support
   app.put('/api/jobs/:id', authenticateToken, async (req, res) => {
     try {
       const id = req.params.id;
-      // Validate the incoming data
+      // Validate the incoming data against our enhanced schema
       const jobData = jobFormDataSchema.parse(req.body);
 
       // The storage layer expects the DB format, so we map it here
       const updates = {
         "Job ID": jobData.jobId,
         "Job Title": jobData.jobTitle,
-        "Required Skills": jobData.requiredSkills
+        "Required Skills": jobData.requiredSkills,
+        "Optional Skills": jobData.optionalSkills || [] // Include optional skills
       };
 
-      // You will need to add an `updateJobCriteria` method to your storage class
       const jobCriteria = await storage.updateJobCriteria(id, updates);
 
       if (!jobCriteria) {
@@ -254,10 +296,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.status(200).json(jobCriteria);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          message: 'Validation failed',
+          errors: error.errors.map(e => ({
+            field: e.path.join('.'),
+            message: e.message
+          }))
+        });
+      }
       res.status(400).json({ message: 'Invalid input data', error });
     }
   });
 
+  // ✨ NEW: DELETE route for job deletion
+  app.delete('/api/jobs/:id', authenticateToken, async (req, res) => {
+    try {
+      const id = req.params.id;
+
+      if (!id) {
+        return res.status(400).json({ message: "Job ID is required" });
+      }
+
+      // Check if job exists before attempting to delete
+      const existingJob = await storage.getJobCriteriaById(id);
+      if (!existingJob) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+
+      // Attempt to delete the job
+      const deleteSuccess = await storage.deleteJobCriteria(id);
+
+      if (!deleteSuccess) {
+        return res.status(500).json({ message: "Failed to delete job" });
+      }
+
+      res.status(200).json({
+        message: "Job deleted successfully",
+        deletedJobId: id,
+        deletedJob: {
+          id: existingJob.id,
+          title: existingJob["Job Title"],
+          jobId: existingJob["Job ID"]
+        }
+      });
+
+    } catch (error) {
+      console.error("Error deleting job:", error);
+      res.status(500).json({ message: "Internal server error", error });
+    }
+  });
 
   // N8N Integration routes
   app.post('/api/n8n/update-candidate', async (req, res) => {
@@ -403,69 +491,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Dashboard metrics
+  // ✨ MODIFIED Dashboard metrics route
   app.get('/api/dashboard/metrics', authenticateToken, async (req, res) => {
     try {
       const candidates = await storage.getCandidates();
       const jobCriteria = await storage.getJobCriteria();
 
+      // --- METRIC CALCULATIONS ---
       const totalCandidates = candidates.length;
-      const activeInterviews = candidates.filter(c => c.status === 'Interview Scheduled').length;
       const hiredCount = candidates.filter(c => c.status === 'Hired').length;
       const hireRate = totalCandidates > 0 ? Math.round((hiredCount / totalCandidates) * 100) : 0;
+      const avgTimeToHire = hiredCount > 0 ? '14d' : '0d'; // Simplified
 
-      // Calculate average time to hire (simplified)
-      const hiredCandidates = candidates.filter(c => c.status === 'Hired');
-      const avgTimeToHire = hiredCandidates.length > 0 ? '14d' : '0d';
+      // --- DATE & TIME LOGIC ---
+      const now = new Date(); // Current time on the server
 
-      // Funnel data - removed Applications, moved future interviews to Interview Scheduled
-      const today = new Date();
-      const pakistanOffset = 5 * 60; // Pakistan is UTC+5
-      const pakistanTime = new Date(today.getTime() + pakistanOffset * 60 * 1000);
+      // Map all candidates to include a parsed interview Date object
+      const candidatesWithParsedDate = candidates.map(c => ({
+        ...c,
+        interviewDateTime: parsePakistanTime(c["Interview Date"], c["Interview Time"]),
+      }));
 
-      // Filter candidates with future interview dates for Interview Scheduled
-      const interviewScheduledCount = candidates.filter(c => {
-        if (!c["Interview Date"]) return false;
-        const interviewDate = new Date(c["Interview Date"]);
-        return interviewDate >= pakistanTime;
-      }).length;
+      // Filter for interviews that are actually in the future
+      const futureInterviews = candidatesWithParsedDate.filter(c => 
+          c.interviewDateTime && c.interviewDateTime > now
+      );
 
+      // --- FUNNEL & INTERVIEW DATA ---
       const funnelStages = [
         { name: 'Qualified', count: candidates.filter(c => c.status === 'Qualified').length, color: 'green' },
-        { name: 'Interview Scheduled', count: interviewScheduledCount, color: 'yellow' },
+        { name: 'Interview Scheduled', count: futureInterviews.length, color: 'yellow' }, // Count is now accurate
         { name: 'Analysis Complete', count: candidates.filter(c => c.status === 'Analysis Complete').length, color: 'purple' },
         { name: 'Hired', count: hiredCount, color: 'success' }
       ];
 
-      // Since you mentioned your candidate has interview date "2025-07-28", let's show all interviews regardless of date for now
-      // This will help us see what's happening with the data
-      const upcomingInterviews = candidates
-        .filter(c => {
-          // Show all candidates that have interview date and time
-          return c["Interview Date"] && c["Interview Time"];
-        })
+      // Get the list of upcoming interviews, now correctly filtered
+      const upcomingInterviews = futureInterviews
         .map(c => ({
           id: c.id,
           candidateName: c["Candidate Name"],
           position: c["Job Title"] || 'N/A',
           time: c["Interview Time"] || '',
           date: c["Interview Date"] || '',
-          calendarLink: c["Calender Event Link"] || `https://calendar.google.com/calendar/event?eid=${c["Calendar Event ID"]}` // Use provided link or fallback
+          calendarLink: c["Calender Event Link"] || `https://calendar.google.com/calendar/event?eid=${c["Calendar Event ID"]}`
         }))
         .slice(0, 4);
 
-      console.log('All interviews found:', upcomingInterviews.length);
-      console.log('Interview data:', upcomingInterviews);
-
       res.json({
         totalCandidates,
-        activeInterviews,
+        activeInterviews: futureInterviews.length, // This metric is also now accurate
         hireRate,
         avgTimeToHire,
         funnelStages,
         upcomingInterviews
       });
     } catch (error) {
+      console.error("Error fetching dashboard metrics:", error);
       res.status(500).json({ message: 'Server error', error });
     }
   });

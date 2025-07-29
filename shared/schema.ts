@@ -25,12 +25,14 @@ export interface IJobCriteria extends Document {
   "Job ID": string;
   "Job Title": string;
   "Required Skills": string[];
+  "Optional Skills"?: string[];
 }
 
 const jobCriteriaSchema = new Schema<IJobCriteria>({
-  "Job ID": { type: String, required: true },
-  "Job Title": { type: String, required: true },
-  "Required Skills": [{ type: String, required: true }]
+"Job ID": { type: String, required: true },
+"Job Title": { type: String, required: true },
+"Required Skills": [{ type: String, required: true }],
+"Optional Skills": [{ type: String }] // Add this line
 }, { collection: 'jobCriteria' });
 
 export const JobCriteriaModel = mongoose.model<IJobCriteria>('JobCriteria', jobCriteriaSchema);
@@ -46,6 +48,7 @@ export interface ICandidate extends Document {
   "Calendar Event ID": string;
   "Calender Event Link"?: string;
   "Google Meet Id"?: string;
+  "Resume Link"?: string;
   status?: string;
   cvUrl?: string;
   analysis?: {
@@ -71,6 +74,7 @@ const candidateSchema = new Schema<ICandidate>({
   "Calendar Event ID": { type: String, required: true },
   "Calender Event Link": { type: String },
   "Google Meet Id": { type: String },
+  "Resume Link": { type: String },
   status: { type: String, default: "New" },
   cvUrl: { type: String },
   analysis: {

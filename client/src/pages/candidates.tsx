@@ -58,7 +58,7 @@ export default function CandidatesPage() {
     const candidateEmail = candidate.email || '';
     const candidateRole = candidate.previousRole || '';
 
-    const matchesSearch = searchTerm === "" || 
+    const matchesSearch = searchTerm === "" ||
       candidateName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       candidateEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
       candidateRole.toLowerCase().includes(searchTerm.toLowerCase());
@@ -224,9 +224,9 @@ export default function CandidatesPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                         <Dialog>
                           <DialogTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               className="text-primary hover:text-primary/80"
                               onClick={() => setSelectedCandidate(candidate)}
                             >
@@ -273,9 +273,9 @@ export default function CandidatesPage() {
                                 {selectedCandidate["Calender Event Link"] && (
                                   <div className="col-span-2">
                                     <Label className="text-sm font-medium text-gray-500">Calendar Event Link</Label>
-                                    <a 
-                                      href={selectedCandidate["Calender Event Link"]} 
-                                      target="_blank" 
+                                    <a
+                                      href={selectedCandidate["Calender Event Link"]}
+                                      target="_blank"
                                       rel="noopener noreferrer"
                                       className="text-sm text-blue-600 hover:text-blue-800 underline break-all"
                                     >
@@ -286,9 +286,9 @@ export default function CandidatesPage() {
                                 {selectedCandidate["Google Meet Id"] && (
                                   <div className="col-span-2">
                                     <Label className="text-sm font-medium text-gray-500">Google Meet ID</Label>
-                                    <a 
+                                    <a
                                       href={`https://${selectedCandidate["Google Meet Id"]}`}
-                                      target="_blank" 
+                                      target="_blank"
                                       rel="noopener noreferrer"
                                       className="text-sm text-blue-600 hover:text-blue-800 underline"
                                     >
@@ -296,6 +296,21 @@ export default function CandidatesPage() {
                                     </a>
                                   </div>
                                 )}
+                                {/* ✨ START: ADDED RESUME LINK DISPLAY ✨ */}
+                                {selectedCandidate["Resume Link"] && (
+                                  <div className="col-span-2">
+                                    <Label className="text-sm font-medium text-gray-500">Resume Link</Label>
+                                    <a
+                                      href={selectedCandidate["Resume Link"]}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-sm text-blue-600 hover:text-blue-800 underline break-all"
+                                    >
+                                      {selectedCandidate["Resume Link"]}
+                                    </a>
+                                  </div>
+                                )}
+                                {/* ✨ END: ADDED RESUME LINK DISPLAY ✨ */}
                                 {selectedCandidate.skills && selectedCandidate.skills.length > 0 && (
                                   <div className="col-span-2">
                                     <Label className="text-sm font-medium text-gray-500">Skills</Label>
@@ -321,9 +336,9 @@ export default function CandidatesPage() {
                                 {selectedCandidate.cvUrl && (
                                   <div className="col-span-2">
                                     <Label className="text-sm font-medium text-gray-500">CV/Resume</Label>
-                                    <a 
+                                    <a
                                       href={selectedCandidate.cvUrl}
-                                      target="_blank" 
+                                      target="_blank"
                                       rel="noopener noreferrer"
                                       className="text-sm text-blue-600 hover:text-blue-800 underline"
                                     >
@@ -368,9 +383,9 @@ export default function CandidatesPage() {
 
                         <Dialog>
                           <DialogTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               className="text-primary hover:text-primary/80"
                               onClick={() => {
                                 setEditingCandidate(candidate);

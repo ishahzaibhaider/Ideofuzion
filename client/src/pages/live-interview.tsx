@@ -43,6 +43,7 @@ export default function LiveInterviewPage() {
   });
 
   // Get the first candidate with interview scheduled for demo
+  // Assuming your Candidate type has a 'resumeUrl' property
   const currentCandidate = candidates?.find((c: any) => c.status === 'Interview Scheduled') || candidates?.[0];
 
   const handleStartSession = () => {
@@ -56,6 +57,21 @@ export default function LiveInterviewPage() {
       description: "Interview session has been ended",
     });
   };
+
+  // ✨ New handler function to open the resume link
+  const handleViewResume = () => {
+    if (currentCandidate?.resumeUrl) {
+      // Opens the link in a new tab with security best practices
+      window.open(currentCandidate.resumeUrl, '_blank', 'noopener,noreferrer');
+    } else {
+      toast({
+        title: "No Resume",
+        description: "A resume link is not available for this candidate.",
+        variant: "destructive",
+      });
+    }
+  };
+
 
   if (!currentCandidate) {
     return (
@@ -85,6 +101,14 @@ export default function LiveInterviewPage() {
               <p className="text-gray-600">Real-time interview monitoring and AI assistance</p>
             </div>
             <div className="flex space-x-3">
+              {/* ✨ New "View Resume" Button */}
+              <Button
+                variant="outline"
+                onClick={handleViewResume}
+                disabled={!currentCandidate?.resumeUrl}
+              >
+                View Resume
+              </Button>
               <Button
                 variant="destructive"
                 onClick={handleEndSession}
