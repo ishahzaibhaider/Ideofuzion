@@ -10,10 +10,8 @@ interface KanbanBoardProps {
 }
 
 const COLUMNS = [
-  { id: 'New', title: 'New Applications', color: 'blue' },
-  { id: 'Qualified', title: 'Qualified', color: 'green' },
   { id: 'Interview Scheduled', title: 'Interview Scheduled', color: 'yellow' },
-  { id: 'Analysis Complete', title: 'Analysis Complete', color: 'purple' },
+  { id: 'Analysis Complete', title: 'Analysis Phase', color: 'purple' },
   { id: 'Hired', title: 'Hired', color: 'success' },
 ];
 

@@ -16,6 +16,9 @@ This is a full-stack hiring pipeline and intelligence platform built with React,
 - Removed sync CVs button from navigation bar as requested
 - Improved grid layout for Live Interview page (better mobile/tablet/desktop responsiveness)
 - Updated candidate schema to properly include "Resume Link" field
+- Streamlined pipeline structure: removed "Qualified" and "New Application" sections, renamed "Analysis Complete" to "Analysis Phase"
+- Implemented automatic status updates: candidates with past interview dates (Pakistan time) auto-move to Analysis Phase
+- Updated dashboard funnel to reflect new pipeline structure (removed Qualified section)
 - All existing candidate and job criteria data preserved from ideofuzion database
 - Application now runs cleanly on Replit with proper client/server separation
 - Maintained secure environment variable configuration for database connection
@@ -57,8 +60,9 @@ Preferred communication style: Simple, everyday language.
 
 ### Hiring Pipeline Management
 - Kanban board interface with drag-and-drop functionality
-- Multiple pipeline stages: New, Qualified, Interview Scheduled, Analysis Complete, Hired
-- Real-time candidate status updates
+- Streamlined pipeline stages: Interview Scheduled, Analysis Phase, Hired
+- Automatic status updates: candidates with past interviews move to Analysis Phase
+- Real-time candidate status updates based on Pakistani timezone
 - Bulk operations for candidate management
 
 ### Live Interview Hub

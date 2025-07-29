@@ -182,7 +182,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/candidates', authenticateToken, async (req, res) => {
     try {
       const candidates = await storage.getCandidates();
-      res.json(candidates);
+      
+      // --- DATE & TIME LOGIC ---
+      const now = new Date(); // Current time on the server
+
+      // Map all candidates to include a parsed interview Date object
+      const candidatesWithParsedDate = candidates.map(c => ({
+        ...c,
+        interviewDateTime: parsePakistanTime(c["Interview Date"], c["Interview Time"]),
+      }));
+
+      // Auto-move candidates with past interviews to Analysis Phase
+      const pastInterviewCandidates = candidatesWithParsedDate.filter(c => 
+        c.status === 'Interview Scheduled' && 
+        c.interviewDateTime && 
+        c.interviewDateTime < now
+      );
+
+      // Update candidates with past interviews to Analysis Complete status
+      for (const candidate of pastInterviewCandidates) {
+        await storage.updateCandidate(candidate.id, { status: 'Analysis Complete' });
+      }
+
+      // Get updated candidates list after status changes
+      const updatedCandidates = await storage.getCandidates();
+      res.json(updatedCandidates);
     } catch (error) {
       res.status(500).json({ message: 'Server error', error });
     }
@@ -497,12 +521,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const candidates = await storage.getCandidates();
       const jobCriteria = await storage.getJobCriteria();
 
-      // --- METRIC CALCULATIONS ---
-      const totalCandidates = candidates.length;
-      const hiredCount = candidates.filter(c => c.status === 'Hired').length;
-      const hireRate = totalCandidates > 0 ? Math.round((hiredCount / totalCandidates) * 100) : 0;
-      const avgTimeToHire = hiredCount > 0 ? '14d' : '0d'; // Simplified
-
       // --- DATE & TIME LOGIC ---
       const now = new Date(); // Current time on the server
 
@@ -512,16 +530,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         interviewDateTime: parsePakistanTime(c["Interview Date"], c["Interview Time"]),
       }));
 
+      // Auto-move candidates with past interviews to Analysis Phase
+      const pastInterviewCandidates = candidatesWithParsedDate.filter(c => 
+        c.status === 'Interview Scheduled' && 
+        c.interviewDateTime && 
+        c.interviewDateTime < now
+      );
+
+      // Update candidates with past interviews to Analysis Complete status
+      for (const candidate of pastInterviewCandidates) {
+        await storage.updateCandidate(candidate.id, { status: 'Analysis Complete' });
+      }
+
+      // Get updated candidates list after status changes
+      const updatedCandidates = await storage.getCandidates();
+      const updatedCandidatesWithParsedDate = updatedCandidates.map(c => ({
+        ...c,
+        interviewDateTime: parsePakistanTime(c["Interview Date"], c["Interview Time"]),
+      }));
+
+      // --- METRIC CALCULATIONS ---
+      const totalCandidates = updatedCandidates.length;
+      const hiredCount = updatedCandidates.filter(c => c.status === 'Hired').length;
+      const hireRate = totalCandidates > 0 ? Math.round((hiredCount / totalCandidates) * 100) : 0;
+      const avgTimeToHire = hiredCount > 0 ? '14d' : '0d'; // Simplified
+
       // Filter for interviews that are actually in the future
-      const futureInterviews = candidatesWithParsedDate.filter(c => 
+      const futureInterviews = updatedCandidatesWithParsedDate.filter(c => 
           c.interviewDateTime && c.interviewDateTime > now
       );
 
       // --- FUNNEL & INTERVIEW DATA ---
       const funnelStages = [
-        { name: 'Qualified', count: candidates.filter(c => c.status === 'Qualified').length, color: 'green' },
         { name: 'Interview Scheduled', count: futureInterviews.length, color: 'yellow' }, // Count is now accurate
-        { name: 'Analysis Complete', count: candidates.filter(c => c.status === 'Analysis Complete').length, color: 'purple' },
+        { name: 'Analysis Phase', count: updatedCandidates.filter(c => c.status === 'Analysis Complete').length, color: 'purple' },
         { name: 'Hired', count: hiredCount, color: 'success' }
       ];
 

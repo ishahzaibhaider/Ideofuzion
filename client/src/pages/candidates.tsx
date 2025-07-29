@@ -158,8 +158,6 @@ export default function CandidatesPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="New">New Applications</SelectItem>
-                  <SelectItem value="Qualified">Qualified</SelectItem>
                   <SelectItem value="Interview Scheduled">Interview Scheduled</SelectItem>
                   <SelectItem value="Analysis Complete">Analysis Complete</SelectItem>
                   <SelectItem value="Hired">Hired</SelectItem>
