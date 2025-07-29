@@ -35,33 +35,65 @@ const authenticateToken = (req: any, res: any, next: any) => {
 
 // ✨ HELPER FUNCTION to parse date and time strings into a proper Date object in PKT
 const parsePakistanTime = (dateStr?: string, timeStr?: string): Date | null => {
-  if (!dateStr || !timeStr) return null;
+  if (!dateStr || !timeStr) {
+    console.log('Missing date or time:', { dateStr, timeStr });
+    return null;
+  }
 
-  // Match time parts (e.g., "3:00 PM")
-  const timeParts = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
-  if (!timeParts) return null; // Invalid time format
+  // Try multiple time formats
+  let timeParts = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!timeParts) {
+    // Try 24-hour format without AM/PM
+    timeParts = timeStr.match(/(\d+):(\d+)/);
+    if (!timeParts) {
+      console.log('Invalid time format:', timeStr);
+      return null;
+    }
+  }
 
   let [_, hours, minutes, modifier] = timeParts;
   let hour = parseInt(hours, 10);
 
-  // Convert to 24-hour format
-  if (modifier.toUpperCase() === 'PM' && hour < 12) {
-    hour += 12;
-  }
-  if (modifier.toUpperCase() === 'AM' && hour === 12) { // Handle midnight case (12 AM is 00 hours)
-    hour = 0;
+  // Convert to 24-hour format if AM/PM is present
+  if (modifier) {
+    if (modifier.toUpperCase() === 'PM' && hour < 12) {
+      hour += 12;
+    }
+    if (modifier.toUpperCase() === 'AM' && hour === 12) { // Handle midnight case (12 AM is 00 hours)
+      hour = 0;
+    }
   }
 
-  // Construct a timezone-aware ISO 8601 string for PKT (UTC+05:00)
-  // This creates a reliable Date object regardless of the server's timezone
-  const isoString = `${dateStr}T${String(hour).padStart(2, '0')}:${minutes}:00.000+05:00`;
+  // Try different date formats
+  let isoString;
+  
+  // Check if date is already in YYYY-MM-DD format
+  if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    isoString = `${dateStr}T${String(hour).padStart(2, '0')}:${minutes}:00.000+05:00`;
+  } else {
+    // Try converting other formats (DD/MM/YYYY, MM/DD/YYYY, etc.)
+    const dateObj = new Date(dateStr);
+    if (!isNaN(dateObj.getTime())) {
+      const year = dateObj.getFullYear();
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const day = String(dateObj.getDate()).padStart(2, '0');
+      isoString = `${year}-${month}-${day}T${String(hour).padStart(2, '0')}:${minutes}:00.000+05:00`;
+    } else {
+      console.log('Invalid date format:', dateStr);
+      return null;
+    }
+  }
 
   try {
       const d = new Date(isoString);
-      if (isNaN(d.getTime())) return null; // Check for invalid date
+      if (isNaN(d.getTime())) {
+        console.log('Failed to create valid date:', isoString);
+        return null;
+      }
+      console.log('Successfully parsed date:', { input: `${dateStr} ${timeStr}`, output: d.toISOString() });
       return d;
   } catch (e) {
-      console.error("Invalid date string:", isoString);
+      console.error("Error parsing date:", isoString, e);
       return null;
   }
 };
@@ -572,6 +604,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log('Dashboard - Raw candidates count:', candidates.length);
       console.log('Dashboard - Sample candidate statuses:', candidates.slice(0, 3).map(c => ({ id: c.id, status: c.status })));
+      console.log('Dashboard - Sample candidate interview data:', candidates.slice(0, 3).map(c => ({ 
+        id: c.id, 
+        date: c["Interview Date"], 
+        time: c["Interview Time"],
+        parsedDateTime: parsePakistanTime(c["Interview Date"], c["Interview Time"])
+      })));
 
       // --- DATE & TIME LOGIC ---
       const now = new Date(); // Current time on the server
@@ -632,17 +670,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { name: 'Hired', count: hiredCount, color: 'success' }
       ];
 
-      // Get the list of upcoming interviews, now correctly filtered
-      const upcomingInterviews = futureInterviews
-        .map(c => ({
-          id: c.id,
-          candidateName: c["Candidate Name"],
-          position: c["Job Title"] || 'N/A',
-          time: c["Interview Time"] || '',
-          date: c["Interview Date"] || '',
-          calendarLink: c["Calender Event Link"] || `https://calendar.google.com/calendar/event?eid=${c["Calendar Event ID"]}`
-        }))
-        .slice(0, 4);
+      // Get the list of upcoming interviews - if date parsing fails, show all Interview Scheduled candidates
+      let upcomingInterviews;
+      if (futureInterviews.length > 0) {
+        upcomingInterviews = futureInterviews
+          .map(c => ({
+            id: c.id,
+            candidateName: c["Candidate Name"],
+            position: c["Job Title"] || 'N/A',
+            time: c["Interview Time"] || '',
+            date: c["Interview Date"] || '',
+            calendarLink: c["Calender Event Link"] || `https://calendar.google.com/calendar/event?eid=${c["Calendar Event ID"]}`
+          }))
+          .slice(0, 4);
+      } else {
+        // Fallback: show all candidates with "Interview Scheduled" status
+        console.log('No future interviews parsed, falling back to all Interview Scheduled candidates');
+        upcomingInterviews = updatedCandidates
+          .filter(c => c.status === 'Interview Scheduled')
+          .map(c => ({
+            id: c.id,
+            candidateName: c["Candidate Name"],
+            position: c["Job Title"] || 'N/A',
+            time: c["Interview Time"] || 'Time TBD',
+            date: c["Interview Date"] || 'Date TBD',
+            calendarLink: c["Calender Event Link"] || `https://calendar.google.com/calendar/event?eid=${c["Calendar Event ID"]}`
+          }))
+          .slice(0, 4);
+      }
 
       console.log('Dashboard - Upcoming interviews:', upcomingInterviews.length);
       console.log('Dashboard - Final funnel stages:', funnelStages);
