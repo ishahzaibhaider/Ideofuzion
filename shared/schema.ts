@@ -103,7 +103,8 @@ export const insertUserSchema = z.object({
 export const insertJobCriteriaSchema = z.object({
   "Job ID": z.string(),
   "Job Title": z.string(),
-  "Required Skills": z.array(z.string())
+  "Required Skills": z.array(z.string()),
+  "Optional Skills": z.array(z.string()).optional()
 });
 
 export const insertCandidateSchema = z.object({
@@ -144,6 +145,7 @@ export type JobCriteria = {
   "Job ID": string;
   "Job Title": string;
   "Required Skills": string[];
+  "Optional Skills"?: string[];
 };
 
 export type InsertCandidate = z.infer<typeof insertCandidateSchema>;
@@ -157,6 +159,7 @@ export type Candidate = {
   "Calendar Event ID": string;
   "Calender Event Link"?: string;
   "Google Meet Id"?: string;
+  "Resume Link"?: string;
   status?: string;
   cvUrl?: string;
   analysis?: {
