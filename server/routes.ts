@@ -570,6 +570,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const candidates = await storage.getCandidates();
       const jobCriteria = await storage.getJobCriteria();
 
+      console.log('Dashboard - Raw candidates count:', candidates.length);
+      console.log('Dashboard - Sample candidate statuses:', candidates.slice(0, 3).map(c => ({ id: c.id, status: c.status })));
+
       // --- DATE & TIME LOGIC ---
       const now = new Date(); // Current time on the server
 
@@ -585,6 +588,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         c.interviewDateTime && 
         c.interviewDateTime < now
       );
+
+      console.log('Dashboard - Past interview candidates to move:', pastInterviewCandidates.length);
 
       // Update candidates with past interviews to Analysis Complete status
       for (const candidate of pastInterviewCandidates) {
@@ -610,9 +615,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
 
       // --- FUNNEL & INTERVIEW DATA ---
+      console.log('Dashboard - Future interviews count:', futureInterviews.length);
+      console.log('Dashboard - Status counts:', {
+        'Interview Scheduled': updatedCandidates.filter(c => c.status === 'Interview Scheduled').length,
+        'Analysis Complete': updatedCandidates.filter(c => c.status === 'Analysis Complete').length,
+        'Hired': hiredCount
+      });
+
+      // Show the actual funnel based on current status, not just future interviews
+      const interviewScheduledCount = updatedCandidates.filter(c => c.status === 'Interview Scheduled').length;
+      const analysisCompleteCount = updatedCandidates.filter(c => c.status === 'Analysis Complete').length;
+
       const funnelStages = [
-        { name: 'Interview Scheduled', count: futureInterviews.length, color: 'yellow' }, // Count is now accurate
-        { name: 'Analysis Phase', count: updatedCandidates.filter(c => c.status === 'Analysis Complete').length, color: 'purple' },
+        { name: 'Interview Scheduled', count: interviewScheduledCount, color: 'yellow' },
+        { name: 'Analysis Phase', count: analysisCompleteCount, color: 'purple' },
         { name: 'Hired', count: hiredCount, color: 'success' }
       ];
 
@@ -627,6 +643,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           calendarLink: c["Calender Event Link"] || `https://calendar.google.com/calendar/event?eid=${c["Calendar Event ID"]}`
         }))
         .slice(0, 4);
+
+      console.log('Dashboard - Upcoming interviews:', upcomingInterviews.length);
+      console.log('Dashboard - Final funnel stages:', funnelStages);
 
       res.json({
         totalCandidates,
