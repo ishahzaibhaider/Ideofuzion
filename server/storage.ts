@@ -30,6 +30,7 @@ export interface IStorage {
   getCandidate(id: string): Promise<Candidate | undefined>;
   createCandidate(candidate: InsertCandidate): Promise<Candidate>;
   updateCandidate(id: string, updates: Partial<Candidate>): Promise<Candidate | undefined>;
+  deleteCandidate(id: string): Promise<boolean>;
   deleteCandidatesByStatus(status: string): Promise<void>;
 }
 
@@ -241,6 +242,16 @@ export class MongoStorage implements IStorage {
     } catch (error) {
       console.error('Error updating candidate:', error);
       return undefined;
+    }
+  }
+
+  async deleteCandidate(id: string): Promise<boolean> {
+    try {
+      const result = await CandidateModel.findByIdAndDelete(id);
+      return result !== null; // Return true if deletion was successful
+    } catch (error) {
+      console.error('Error deleting candidate:', error);
+      return false;
     }
   }
 

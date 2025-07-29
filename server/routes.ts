@@ -251,6 +251,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete('/api/candidates/:id', authenticateToken, async (req, res) => {
+    try {
+      const id = req.params.id;
+      const success = await storage.deleteCandidate(id);
+      if (!success) {
+        return res.status(404).json({ message: 'Candidate not found' });
+      }
+      res.json({ message: 'Candidate deleted successfully' });
+    } catch (error) {
+      res.status(500).json({ message: 'Server error', error });
+    }
+  });
+
+  // Get all upcoming interviews
+  app.get('/api/interviews/upcoming', authenticateToken, async (req, res) => {
+    try {
+      const candidates = await storage.getCandidates();
+      
+      // --- DATE & TIME LOGIC ---
+      const now = new Date(); // Current time on the server
+
+      // Map all candidates to include a parsed interview Date object
+      const candidatesWithParsedDate = candidates.map(c => ({
+        ...c,
+        interviewDateTime: parsePakistanTime(c["Interview Date"], c["Interview Time"]),
+      }));
+
+      // Filter for interviews that are actually in the future
+      const futureInterviews = candidatesWithParsedDate.filter(c => 
+          c.interviewDateTime && c.interviewDateTime > now
+      );
+
+      // Get all upcoming interviews (no limit)
+      const upcomingInterviews = futureInterviews.map(c => ({
+        id: c.id,
+        candidateName: c["Candidate Name"],
+        position: c["Job Title"] || 'N/A',
+        time: c["Interview Time"] || '',
+        date: c["Interview Date"] || '',
+        calendarLink: c["Calender Event Link"] || `https://calendar.google.com/calendar/event?eid=${c["Calendar Event ID"]}`
+      }));
+
+      res.json(upcomingInterviews);
+    } catch (error) {
+      console.error("Error fetching upcoming interviews:", error);
+      res.status(500).json({ message: 'Server error', error });
+    }
+  });
+
   // Job routes
   app.get('/api/job-criteria', authenticateToken, async (req, res) => {
     try {

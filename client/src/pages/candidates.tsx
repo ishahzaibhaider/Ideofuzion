@@ -1,4 +1,5 @@
 import { useState } from "react";
+import * as React from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { authenticatedApiRequest } from "@/lib/auth";
 import { queryClient } from "@/lib/queryClient";
@@ -9,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Search, Edit2, Eye } from "lucide-react";
+import { Search, Edit2, Eye, Trash2 } from "lucide-react";
 import { Candidate } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
@@ -20,6 +21,15 @@ export default function CandidatesPage() {
   const [editingCandidate, setEditingCandidate] = useState<Candidate | null>(null);
   const [editForm, setEditForm] = useState<Partial<Candidate>>({});
   const { toast } = useToast();
+
+  // Check URL params to set initial filter
+  React.useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const filterParam = urlParams.get('filter');
+    if (filterParam) {
+      setStatusFilter(filterParam);
+    }
+  }, []);
 
   const { data: candidates, isLoading } = useQuery({
     queryKey: ["/api/candidates"],
@@ -47,6 +57,27 @@ export default function CandidatesPage() {
       toast({
         title: "Error",
         description: "Failed to update candidate",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteCandidateMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await authenticatedApiRequest("DELETE", `/api/candidates/${id}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/candidates"] });
+      toast({
+        title: "Success",
+        description: "Candidate deleted successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete candidate",
         variant: "destructive",
       });
     },
@@ -491,6 +522,21 @@ export default function CandidatesPage() {
                             )}
                           </DialogContent>
                         </Dialog>
+
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                          onClick={() => {
+                            if (window.confirm(`Are you sure you want to delete ${candidate["Candidate Name"] || 'this candidate'}?`)) {
+                              deleteCandidateMutation.mutate(candidate.id);
+                            }
+                          }}
+                          disabled={deleteCandidateMutation.isPending}
+                        >
+                          <Trash2 className="w-4 h-4 mr-1" />
+                          {deleteCandidateMutation.isPending ? 'Deleting...' : 'Delete'}
+                        </Button>
                       </td>
                     </tr>
                   ))}

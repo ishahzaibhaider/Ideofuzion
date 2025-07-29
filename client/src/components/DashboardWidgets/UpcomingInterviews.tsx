@@ -1,3 +1,5 @@
+import { Link } from "wouter";
+
 interface Interview {
   id: number;
   candidateName: string;
@@ -56,9 +58,9 @@ export default function UpcomingInterviews({ interviews }: UpcomingInterviewsPro
         )}
         
         {interviews.length > 0 && (
-          <button className="w-full text-center py-2 text-primary hover:text-primary/80 text-sm font-medium border-t border-gray-200 mt-4 pt-4">
+          <Link href="/candidates?filter=Interview Scheduled" className="block w-full text-center py-2 text-primary hover:text-primary/80 text-sm font-medium border-t border-gray-200 mt-4 pt-4">
             View All Interviews
-          </button>
+          </Link>
         )}
       </div>
     </div>
