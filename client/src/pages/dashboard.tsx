@@ -80,13 +80,7 @@ export default function DashboardPage() {
               trend="up"
               icon={<Users className="w-6 h-6 text-primary" />}
             />
-            <MetricCard
-              title="Active Interviews"
-              value={metrics?.activeInterviews || 0}
-              change="+3"
-              trend="up"
-              icon={<Video className="w-6 h-6 text-success" />}
-            />
+           
             <MetricCard
               title="Hire Rate"
               value={`${metrics?.hireRate || 0}%`}

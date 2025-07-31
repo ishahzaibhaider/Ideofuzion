@@ -262,9 +262,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = req.params.id;
       const updates = req.body;
 
+      // Get candidate data before update to access Calendar Event ID
+      const existingCandidate = await storage.getCandidate(id);
+      if (!existingCandidate) {
+        return res.status(404).json({ message: 'Candidate not found' });
+      }
+
       const candidate = await storage.updateCandidate(id, updates);
       if (!candidate) {
         return res.status(404).json({ message: 'Candidate not found' });
+      }
+
+      // Trigger N8N webhook for calendar event update
+      try {
+        const calendarEventId = candidate["Calendar Event ID"];
+        if (calendarEventId) {
+          console.log('Triggering N8N update webhook for candidate:', candidate["Candidate Name"], 'Calendar Event ID:', calendarEventId);
+          
+          const webhookPayload = {
+            candidateId: candidate.id,
+            candidateName: candidate["Candidate Name"],
+            calendarEventId: calendarEventId,
+            interviewDate: candidate["Interview Date"],
+            interviewTime: candidate["Interview Time"],
+            status: candidate.status,
+            updates: updates,
+            timestamp: new Date().toISOString()
+          };
+
+          const response = await fetch('http://54.226.92.93:5678/webhook-test/update-calendar-event', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(webhookPayload)
+          });
+
+          if (!response.ok) {
+            console.error('N8N update webhook failed:', response.status, await response.text());
+          } else {
+            const responseData = await response.json();
+            console.log('N8N update webhook success:', responseData);
+          }
+        } else {
+          console.log('No Calendar Event ID found for candidate, skipping webhook');
+        }
+      } catch (webhookError) {
+        console.error('Error calling N8N update webhook:', webhookError);
+        // Don't fail the candidate update if webhook fails
       }
 
       res.json(candidate);
@@ -286,10 +331,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/candidates/:id', authenticateToken, async (req, res) => {
     try {
       const id = req.params.id;
+      
+      // Get candidate data before deletion to access Calendar Event ID
+      const existingCandidate = await storage.getCandidate(id);
+      if (!existingCandidate) {
+        return res.status(404).json({ message: 'Candidate not found' });
+      }
+
       const success = await storage.deleteCandidate(id);
       if (!success) {
         return res.status(404).json({ message: 'Candidate not found' });
       }
+
+      // Trigger N8N webhook for calendar event deletion
+      try {
+        const calendarEventId = existingCandidate["Calendar Event ID"];
+        if (calendarEventId) {
+          console.log('Triggering N8N delete webhook for candidate:', existingCandidate["Candidate Name"], 'Calendar Event ID:', calendarEventId);
+          
+          const webhookPayload = {
+            candidateId: existingCandidate.id,
+            candidateName: existingCandidate["Candidate Name"],
+            calendarEventId: calendarEventId,
+            interviewDate: existingCandidate["Interview Date"],
+            interviewTime: existingCandidate["Interview Time"],
+            timestamp: new Date().toISOString()
+          };
+
+          const response = await fetch('http://54.226.92.93:5678/webhook-test/delete-calendar-event', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(webhookPayload)
+          });
+
+          if (!response.ok) {
+            console.error('N8N delete webhook failed:', response.status, await response.text());
+          } else {
+            const responseData = await response.json();
+            console.log('N8N delete webhook success:', responseData);
+          }
+        } else {
+          console.log('No Calendar Event ID found for candidate, skipping webhook');
+        }
+      } catch (webhookError) {
+        console.error('Error calling N8N delete webhook:', webhookError);
+        // Don't fail the candidate deletion if webhook fails
+      }
+
       res.json({ message: 'Candidate deleted successfully' });
     } catch (error) {
       res.status(500).json({ message: 'Server error', error });
