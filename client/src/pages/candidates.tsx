@@ -9,8 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
-import { Search, Edit2, Eye, Trash2 } from "lucide-react";
+import { Search, Edit2, Eye, Trash2, MoreVertical } from "lucide-react";
 import { Candidate } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
@@ -250,19 +251,21 @@ export default function CandidatesPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {candidate.interviewDate || 'N/A'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-primary hover:text-primary/80"
-                              onClick={() => setSelectedCandidate(candidate)}
-                            >
-                              <Eye className="w-4 h-4 mr-1" />
-                              View
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="p-0 w-8 h-8">
+                              <MoreVertical className="w-4 h-4" />
                             </Button>
-                          </DialogTrigger>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <DropdownMenuItem onClick={() => setSelectedCandidate(candidate)}>
+                                  <Eye className="w-4 h-4 mr-2" />
+                                  View
+                                </DropdownMenuItem>
+                              </DialogTrigger>
                           <DialogContent className="max-w-2xl">
                             <DialogHeader>
                               <DialogTitle>Candidate Details</DialogTitle>
@@ -410,133 +413,130 @@ export default function CandidatesPage() {
                           </DialogContent>
                         </Dialog>
 
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-primary hover:text-primary/80"
-                              onClick={() => {
-                                setEditingCandidate(candidate);
-                                setEditForm({
-                                  name: candidate.name,
-                                  email: candidate.email,
-                                  previousRole: candidate.previousRole,
-                                  interviewDate: candidate.interviewDate,
-                                  interviewTime: candidate.interviewTime,
-                                  status: candidate.status || "New"
-                                });
-                              }}
-                            >
-                              <Edit2 className="w-4 h-4 mr-1" />
-                              Edit
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Edit Candidate</DialogTitle>
-                            </DialogHeader>
-                            {editingCandidate && (
-                              <div className="grid grid-cols-1 gap-4 py-4">
-                                <div>
-                                  <Label htmlFor="name">Candidate Name</Label>
-                                  <Input
-                                    id="name"
-                                    value={editForm.name || ""}
-                                    onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
-                                  />
-                                </div>
-                                <div>
-                                  <Label htmlFor="email">Email</Label>
-                                  <Input
-                                    id="email"
-                                    type="email"
-                                    value={editForm.email || ""}
-                                    onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
-                                  />
-                                </div>
-                                <div>
-                                  <Label htmlFor="previousRole">Job Title</Label>
-                                  <Input
-                                    id="previousRole"
-                                    value={editForm.previousRole || ""}
-                                    onChange={(e) => setEditForm(prev => ({ ...prev, previousRole: e.target.value }))}
-                                  />
-                                </div>
-                                <div>
-                                  <Label htmlFor="interviewDate">Interview Date</Label>
-                                  <Input
-                                    id="interviewDate"
-                                    type="date"
-                                    value={editForm.interviewDate || ""}
-                                    onChange={(e) => setEditForm(prev => ({ ...prev, interviewDate: e.target.value }))}
-                                  />
-                                </div>
-                                <div>
-                                  <Label htmlFor="interviewTime">Interview Time</Label>
-                                  <Input
-                                    id="interviewTime"
-                                    value={editForm.interviewTime || ""}
-                                    onChange={(e) => setEditForm(prev => ({ ...prev, interviewTime: e.target.value }))}
-                                  />
-                                </div>
-                                <div>
-                                  <Label htmlFor="status">Status</Label>
-                                  <Select value={editForm.status || "New"} onValueChange={(value) => setEditForm(prev => ({ ...prev, status: value }))}>
-                                    <SelectTrigger>
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="New">New</SelectItem>
-                                      <SelectItem value="Qualified">Qualified</SelectItem>
-                                      <SelectItem value="Interview Scheduled">Interview Scheduled</SelectItem>
-                                      <SelectItem value="Analysis Complete">Analysis Complete</SelectItem>
-                                      <SelectItem value="Hired">Hired</SelectItem>
-                                      <SelectItem value="Rejected">Rejected</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                                <div className="flex justify-end space-x-2">
-                                  <Button
-                                    variant="outline"
-                                    onClick={() => {
-                                      setEditingCandidate(null);
-                                      setEditForm({});
-                                    }}
-                                  >
-                                    Cancel
-                                  </Button>
-                                  <Button
-                                    onClick={() => {
-                                      updateCandidateMutation.mutate({
-                                        id: editingCandidate.id,
-                                        updates: editForm
-                                      });
-                                    }}
-                                    disabled={updateCandidateMutation.isPending}
-                                  >
-                                    {updateCandidateMutation.isPending ? "Saving..." : "Save Changes"}
-                                  </Button>
-                                </div>
-                              </div>
-                            )}
-                          </DialogContent>
-                        </Dialog>
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setEditingCandidate(candidate);
+                                    setEditForm({
+                                      name: candidate.name,
+                                      email: candidate.email,
+                                      previousRole: candidate.previousRole,
+                                      interviewDate: candidate.interviewDate,
+                                      interviewTime: candidate.interviewTime,
+                                      status: candidate.status || "New"
+                                    });
+                                  }}
+                                >
+                                  <Edit2 className="w-4 h-4 mr-2" />
+                                  Edit
+                                </DropdownMenuItem>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Edit Candidate</DialogTitle>
+                                </DialogHeader>
+                                {editingCandidate && (
+                                  <div className="grid grid-cols-1 gap-4 py-4">
+                                    <div>
+                                      <Label htmlFor="name">Candidate Name</Label>
+                                      <Input
+                                        id="name"
+                                        value={editForm.name || ""}
+                                        onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label htmlFor="email">Email</Label>
+                                      <Input
+                                        id="email"
+                                        type="email"
+                                        value={editForm.email || ""}
+                                        onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label htmlFor="previousRole">Job Title</Label>
+                                      <Input
+                                        id="previousRole"
+                                        value={editForm.previousRole || ""}
+                                        onChange={(e) => setEditForm(prev => ({ ...prev, previousRole: e.target.value }))}
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label htmlFor="interviewDate">Interview Date</Label>
+                                      <Input
+                                        id="interviewDate"
+                                        type="date"
+                                        value={editForm.interviewDate || ""}
+                                        onChange={(e) => setEditForm(prev => ({ ...prev, interviewDate: e.target.value }))}
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label htmlFor="interviewTime">Interview Time</Label>
+                                      <Input
+                                        id="interviewTime"
+                                        value={editForm.interviewTime || ""}
+                                        onChange={(e) => setEditForm(prev => ({ ...prev, interviewTime: e.target.value }))}
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label htmlFor="status">Status</Label>
+                                      <Select value={editForm.status || "New"} onValueChange={(value) => setEditForm(prev => ({ ...prev, status: value }))}>
+                                        <SelectTrigger>
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="New">New</SelectItem>
+                                          <SelectItem value="Qualified">Qualified</SelectItem>
+                                          <SelectItem value="Interview Scheduled">Interview Scheduled</SelectItem>
+                                          <SelectItem value="Analysis Complete">Analysis Complete</SelectItem>
+                                          <SelectItem value="Hired">Hired</SelectItem>
+                                          <SelectItem value="Rejected">Rejected</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    <div className="flex justify-end space-x-2">
+                                      <Button
+                                        variant="outline"
+                                        onClick={() => {
+                                          setEditingCandidate(null);
+                                          setEditForm({});
+                                        }}
+                                      >
+                                        Cancel
+                                      </Button>
+                                      <Button
+                                        onClick={() => {
+                                          updateCandidateMutation.mutate({
+                                            id: editingCandidate.id,
+                                            updates: editForm
+                                          });
+                                        }}
+                                        disabled={updateCandidateMutation.isPending}
+                                      >
+                                        {updateCandidateMutation.isPending ? "Saving..." : "Save Changes"}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+                              </DialogContent>
+                            </Dialog>
 
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-600 hover:text-red-800 hover:bg-red-50"
-                          onClick={() => {
-                            if (window.confirm(`Are you sure you want to delete ${candidate["Candidate Name"] || 'this candidate'}?`)) {
-                              deleteCandidateMutation.mutate(candidate.id);
-                            }
-                          }}
-                          disabled={deleteCandidateMutation.isPending}
-                        >
-                          <Trash2 className="w-4 h-4 mr-1" />
-                          {deleteCandidateMutation.isPending ? 'Deleting...' : 'Delete'}
-                        </Button>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                if (window.confirm(`Are you sure you want to delete ${candidate["Candidate Name"] || 'this candidate'}?`)) {
+                                  deleteCandidateMutation.mutate(candidate.id);
+                                }
+                              }}
+                              disabled={deleteCandidateMutation.isPending}
+                              className="text-red-600 focus:text-red-600"
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              {deleteCandidateMutation.isPending ? 'Deleting...' : 'Delete'}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                     </tr>
                   ))}

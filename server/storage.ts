@@ -233,12 +233,39 @@ export class MongoStorage implements IStorage {
 
   async updateCandidate(id: string, updates: Partial<Candidate>): Promise<Candidate | undefined> {
     try {
+      // Map frontend field names to database field names
+      const mongoUpdates: any = {};
+      
+      if (updates.name) mongoUpdates["Candidate Name"] = updates.name;
+      if (updates.email) mongoUpdates.Email = updates.email;
+      if (updates.previousRole) mongoUpdates["Job Title"] = updates.previousRole;
+      if (updates.interviewDate) mongoUpdates["Interview Date"] = updates.interviewDate;
+      if (updates.interviewTime) mongoUpdates["Interview Time"] = updates.interviewTime;
+      if (updates.status) mongoUpdates.status = updates.status;
+      if (updates.cvUrl) mongoUpdates.cvUrl = updates.cvUrl;
+      if (updates.analysis) mongoUpdates.analysis = updates.analysis;
+      if (updates.skills) mongoUpdates.skills = updates.skills;
+      if (updates.experience) mongoUpdates.experience = updates.experience;
+      if (updates.education) mongoUpdates.education = updates.education;
+      if (updates.score) mongoUpdates.score = updates.score;
+
+      console.log('Updating candidate with ID:', id);
+      console.log('Frontend updates:', updates);
+      console.log('Mapped MongoDB updates:', mongoUpdates);
+
       const candidate = await CandidateModel.findByIdAndUpdate(
         id,
-        updates,
+        mongoUpdates,
         { new: true }
       );
-      return candidate ? this.mongoDocToCandidate(candidate) : undefined;
+      
+      if (candidate) {
+        console.log('Successfully updated candidate in MongoDB');
+        return this.mongoDocToCandidate(candidate);
+      } else {
+        console.log('Candidate not found in MongoDB');
+        return undefined;
+      }
     } catch (error) {
       console.error('Error updating candidate:', error);
       return undefined;

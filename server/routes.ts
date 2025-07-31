@@ -287,7 +287,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             interviewTime: candidate["Interview Time"],
             status: candidate.status,
             updates: updates,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            // Send the updated candidate data for calendar sync
+            updatedCandidate: {
+              name: candidate["Candidate Name"],
+              email: candidate.Email,
+              jobTitle: candidate["Job Title"],
+              interviewDate: candidate["Interview Date"],
+              interviewTime: candidate["Interview Time"],
+              status: candidate.status
+            }
           };
 
           const response = await fetch('http://54.226.92.93:5678/webhook-test/update-calendar-event', {
