@@ -1,4 +1,4 @@
-import { UserModel, JobCriteriaModel, CandidateModel, type User, type InsertUser, type JobCriteria, type InsertJobCriteria, type Candidate, type InsertCandidate } from "@shared/schema";
+import { UserModel, JobCriteriaModel, CandidateModel, TranscriptModel, type User, type InsertUser, type JobCriteria, type InsertJobCriteria, type Candidate, type InsertCandidate, type Transcript, type InsertTranscript } from "@shared/schema";
 import { connectToDatabase } from "./db";
 
 // Define the structure for the data coming from the frontend form
@@ -32,6 +32,11 @@ export interface IStorage {
   updateCandidate(id: string, updates: Partial<Candidate>): Promise<Candidate | undefined>;
   deleteCandidate(id: string): Promise<boolean>;
   deleteCandidatesByStatus(status: string): Promise<void>;
+
+  // Transcripts
+  getTranscripts(): Promise<Transcript[]>;
+  getLatestTranscript(): Promise<Transcript | undefined>;
+  createTranscript(transcript: InsertTranscript): Promise<Transcript>;
 }
 
 export class MongoStorage implements IStorage {
@@ -287,6 +292,50 @@ export class MongoStorage implements IStorage {
       await CandidateModel.deleteMany({ status });
     } catch (error) {
       console.error('Error deleting candidates by status:', error);
+      throw error;
+    }
+  }
+
+  // Helper method to convert MongoDB document to Transcript
+  private mongoDocToTranscript(doc: any): Transcript {
+    return {
+      id: doc._id.toString(),
+      fid: doc.fid,
+      Speaker1: doc.Speaker1,
+      Speaker2: doc.Speaker2,
+      Speaker3: doc.Speaker3,
+      suggestedQuestions: doc.suggestedQuestions || [],
+      summary: doc.summary,
+      createdAt: doc.createdAt
+    };
+  }
+
+  async getTranscripts(): Promise<Transcript[]> {
+    try {
+      const transcripts = await TranscriptModel.find();
+      return transcripts.map(transcript => this.mongoDocToTranscript(transcript));
+    } catch (error) {
+      console.error('Error getting transcripts:', error);
+      return [];
+    }
+  }
+
+  async getLatestTranscript(): Promise<Transcript | undefined> {
+    try {
+      const transcript = await TranscriptModel.findOne().sort({ createdAt: -1 });
+      return transcript ? this.mongoDocToTranscript(transcript) : undefined;
+    } catch (error) {
+      console.error('Error getting latest transcript:', error);
+      return undefined;
+    }
+  }
+
+  async createTranscript(insertTranscript: InsertTranscript): Promise<Transcript> {
+    try {
+      const transcript = await TranscriptModel.create(insertTranscript);
+      return this.mongoDocToTranscript(transcript);
+    } catch (error) {
+      console.error('Error creating transcript:', error);
       throw error;
     }
   }

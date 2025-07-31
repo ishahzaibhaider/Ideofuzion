@@ -1,10 +1,15 @@
 import { useState, useEffect } from "react";
-import { Candidate } from "@shared/schema";
+import { useQuery } from "@tanstack/react-query";
+import { Candidate, Transcript } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { RefreshCw, Lightbulb, FileText } from "lucide-react";
 import { wsManager } from "@/lib/websocket";
+import { authenticatedApiRequest } from "@/lib/auth";
 
 interface LiveInterviewHubProps {
   candidate: Candidate;
@@ -38,20 +43,30 @@ export default function LiveInterviewHub({
     communication: 90,
     problemSolving: 75
   });
-  const [suggestions, setSuggestions] = useState([
-    {
-      type: "Technical Deep-dive",
-      question: "Can you explain how you measured the performance improvements?"
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [transcriptSummary, setTranscriptSummary] = useState<string>("");
+
+  // Query for latest transcript data
+  const { data: latestTranscript, refetch: refetchTranscript, isLoading: isTranscriptLoading } = useQuery({
+    queryKey: ["/api/transcripts/latest"],
+    queryFn: async () => {
+      const response = await authenticatedApiRequest("GET", "/api/transcripts/latest");
+      return response.json() as Promise<Transcript>;
     },
-    {
-      type: "Problem-solving",
-      question: "What challenges did you face during the optimization process?"
-    },
-    {
-      type: "Team Collaboration",
-      question: "How did you communicate these technical decisions to non-technical stakeholders?"
+    refetchOnWindowFocus: false,
+  });
+
+  // Update suggestions and summary when transcript data changes
+  useEffect(() => {
+    if (latestTranscript) {
+      setSuggestions(latestTranscript.suggestedQuestions || []);
+      setTranscriptSummary(latestTranscript.summary || "");
     }
-  ]);
+  }, [latestTranscript]);
+
+  const handleReloadAIAssistant = () => {
+    refetchTranscript();
+  };
 
   useEffect(() => {
     // Connect to WebSocket for real-time updates
@@ -220,34 +235,67 @@ export default function LiveInterviewHub({
       {/* Right Panel: AI Suggestions */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="p-4 lg:p-6 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">AI Interview Assistant</h3>
-          <p className="text-sm text-gray-600">Real-time suggestions and insights</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">AI Interview Assistant</h3>
+              <p className="text-sm text-gray-600">AI-powered suggestions from interview transcripts</p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleReloadAIAssistant}
+              disabled={isTranscriptLoading}
+              className="p-2"
+            >
+              <RefreshCw className={`w-4 h-4 ${isTranscriptLoading ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
         </div>
         <div className="p-4 lg:p-6 space-y-4 lg:space-y-6">
-          {/* Current Analysis */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h4 className="font-medium text-blue-900 mb-2">Current Analysis</h4>
-            <p className="text-sm text-blue-800">
-              Candidate is demonstrating strong technical knowledge of React performance optimization. 
-              Consider asking about specific metrics or results achieved.
-            </p>
-          </div>
+          {/* Transcript Summary */}
+          {transcriptSummary && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  Interview Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-700 leading-relaxed">
+                  {transcriptSummary}
+                </p>
+              </CardContent>
+            </Card>
+          )}
           
           {/* Suggested Questions */}
           <div>
-            <h4 className="font-medium text-gray-900 mb-3">Suggested Follow-up Questions</h4>
+            <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+              <Lightbulb className="w-4 h-4" />
+              AI Suggested Questions
+            </h4>
             <div className="space-y-2">
-              {suggestions.map((suggestion, index) => (
-                <button 
-                  key={index}
-                  className="w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors"
-                >
-                  <p className="text-sm font-medium text-gray-900">{suggestion.type}</p>
-                  <p className="text-xs text-gray-600">"{suggestion.question}"</p>
-                </button>
-              ))}
+              {suggestions.length > 0 ? (
+                suggestions.map((question, index) => (
+                  <button 
+                    key={index}
+                    className="w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors"
+                  >
+                    <p className="text-sm text-gray-800">"{question}"</p>
+                  </button>
+                ))
+              ) : (
+                <div className="text-center py-4 text-gray-500">
+                  <Lightbulb className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                  <p className="text-sm">No AI suggestions available yet</p>
+                  <p className="text-xs text-gray-400">Click reload to fetch latest data</p>
+                </div>
+              )}
             </div>
           </div>
+
+          <Separator />
           
           {/* Skills Assessment */}
           <div>

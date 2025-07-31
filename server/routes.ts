@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { z } from "zod"; // Import Zod for validation
 import { storage } from "./storage";
-import { insertUserSchema, insertCandidateSchema, type Candidate } from "@shared/schema";
+import { insertUserSchema, insertCandidateSchema, insertTranscriptSchema, type Candidate } from "@shared/schema";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
@@ -812,6 +812,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching dashboard metrics:", error);
       res.status(500).json({ message: 'Server error', error });
+    }
+  });
+
+  // Transcript routes
+  app.get("/api/transcripts", authenticateToken, async (req, res) => {
+    try {
+      const transcripts = await storage.getTranscripts();
+      res.json(transcripts);
+    } catch (error) {
+      console.error("Error getting transcripts:", error);
+      res.status(500).json({ error: "Failed to get transcripts" });
+    }
+  });
+
+  app.get("/api/transcripts/latest", authenticateToken, async (req, res) => {
+    try {
+      const transcript = await storage.getLatestTranscript();
+      if (transcript) {
+        res.json(transcript);
+      } else {
+        res.status(404).json({ error: "No transcripts found" });
+      }
+    } catch (error) {
+      console.error("Error getting latest transcript:", error);
+      res.status(500).json({ error: "Failed to get latest transcript" });
+    }
+  });
+
+  app.post("/api/transcripts", authenticateToken, async (req, res) => {
+    try {
+      const { error, data } = insertTranscriptSchema.safeParse(req.body);
+      if (error) {
+        return res.status(400).json({ error: "Invalid input", details: error.issues });
+      }
+      const transcript = await storage.createTranscript(data);
+      res.status(201).json(transcript);
+    } catch (error) {
+      console.error("Error creating transcript:", error);
+      res.status(500).json({ error: "Failed to create transcript" });
     }
   });
 

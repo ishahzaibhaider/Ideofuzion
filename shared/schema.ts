@@ -93,6 +93,30 @@ const candidateSchema = new Schema<ICandidate>({
 
 export const CandidateModel = mongoose.model<ICandidate>('Candidate', candidateSchema);
 
+// MongoDB Transcript Schema (matching your data structure)
+export interface ITranscript extends Document {
+  _id: string;
+  fid: number;
+  Speaker1?: string;
+  Speaker2?: string;
+  Speaker3?: string;
+  suggestedQuestions?: string[];
+  summary?: string;
+  createdAt?: Date;
+}
+
+const transcriptSchema = new Schema<ITranscript>({
+  fid: { type: Number, required: true },
+  Speaker1: { type: String },
+  Speaker2: { type: String },
+  Speaker3: { type: String },
+  suggestedQuestions: [{ type: String }],
+  summary: { type: String },
+  createdAt: { type: Date, default: Date.now }
+}, { collection: 'transcripts' });
+
+export const TranscriptModel = mongoose.model<ITranscript>('Transcript', transcriptSchema);
+
 // Zod validation schemas
 export const insertUserSchema = z.object({
   name: z.string(),
@@ -127,6 +151,15 @@ export const insertCandidateSchema = z.object({
   experience: z.string().optional(),
   education: z.string().optional(),
   score: z.number().optional()
+});
+
+export const insertTranscriptSchema = z.object({
+  fid: z.number(),
+  Speaker1: z.string().optional(),
+  Speaker2: z.string().optional(),
+  Speaker3: z.string().optional(),
+  suggestedQuestions: z.array(z.string()).optional(),
+  summary: z.string().optional()
 });
 
 // Types
@@ -183,4 +216,16 @@ export type Candidate = {
   calendarEventId: string;
   calenderEventLink?: string;
   googleMeetId?: string;
+};
+
+export type InsertTranscript = z.infer<typeof insertTranscriptSchema>;
+export type Transcript = {
+  id: string;
+  fid: number;
+  Speaker1?: string;
+  Speaker2?: string;
+  Speaker3?: string;
+  suggestedQuestions?: string[];
+  summary?: string;
+  createdAt?: Date;
 };
