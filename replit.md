@@ -6,7 +6,7 @@ This is a full-stack hiring pipeline and intelligence platform built with React,
 
 ## Recent Changes
 
-**January 31, 2025 - Migration Complete + Enhanced Candidate Management**
+**January 31, 2025 - Migration Complete + Enhanced Candidate Management with 3-Dot Menu**
 - Successfully completed migration from Replit Agent to standard Replit environment
 - Configured MongoDB Atlas connection with MONGODB_URI environment variable
 - Fixed all TypeScript compilation errors and LSP diagnostics issues
@@ -22,10 +22,11 @@ This is a full-stack hiring pipeline and intelligence platform built with React,
 - All existing candidate and job criteria data preserved from ideofuzion database
 - Application now runs cleanly on Replit with proper client/server separation
 - Maintained secure environment variable configuration for database connection
-- **NEW:** Added 3-dot dropdown menu for candidate actions (View, Edit, Delete) in candidates page
-- **NEW:** Fixed MongoDB data update mapping between frontend and database field names
-- **NEW:** Enhanced webhook integration with EC2 instance (http://54.226.92.93:5678/) for calendar updates
-- **NEW:** Improved candidate update process with proper field mapping and logging
+- **LATEST:** Added 3-dot dropdown menu for candidate actions (View, Edit, Delete) in candidates page
+- **LATEST:** Fixed dropdown menu dialog conflicts by separating dialogs from dropdown menu structure
+- **LATEST:** Fixed MongoDB data update mapping between frontend and database field names with proper logging
+- **LATEST:** Enhanced webhook integration with EC2 instance (http://54.226.92.93:5678/) for calendar updates
+- **LATEST:** Improved candidate update process with proper field mapping and comprehensive webhook data
 
 ## User Preferences
 

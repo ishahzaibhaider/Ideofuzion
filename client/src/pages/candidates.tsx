@@ -21,6 +21,8 @@ export default function CandidatesPage() {
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [editingCandidate, setEditingCandidate] = useState<Candidate | null>(null);
   const [editForm, setEditForm] = useState<Partial<Candidate>>({});
+  const [showViewDialog, setShowViewDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const { toast } = useToast();
 
   // Check URL params to set initial filter
@@ -49,6 +51,7 @@ export default function CandidatesPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/candidates"] });
       setEditingCandidate(null);
       setEditForm({});
+      setShowEditDialog(false);
       toast({
         title: "Success",
         description: "Candidate updated successfully",
@@ -259,269 +262,33 @@ export default function CandidatesPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <DropdownMenuItem onClick={() => setSelectedCandidate(candidate)}>
-                                  <Eye className="w-4 h-4 mr-2" />
-                                  View
-                                </DropdownMenuItem>
-                              </DialogTrigger>
-                          <DialogContent className="max-w-2xl">
-                            <DialogHeader>
-                              <DialogTitle>Candidate Details</DialogTitle>
-                            </DialogHeader>
-                            {selectedCandidate && (
-                              <div className="grid grid-cols-2 gap-4 py-4 max-h-96 overflow-y-auto">
-                                <div>
-                                  <Label className="text-sm font-medium text-gray-500">Candidate Name</Label>
-                                  <p className="text-sm text-gray-900">{selectedCandidate["Candidate Name"] || 'N/A'}</p>
-                                </div>
-                                <div>
-                                  <Label className="text-sm font-medium text-gray-500">Email</Label>
-                                  <p className="text-sm text-gray-900">{selectedCandidate.Email || 'N/A'}</p>
-                                </div>
-                                <div>
-                                  <Label className="text-sm font-medium text-gray-500">Job Title</Label>
-                                  <p className="text-sm text-gray-900">{selectedCandidate["Job Title"] || 'N/A'}</p>
-                                </div>
-                                <div>
-                                  <Label className="text-sm font-medium text-gray-500">Status</Label>
-                                  <Badge className={getStatusBadge(selectedCandidate.status || "New")}>
-                                    {selectedCandidate.status || "New"}
-                                  </Badge>
-                                </div>
-                                <div>
-                                  <Label className="text-sm font-medium text-gray-500">Interview Date</Label>
-                                  <p className="text-sm text-gray-900">{selectedCandidate["Interview Date"] || 'N/A'}</p>
-                                </div>
-                                <div>
-                                  <Label className="text-sm font-medium text-gray-500">Interview Time</Label>
-                                  <p className="text-sm text-gray-900">{selectedCandidate["Interview Time"] || 'N/A'}</p>
-                                </div>
-                                <div className="col-span-2">
-                                  <Label className="text-sm font-medium text-gray-500">Calendar Event ID</Label>
-                                  <p className="text-sm text-gray-900">{selectedCandidate["Calendar Event ID"] || 'N/A'}</p>
-                                </div>
-                                {selectedCandidate["Calender Event Link"] && (
-                                  <div className="col-span-2">
-                                    <Label className="text-sm font-medium text-gray-500">Calendar Event Link</Label>
-                                    <a
-                                      href={selectedCandidate["Calender Event Link"]}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-sm text-blue-600 hover:text-blue-800 underline break-all"
-                                    >
-                                      {selectedCandidate["Calender Event Link"]}
-                                    </a>
-                                  </div>
-                                )}
-                                {selectedCandidate["Google Meet Id"] && (
-                                  <div className="col-span-2">
-                                    <Label className="text-sm font-medium text-gray-500">Google Meet ID</Label>
-                                    <a
-                                      href={`https://${selectedCandidate["Google Meet Id"]}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-sm text-blue-600 hover:text-blue-800 underline"
-                                    >
-                                      {selectedCandidate["Google Meet Id"]}
-                                    </a>
-                                  </div>
-                                )}
-                                {/* ✨ START: ADDED RESUME LINK DISPLAY ✨ */}
-                                {selectedCandidate["Resume Link"] && (
-                                  <div className="col-span-2">
-                                    <Label className="text-sm font-medium text-gray-500">Resume Link</Label>
-                                    <a
-                                      href={selectedCandidate["Resume Link"]}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-sm text-blue-600 hover:text-blue-800 underline break-all"
-                                    >
-                                      {selectedCandidate["Resume Link"]}
-                                    </a>
-                                  </div>
-                                )}
-                                {/* ✨ END: ADDED RESUME LINK DISPLAY ✨ */}
-                                {selectedCandidate.skills && selectedCandidate.skills.length > 0 && (
-                                  <div className="col-span-2">
-                                    <Label className="text-sm font-medium text-gray-500">Skills</Label>
-                                    <div className="flex flex-wrap gap-1 mt-1">
-                                      {selectedCandidate.skills.map((skill, index) => (
-                                        <Badge key={index} variant="secondary">{skill}</Badge>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                                {selectedCandidate.experience && (
-                                  <div className="col-span-2">
-                                    <Label className="text-sm font-medium text-gray-500">Experience</Label>
-                                    <p className="text-sm text-gray-900">{selectedCandidate.experience}</p>
-                                  </div>
-                                )}
-                                {selectedCandidate.education && (
-                                  <div className="col-span-2">
-                                    <Label className="text-sm font-medium text-gray-500">Education</Label>
-                                    <p className="text-sm text-gray-900">{selectedCandidate.education}</p>
-                                  </div>
-                                )}
-                                {selectedCandidate.cvUrl && (
-                                  <div className="col-span-2">
-                                    <Label className="text-sm font-medium text-gray-500">CV/Resume</Label>
-                                    <a
-                                      href={selectedCandidate.cvUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-sm text-blue-600 hover:text-blue-800 underline"
-                                    >
-                                      View CV/Resume
-                                    </a>
-                                  </div>
-                                )}
-                                {selectedCandidate.analysis && (
-                                  <div className="col-span-2">
-                                    <Label className="text-sm font-medium text-gray-500">Analysis</Label>
-                                    <div className="text-sm text-gray-900 space-y-2">
-                                      {selectedCandidate.analysis.summary && (
-                                        <div>
-                                          <p className="font-medium">Summary:</p>
-                                          <p>{selectedCandidate.analysis.summary}</p>
-                                        </div>
-                                      )}
-                                      {selectedCandidate.analysis.technicalScore && (
-                                        <div>
-                                          <p className="font-medium">Technical Score: {selectedCandidate.analysis.technicalScore}/100</p>
-                                        </div>
-                                      )}
-                                      {selectedCandidate.analysis.psychometricAnalysis && (
-                                        <div>
-                                          <p className="font-medium">Psychometric Analysis:</p>
-                                          <p>{selectedCandidate.analysis.psychometricAnalysis}</p>
-                                        </div>
-                                      )}
-                                      {selectedCandidate.analysis.finalRecommendation && (
-                                        <div>
-                                          <p className="font-medium">Final Recommendation:</p>
-                                          <p>{selectedCandidate.analysis.finalRecommendation}</p>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </DialogContent>
-                        </Dialog>
-
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setEditingCandidate(candidate);
-                                    setEditForm({
-                                      name: candidate.name,
-                                      email: candidate.email,
-                                      previousRole: candidate.previousRole,
-                                      interviewDate: candidate.interviewDate,
-                                      interviewTime: candidate.interviewTime,
-                                      status: candidate.status || "New"
-                                    });
-                                  }}
-                                >
-                                  <Edit2 className="w-4 h-4 mr-2" />
-                                  Edit
-                                </DropdownMenuItem>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>Edit Candidate</DialogTitle>
-                                </DialogHeader>
-                                {editingCandidate && (
-                                  <div className="grid grid-cols-1 gap-4 py-4">
-                                    <div>
-                                      <Label htmlFor="name">Candidate Name</Label>
-                                      <Input
-                                        id="name"
-                                        value={editForm.name || ""}
-                                        onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
-                                      />
-                                    </div>
-                                    <div>
-                                      <Label htmlFor="email">Email</Label>
-                                      <Input
-                                        id="email"
-                                        type="email"
-                                        value={editForm.email || ""}
-                                        onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
-                                      />
-                                    </div>
-                                    <div>
-                                      <Label htmlFor="previousRole">Job Title</Label>
-                                      <Input
-                                        id="previousRole"
-                                        value={editForm.previousRole || ""}
-                                        onChange={(e) => setEditForm(prev => ({ ...prev, previousRole: e.target.value }))}
-                                      />
-                                    </div>
-                                    <div>
-                                      <Label htmlFor="interviewDate">Interview Date</Label>
-                                      <Input
-                                        id="interviewDate"
-                                        type="date"
-                                        value={editForm.interviewDate || ""}
-                                        onChange={(e) => setEditForm(prev => ({ ...prev, interviewDate: e.target.value }))}
-                                      />
-                                    </div>
-                                    <div>
-                                      <Label htmlFor="interviewTime">Interview Time</Label>
-                                      <Input
-                                        id="interviewTime"
-                                        value={editForm.interviewTime || ""}
-                                        onChange={(e) => setEditForm(prev => ({ ...prev, interviewTime: e.target.value }))}
-                                      />
-                                    </div>
-                                    <div>
-                                      <Label htmlFor="status">Status</Label>
-                                      <Select value={editForm.status || "New"} onValueChange={(value) => setEditForm(prev => ({ ...prev, status: value }))}>
-                                        <SelectTrigger>
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="New">New</SelectItem>
-                                          <SelectItem value="Qualified">Qualified</SelectItem>
-                                          <SelectItem value="Interview Scheduled">Interview Scheduled</SelectItem>
-                                          <SelectItem value="Analysis Complete">Analysis Complete</SelectItem>
-                                          <SelectItem value="Hired">Hired</SelectItem>
-                                          <SelectItem value="Rejected">Rejected</SelectItem>
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                    <div className="flex justify-end space-x-2">
-                                      <Button
-                                        variant="outline"
-                                        onClick={() => {
-                                          setEditingCandidate(null);
-                                          setEditForm({});
-                                        }}
-                                      >
-                                        Cancel
-                                      </Button>
-                                      <Button
-                                        onClick={() => {
-                                          updateCandidateMutation.mutate({
-                                            id: editingCandidate.id,
-                                            updates: editForm
-                                          });
-                                        }}
-                                        disabled={updateCandidateMutation.isPending}
-                                      >
-                                        {updateCandidateMutation.isPending ? "Saving..." : "Save Changes"}
-                                      </Button>
-                                    </div>
-                                  </div>
-                                )}
-                              </DialogContent>
-                            </Dialog>
+                            <DropdownMenuItem 
+                              onClick={() => {
+                                setSelectedCandidate(candidate);
+                                setShowViewDialog(true);
+                              }}
+                            >
+                              <Eye className="w-4 h-4 mr-2" />
+                              View
+                            </DropdownMenuItem>
+                            
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setEditingCandidate(candidate);
+                                setEditForm({
+                                  name: candidate.name,
+                                  email: candidate.email,
+                                  previousRole: candidate.previousRole,
+                                  interviewDate: candidate.interviewDate,
+                                  interviewTime: candidate.interviewTime,
+                                  status: candidate.status || "New"
+                                });
+                                setShowEditDialog(true);
+                              }}
+                            >
+                              <Edit2 className="w-4 h-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
 
                             <DropdownMenuItem
                               onClick={() => {
@@ -573,6 +340,247 @@ export default function CandidatesPage() {
           </div>
         </div>
       </div>
+
+      {/* View Dialog - Separate from dropdown */}
+      <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Candidate Details</DialogTitle>
+          </DialogHeader>
+          {selectedCandidate && (
+            <div className="grid grid-cols-2 gap-4 py-4 max-h-96 overflow-y-auto">
+              <div>
+                <Label className="text-sm font-medium text-gray-500">Candidate Name</Label>
+                <p className="text-sm text-gray-900">{selectedCandidate["Candidate Name"] || 'N/A'}</p>
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-gray-500">Email</Label>
+                <p className="text-sm text-gray-900">{selectedCandidate.Email || 'N/A'}</p>
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-gray-500">Job Title</Label>
+                <p className="text-sm text-gray-900">{selectedCandidate["Job Title"] || 'N/A'}</p>
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-gray-500">Status</Label>
+                <Badge className={getStatusBadge(selectedCandidate.status || "New")}>
+                  {selectedCandidate.status || "New"}
+                </Badge>
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-gray-500">Interview Date</Label>
+                <p className="text-sm text-gray-900">{selectedCandidate["Interview Date"] || 'N/A'}</p>
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-gray-500">Interview Time</Label>
+                <p className="text-sm text-gray-900">{selectedCandidate["Interview Time"] || 'N/A'}</p>
+              </div>
+              <div className="col-span-2">
+                <Label className="text-sm font-medium text-gray-500">Calendar Event ID</Label>
+                <p className="text-sm text-gray-900">{selectedCandidate["Calendar Event ID"] || 'N/A'}</p>
+              </div>
+              {selectedCandidate["Calender Event Link"] && (
+                <div className="col-span-2">
+                  <Label className="text-sm font-medium text-gray-500">Calendar Event Link</Label>
+                  <a
+                    href={selectedCandidate["Calender Event Link"]}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-600 hover:text-blue-800 underline break-all"
+                  >
+                    {selectedCandidate["Calender Event Link"]}
+                  </a>
+                </div>
+              )}
+              {selectedCandidate["Google Meet Id"] && (
+                <div className="col-span-2">
+                  <Label className="text-sm font-medium text-gray-500">Google Meet ID</Label>
+                  <a
+                    href={`https://${selectedCandidate["Google Meet Id"]}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-600 hover:text-blue-800 underline"
+                  >
+                    {selectedCandidate["Google Meet Id"]}
+                  </a>
+                </div>
+              )}
+              {selectedCandidate["Resume Link"] && (
+                <div className="col-span-2">
+                  <Label className="text-sm font-medium text-gray-500">Resume Link</Label>
+                  <a
+                    href={selectedCandidate["Resume Link"]}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-600 hover:text-blue-800 underline break-all"
+                  >
+                    {selectedCandidate["Resume Link"]}
+                  </a>
+                </div>
+              )}
+              {selectedCandidate.skills && selectedCandidate.skills.length > 0 && (
+                <div className="col-span-2">
+                  <Label className="text-sm font-medium text-gray-500">Skills</Label>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {selectedCandidate.skills.map((skill, index) => (
+                      <Badge key={index} variant="secondary">{skill}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {selectedCandidate.experience && (
+                <div className="col-span-2">
+                  <Label className="text-sm font-medium text-gray-500">Experience</Label>
+                  <p className="text-sm text-gray-900">{selectedCandidate.experience}</p>
+                </div>
+              )}
+              {selectedCandidate.education && (
+                <div className="col-span-2">
+                  <Label className="text-sm font-medium text-gray-500">Education</Label>
+                  <p className="text-sm text-gray-900">{selectedCandidate.education}</p>
+                </div>
+              )}
+              {selectedCandidate.cvUrl && (
+                <div className="col-span-2">
+                  <Label className="text-sm font-medium text-gray-500">CV/Resume</Label>
+                  <a
+                    href={selectedCandidate.cvUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-600 hover:text-blue-800 underline"
+                  >
+                    View CV/Resume
+                  </a>
+                </div>
+              )}
+              {selectedCandidate.analysis && (
+                <div className="col-span-2">
+                  <Label className="text-sm font-medium text-gray-500">Analysis</Label>
+                  <div className="text-sm text-gray-900 space-y-2">
+                    {selectedCandidate.analysis.summary && (
+                      <div>
+                        <p className="font-medium">Summary:</p>
+                        <p>{selectedCandidate.analysis.summary}</p>
+                      </div>
+                    )}
+                    {selectedCandidate.analysis.technicalScore && (
+                      <div>
+                        <p className="font-medium">Technical Score: {selectedCandidate.analysis.technicalScore}/100</p>
+                      </div>
+                    )}
+                    {selectedCandidate.analysis.psychometricAnalysis && (
+                      <div>
+                        <p className="font-medium">Psychometric Analysis:</p>
+                        <p>{selectedCandidate.analysis.psychometricAnalysis}</p>
+                      </div>
+                    )}
+                    {selectedCandidate.analysis.finalRecommendation && (
+                      <div>
+                        <p className="font-medium">Final Recommendation:</p>
+                        <p>{selectedCandidate.analysis.finalRecommendation}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog - Separate from dropdown */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Candidate</DialogTitle>
+          </DialogHeader>
+          {editingCandidate && (
+            <div className="grid grid-cols-1 gap-4 py-4">
+              <div>
+                <Label htmlFor="name">Candidate Name</Label>
+                <Input
+                  id="name"
+                  value={editForm.name || ""}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={editForm.email || ""}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="previousRole">Job Title</Label>
+                <Input
+                  id="previousRole"
+                  value={editForm.previousRole || ""}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, previousRole: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="interviewDate">Interview Date</Label>
+                <Input
+                  id="interviewDate"
+                  type="date"
+                  value={editForm.interviewDate || ""}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, interviewDate: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="interviewTime">Interview Time</Label>
+                <Input
+                  id="interviewTime"
+                  value={editForm.interviewTime || ""}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, interviewTime: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="status">Status</Label>
+                <Select value={editForm.status || "New"} onValueChange={(value) => setEditForm(prev => ({ ...prev, status: value }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="New">New</SelectItem>
+                    <SelectItem value="Qualified">Qualified</SelectItem>
+                    <SelectItem value="Interview Scheduled">Interview Scheduled</SelectItem>
+                    <SelectItem value="Analysis Complete">Analysis Complete</SelectItem>
+                    <SelectItem value="Hired">Hired</SelectItem>
+                    <SelectItem value="Rejected">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end space-x-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setEditingCandidate(null);
+                    setEditForm({});
+                    setShowEditDialog(false);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    updateCandidateMutation.mutate({
+                      id: editingCandidate.id,
+                      updates: editForm
+                    });
+                  }}
+                  disabled={updateCandidateMutation.isPending}
+                >
+                  {updateCandidateMutation.isPending ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
