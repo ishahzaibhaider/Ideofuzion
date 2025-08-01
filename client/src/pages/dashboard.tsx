@@ -82,7 +82,7 @@ export default function DashboardPage() {
             />
            
             <MetricCard
-              title="Hire Rate"
+              title="Hiring Rate"
               value={`${metrics?.hireRate || 0}%`}
               change="+5%"
               trend="up"
