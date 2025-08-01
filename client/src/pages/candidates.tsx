@@ -115,6 +115,10 @@ export default function CandidatesPage() {
     return statusConfig[status as keyof typeof statusConfig] || 'bg-gray-100 text-gray-800';
   };
 
+  const getStatusDisplayText = (status: string) => {
+    return status === 'Analysis Complete' ? 'Analysis Ongoing' : status;
+  };
+
   const formatDate = (date: Date | null) => {
     if (!date) return 'N/A';
     const now = new Date();
@@ -248,7 +252,7 @@ export default function CandidatesPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <Badge className={getStatusBadge(candidate.status || "New")}>
-                          {candidate.status || "New"}
+                          {getStatusDisplayText(candidate.status || "New")}
                         </Badge>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

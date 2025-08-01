@@ -27,6 +27,11 @@ This is a full-stack hiring pipeline and intelligence platform built with React,
 - **LATEST:** Fixed MongoDB data update mapping between frontend and database field names with proper logging
 - **LATEST:** Enhanced webhook integration with EC2 instance (http://54.226.92.93:5678/) for calendar updates
 - **LATEST:** Improved candidate update process with proper field mapping and comprehensive webhook data
+- **LATEST:** Changed "Analysis Complete" status text to "Analysis Ongoing" across all UI elements including badges and dropdowns
+- **LATEST:** Implemented "Add Available Slots" button on Dashboard with full calendar popup functionality
+- **LATEST:** Created calendar component with date picker and multiple time slot management
+- **LATEST:** Added available slots API endpoints with MongoDB integration storing data in ISO format
+- **LATEST:** Updated README.md to reflect current project state with MongoDB Atlas, N8N integration, and latest features
 
 ## User Preferences
 
