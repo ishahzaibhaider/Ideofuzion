@@ -2,7 +2,7 @@
 
 /**
  * This pipeline automates the deployment of the Ideofuzion application.
- * It correctly builds both the server and the client-side UI.
+ * It builds the entire application and ensures a clean deployment to the server.
  */
 pipeline {
     // 1. Agent and Tools Configuration
@@ -29,7 +29,6 @@ pipeline {
                 sh 'npm install'
                 
                 echo 'Installing client dependencies...'
-                // CORRECTED: Go into the client folder and install its dependencies
                 sh 'cd client && npm install'
             }
         }
@@ -37,13 +36,9 @@ pipeline {
         // Stage: Build Application
         stage('Build Application') {
             steps {
-                echo 'Building the server...'
-                // This builds the server and outputs to the root 'dist' folder
+                echo 'Building the application (client and server)...'
+                // CORRECTED: This single command builds everything needed into the root 'dist' folder.
                 sh 'npm run build'
-
-                echo 'Building the client UI...'
-                // CORRECTED: Go into the client folder and build the UI
-                sh 'cd client && npm run build'
             }
         }
 
@@ -56,14 +51,13 @@ pipeline {
                     # --- IMPORTANT ---
                     # Using the private IP of your web server.
                     
-                    # Step A: Copy the SERVER build output from the root 'dist' folder
-                    scp -r dist/* ubuntu@172.31.80.177:/home/ubuntu/Ideofuzion/dist
+                    # Step A: Clean up the old build on the remote server to prevent stale files.
+                    ssh ubuntu@172.31.80.177 "rm -rf /home/ubuntu/Ideofuzion/dist && mkdir /home/ubuntu/Ideofuzion/dist"
                     
-                    # Step B: Copy the CLIENT build output from the 'client/dist' folder
-                    # This is the step that was missing. It copies your UI.
-                    scp -r client/dist/* ubuntu@172.31.80.177:/home/ubuntu/Ideofuzion/dist/public
+                    # Step B: Copy the new, unified build output to the remote server.
+                    scp -r dist/* ubuntu@172.31.80.177:/home/ubuntu/Ideofuzion/dist/
                     
-                    # Step C: Connect and reload the PM2 application
+                    # Step C: Connect and reload the PM2 application.
                     ssh ubuntu@172.31.80.177 "pm2 reload ideofuzion-app"
 
                     echo "Deployment complete."
