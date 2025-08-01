@@ -41,6 +41,7 @@ export interface IStorage {
   // Unavailable Slots
   getUnavailableSlots(): Promise<UnavailableSlot[]>;
   createUnavailableSlot(slot: InsertUnavailableSlot): Promise<UnavailableSlot>;
+  updateUnavailableSlot(id: string, updates: Partial<InsertUnavailableSlot>): Promise<UnavailableSlot | undefined>;
   deleteUnavailableSlot(id: string): Promise<boolean>;
 }
 
@@ -374,6 +375,16 @@ export class MongoStorage implements IStorage {
     } catch (error) {
       console.error('Error creating unavailable slot:', error);
       throw error;
+    }
+  }
+
+  async updateUnavailableSlot(id: string, updates: Partial<InsertUnavailableSlot>): Promise<UnavailableSlot | undefined> {
+    try {
+      const slot = await UnavailableSlotModel.findByIdAndUpdate(id, updates, { new: true });
+      return slot ? this.mongoDocToUnavailableSlot(slot) : undefined;
+    } catch (error) {
+      console.error('Error updating unavailable slot:', error);
+      return undefined;
     }
   }
 

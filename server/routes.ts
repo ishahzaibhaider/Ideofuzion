@@ -879,6 +879,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/unavailable-slots/:id", authenticateToken, async (req, res) => {
+    try {
+      const { error, data } = insertUnavailableSlotSchema.safeParse(req.body);
+      if (error) {
+        return res.status(400).json({ error: "Invalid input", details: error.issues });
+      }
+      const slot = await storage.updateUnavailableSlot(req.params.id, data);
+      if (slot) {
+        res.json(slot);
+      } else {
+        res.status(404).json({ error: "Unavailable slot not found" });
+      }
+    } catch (error) {
+      console.error("Error updating unavailable slot:", error);
+      res.status(500).json({ error: "Failed to update unavailable slot" });
+    }
+  });
+
   app.delete("/api/unavailable-slots/:id", authenticateToken, async (req, res) => {
     try {
       const success = await storage.deleteUnavailableSlot(req.params.id);

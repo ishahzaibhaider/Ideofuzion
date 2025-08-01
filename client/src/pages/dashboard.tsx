@@ -6,6 +6,7 @@ import MetricCard from "@/components/DashboardWidgets/MetricCard";
 import HiringFunnel from "@/components/DashboardWidgets/HiringFunnel";
 import UpcomingInterviews from "@/components/DashboardWidgets/UpcomingInterviews";
 import AddUnavailableSlotsDialog from "@/components/AddUnavailableSlotsDialog";
+import UnavailableSlotsManager from "@/components/UnavailableSlotsManager";
 import { Users, Video, BarChart3, Clock, Plus } from "lucide-react";
 
 export default function DashboardPage() {
@@ -102,6 +103,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <HiringFunnel stages={metrics?.funnelStages || []} />
             <UpcomingInterviews interviews={metrics?.upcomingInterviews || []} />
+            <UnavailableSlotsManager />
           </div>
         </div>
       </div>
