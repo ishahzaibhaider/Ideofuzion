@@ -66,7 +66,7 @@ export default function DashboardPage() {
               <AddAvailableSlotsDialog />
               <Link href="/create-jobs" className="bg-primary text-white font-bold py-2 px-4 rounded-lg flex items-center space-x-2 hover:bg-primary/90 transition-colors">
                 <Plus className="w-5 h-5" />
-                <span>Create New Job</span>
+                <span>Create Job</span>
               </Link>
             </div>
           </div>
