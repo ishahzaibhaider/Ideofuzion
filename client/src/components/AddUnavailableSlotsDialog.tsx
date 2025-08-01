@@ -84,9 +84,10 @@ export default function AddUnavailableSlotsDialog() {
       const dateStr = selectedDate.toISOString().split('T')[0]; // YYYY-MM-DD format
       
       for (const slot of validSlots) {
-        // Create ISO datetime strings
-        const startDateTime = new Date(`${dateStr}T${slot.startTime}:00.000Z`).toISOString();
-        const endDateTime = new Date(`${dateStr}T${slot.endTime}:00.000Z`).toISOString();
+        // Create datetime strings in Pakistan Standard Time (UTC+5)
+        // Parse the time input and create PKT datetime strings
+        const startDateTime = new Date(`${dateStr}T${slot.startTime}:00.000+05:00`).toISOString();
+        const endDateTime = new Date(`${dateStr}T${slot.endTime}:00.000+05:00`).toISOString();
         
         await createSlotMutation.mutateAsync({
           date: dateStr,
