@@ -194,7 +194,7 @@ export default function CandidatesPage() {
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="Interview Scheduled">Interview Scheduled</SelectItem>
-                  <SelectItem value="Analysis Complete">Analysis Complete</SelectItem>
+                  <SelectItem value="Analysis Complete">Analysis Ongoing</SelectItem>
                   <SelectItem value="Hired">Hired</SelectItem>
                   <SelectItem value="Rejected">Rejected</SelectItem>
                 </SelectContent>
@@ -548,7 +548,7 @@ export default function CandidatesPage() {
                     <SelectItem value="New">New</SelectItem>
                     <SelectItem value="Qualified">Qualified</SelectItem>
                     <SelectItem value="Interview Scheduled">Interview Scheduled</SelectItem>
-                    <SelectItem value="Analysis Complete">Analysis Complete</SelectItem>
+                    <SelectItem value="Analysis Complete">Analysis Ongoing</SelectItem>
                     <SelectItem value="Hired">Hired</SelectItem>
                     <SelectItem value="Rejected">Rejected</SelectItem>
                   </SelectContent>

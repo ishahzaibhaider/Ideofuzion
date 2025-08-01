@@ -229,3 +229,40 @@ export type Transcript = {
   summary?: string;
   createdAt?: Date;
 };
+
+// MongoDB Available Slot Schema
+export interface IAvailableSlot extends Document {
+  _id: string;
+  date: string; // ISO date string
+  startTime: string; // ISO datetime string
+  endTime: string; // ISO datetime string
+  isBooked: boolean;
+  createdAt: Date;
+}
+
+const availableSlotSchema = new Schema<IAvailableSlot>({
+  date: { type: String, required: true }, // ISO date format
+  startTime: { type: String, required: true }, // ISO datetime format
+  endTime: { type: String, required: true }, // ISO datetime format
+  isBooked: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now }
+}, { collection: 'available_slots' });
+
+export const AvailableSlotModel = mongoose.model<IAvailableSlot>('AvailableSlot', availableSlotSchema);
+
+export const insertAvailableSlotSchema = z.object({
+  date: z.string(),
+  startTime: z.string(),
+  endTime: z.string(),
+  isBooked: z.boolean().optional()
+});
+
+export type InsertAvailableSlot = z.infer<typeof insertAvailableSlotSchema>;
+export type AvailableSlot = {
+  id: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  isBooked: boolean;
+  createdAt: Date;
+};

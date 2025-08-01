@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { z } from "zod"; // Import Zod for validation
 import { storage } from "./storage";
-import { insertUserSchema, insertCandidateSchema, insertTranscriptSchema, type Candidate } from "@shared/schema";
+import { insertUserSchema, insertCandidateSchema, insertTranscriptSchema, insertAvailableSlotSchema, type Candidate } from "@shared/schema";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
@@ -851,6 +851,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating transcript:", error);
       res.status(500).json({ error: "Failed to create transcript" });
+    }
+  });
+
+  // Available Slots routes
+  app.get("/api/available-slots", authenticateToken, async (req, res) => {
+    try {
+      const slots = await storage.getAvailableSlots();
+      res.json(slots);
+    } catch (error) {
+      console.error("Error getting available slots:", error);
+      res.status(500).json({ error: "Failed to get available slots" });
+    }
+  });
+
+  app.post("/api/available-slots", authenticateToken, async (req, res) => {
+    try {
+      const { error, data } = insertAvailableSlotSchema.safeParse(req.body);
+      if (error) {
+        return res.status(400).json({ error: "Invalid input", details: error.issues });
+      }
+      const slot = await storage.createAvailableSlot(data);
+      res.status(201).json(slot);
+    } catch (error) {
+      console.error("Error creating available slot:", error);
+      res.status(500).json({ error: "Failed to create available slot" });
+    }
+  });
+
+  app.delete("/api/available-slots/:id", authenticateToken, async (req, res) => {
+    try {
+      const success = await storage.deleteAvailableSlot(req.params.id);
+      if (success) {
+        res.json({ success: true });
+      } else {
+        res.status(404).json({ error: "Available slot not found" });
+      }
+    } catch (error) {
+      console.error("Error deleting available slot:", error);
+      res.status(500).json({ error: "Failed to delete available slot" });
     }
   });
 

@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import MetricCard from "@/components/DashboardWidgets/MetricCard";
 import HiringFunnel from "@/components/DashboardWidgets/HiringFunnel";
 import UpcomingInterviews from "@/components/DashboardWidgets/UpcomingInterviews";
+import AddAvailableSlotsDialog from "@/components/AddAvailableSlotsDialog";
 import { Users, Video, BarChart3, Clock, Plus } from "lucide-react";
 
 export default function DashboardPage() {
@@ -60,13 +61,12 @@ export default function DashboardPage() {
                 Monitor your recruitment pipeline and key metrics
               </p>
             </div>
-            {/* ✨ Create New Job Button (using wouter's Link) */}
-            <div>
-              <Link href="/create-jobs">
-                <a className="bg-primary text-white font-bold py-2 px-4 rounded-lg flex items-center space-x-2 hover:bg-primary/90 transition-colors">
-                  <Plus className="w-5 h-5" />
-                  <span>Create New Job</span>
-                </a>
+            {/* Action Buttons */}
+            <div className="flex space-x-3">
+              <AddAvailableSlotsDialog />
+              <Link href="/create-jobs" className="bg-primary text-white font-bold py-2 px-4 rounded-lg flex items-center space-x-2 hover:bg-primary/90 transition-colors">
+                <Plus className="w-5 h-5" />
+                <span>Create New Job</span>
               </Link>
             </div>
           </div>

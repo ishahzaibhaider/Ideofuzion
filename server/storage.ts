@@ -1,4 +1,4 @@
-import { UserModel, JobCriteriaModel, CandidateModel, TranscriptModel, type User, type InsertUser, type JobCriteria, type InsertJobCriteria, type Candidate, type InsertCandidate, type Transcript, type InsertTranscript } from "@shared/schema";
+import { UserModel, JobCriteriaModel, CandidateModel, TranscriptModel, AvailableSlotModel, type User, type InsertUser, type JobCriteria, type InsertJobCriteria, type Candidate, type InsertCandidate, type Transcript, type InsertTranscript, type AvailableSlot, type InsertAvailableSlot } from "@shared/schema";
 import { connectToDatabase } from "./db";
 
 // Define the structure for the data coming from the frontend form
@@ -37,6 +37,11 @@ export interface IStorage {
   getTranscripts(): Promise<Transcript[]>;
   getLatestTranscript(): Promise<Transcript | undefined>;
   createTranscript(transcript: InsertTranscript): Promise<Transcript>;
+
+  // Available Slots
+  getAvailableSlots(): Promise<AvailableSlot[]>;
+  createAvailableSlot(slot: InsertAvailableSlot): Promise<AvailableSlot>;
+  deleteAvailableSlot(id: string): Promise<boolean>;
 }
 
 export class MongoStorage implements IStorage {
@@ -337,6 +342,48 @@ export class MongoStorage implements IStorage {
     } catch (error) {
       console.error('Error creating transcript:', error);
       throw error;
+    }
+  }
+
+  // Helper method to convert MongoDB document to AvailableSlot
+  private mongoDocToAvailableSlot(doc: any): AvailableSlot {
+    return {
+      id: doc._id.toString(),
+      date: doc.date,
+      startTime: doc.startTime,
+      endTime: doc.endTime,
+      isBooked: doc.isBooked,
+      createdAt: doc.createdAt
+    };
+  }
+
+  async getAvailableSlots(): Promise<AvailableSlot[]> {
+    try {
+      const slots = await AvailableSlotModel.find().sort({ date: 1, startTime: 1 });
+      return slots.map(slot => this.mongoDocToAvailableSlot(slot));
+    } catch (error) {
+      console.error('Error getting available slots:', error);
+      return [];
+    }
+  }
+
+  async createAvailableSlot(insertSlot: InsertAvailableSlot): Promise<AvailableSlot> {
+    try {
+      const slot = await AvailableSlotModel.create(insertSlot);
+      return this.mongoDocToAvailableSlot(slot);
+    } catch (error) {
+      console.error('Error creating available slot:', error);
+      throw error;
+    }
+  }
+
+  async deleteAvailableSlot(id: string): Promise<boolean> {
+    try {
+      const result = await AvailableSlotModel.findByIdAndDelete(id);
+      return result !== null;
+    } catch (error) {
+      console.error('Error deleting available slot:', error);
+      return false;
     }
   }
 }
