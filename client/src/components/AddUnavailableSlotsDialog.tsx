@@ -85,9 +85,9 @@ export default function AddUnavailableSlotsDialog() {
       
       for (const slot of validSlots) {
         // Create datetime strings in Pakistan Standard Time (UTC+5)
-        // Parse the time input and create PKT datetime strings
-        const startDateTime = new Date(`${dateStr}T${slot.startTime}:00.000+05:00`).toISOString();
-        const endDateTime = new Date(`${dateStr}T${slot.endTime}:00.000+05:00`).toISOString();
+        // Store the time directly in PKT format without converting to UTC
+        const startDateTime = `${dateStr}T${slot.startTime}:00.000+05:00`;
+        const endDateTime = `${dateStr}T${slot.endTime}:00.000+05:00`;
         
         await createSlotMutation.mutateAsync({
           date: dateStr,
