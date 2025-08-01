@@ -18,7 +18,7 @@ interface TimeSlot {
   endTime: string;
 }
 
-export default function AddAvailableSlotsDialog() {
+export default function AddUnavailableSlotsDialog() {
   const [open, setOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([{ startTime: "", endTime: "" }]);
@@ -26,20 +26,20 @@ export default function AddAvailableSlotsDialog() {
 
   const createSlotMutation = useMutation({
     mutationFn: async (slotData: { date: string; startTime: string; endTime: string }) => {
-      const response = await authenticatedApiRequest("POST", "/api/available-slots", slotData);
+      const response = await authenticatedApiRequest("POST", "/api/unavailable-slots", slotData);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/available-slots"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/unavailable-slots"] });
       toast({
         title: "Success",
-        description: "Available slots added successfully",
+        description: "Unavailable slots added successfully",
       });
     },
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to add available slots",
+        description: "Failed to add unavailable slots",
         variant: "destructive",
       });
     },
@@ -109,12 +109,12 @@ export default function AddAvailableSlotsDialog() {
       <DialogTrigger asChild>
         <Button className="bg-primary text-white font-bold py-2 px-4 rounded-lg flex items-center space-x-2 hover:bg-primary/90 transition-colors">
           <Plus className="w-5 h-5" />
-          <span>Add Available Slots</span>
+          <span>Add Unavailable Slots</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Add Available Time Slots</DialogTitle>
+          <DialogTitle>Add Unavailable Time Slots</DialogTitle>
         </DialogHeader>
         <div className="space-y-6">
           {/* Date Picker */}
@@ -193,15 +193,12 @@ export default function AddAvailableSlotsDialog() {
             ))}
           </div>
 
-          {/* Actions */}
+          {/* Save Button */}
           <div className="flex justify-end space-x-2">
-            <Button
-              variant="outline"
-              onClick={() => setOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button
+            <Button 
               onClick={handleSave}
               disabled={createSlotMutation.isPending}
             >

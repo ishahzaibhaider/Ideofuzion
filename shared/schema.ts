@@ -230,39 +230,39 @@ export type Transcript = {
   createdAt?: Date;
 };
 
-// MongoDB Available Slot Schema
-export interface IAvailableSlot extends Document {
+// MongoDB Unavailable Slot Schema
+export interface IUnavailableSlot extends Document {
   _id: string;
   date: string; // ISO date string
   startTime: string; // ISO datetime string
   endTime: string; // ISO datetime string
-  isBooked: boolean;
+  reason: string; // Reason for unavailability
   createdAt: Date;
 }
 
-const availableSlotSchema = new Schema<IAvailableSlot>({
+const unavailableSlotSchema = new Schema<IUnavailableSlot>({
   date: { type: String, required: true }, // ISO date format
   startTime: { type: String, required: true }, // ISO datetime format
   endTime: { type: String, required: true }, // ISO datetime format
-  isBooked: { type: Boolean, default: false },
+  reason: { type: String, default: "Unavailable" }, // Reason for unavailability
   createdAt: { type: Date, default: Date.now }
-}, { collection: 'available_slots' });
+}, { collection: 'unavailable_slots' });
 
-export const AvailableSlotModel = mongoose.model<IAvailableSlot>('AvailableSlot', availableSlotSchema);
+export const UnavailableSlotModel = mongoose.model<IUnavailableSlot>('UnavailableSlot', unavailableSlotSchema);
 
-export const insertAvailableSlotSchema = z.object({
+export const insertUnavailableSlotSchema = z.object({
   date: z.string(),
   startTime: z.string(),
   endTime: z.string(),
-  isBooked: z.boolean().optional()
+  reason: z.string().optional()
 });
 
-export type InsertAvailableSlot = z.infer<typeof insertAvailableSlotSchema>;
-export type AvailableSlot = {
+export type InsertUnavailableSlot = z.infer<typeof insertUnavailableSlotSchema>;
+export type UnavailableSlot = {
   id: string;
   date: string;
   startTime: string;
   endTime: string;
-  isBooked: boolean;
+  reason: string;
   createdAt: Date;
 };
