@@ -64,16 +64,19 @@ export default function AddUnavailableSlotsDialog() {
   const convertTo24Hour = (time12h: string): string => {
     const [time, modifier] = time12h.split(' ');
     let [hours, minutes] = time.split(':');
+    let hour = parseInt(hours, 10);
     
-    if (hours === '12') {
-      hours = '00';
+    if (modifier === 'AM') {
+      if (hour === 12) {
+        hour = 0; // 12:00 AM becomes 00:00
+      }
+    } else if (modifier === 'PM') {
+      if (hour !== 12) {
+        hour += 12; // 1:00 PM becomes 13:00, but 12:00 PM stays 12:00
+      }
     }
     
-    if (modifier === 'PM') {
-      hours = String(parseInt(hours, 10) + 12);
-    }
-    
-    return `${hours.padStart(2, '0')}:${minutes}`;
+    return `${hour.toString().padStart(2, '0')}:${minutes}`;
   };
 
   const handleSave = async () => {
