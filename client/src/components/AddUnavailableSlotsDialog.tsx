@@ -60,6 +60,22 @@ export default function AddUnavailableSlotsDialog() {
     setTimeSlots(updated);
   };
 
+  // Helper function to convert 12-hour format to 24-hour format
+  const convertTo24Hour = (time12h: string): string => {
+    const [time, modifier] = time12h.split(' ');
+    let [hours, minutes] = time.split(':');
+    
+    if (hours === '12') {
+      hours = '00';
+    }
+    
+    if (modifier === 'PM') {
+      hours = String(parseInt(hours, 10) + 12);
+    }
+    
+    return `${hours.padStart(2, '0')}:${minutes}`;
+  };
+
   const handleSave = async () => {
     if (!selectedDate) {
       toast({
@@ -81,13 +97,20 @@ export default function AddUnavailableSlotsDialog() {
     }
 
     try {
-      const dateStr = selectedDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+      // Fix date issue: Use local date format to avoid timezone conversion
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(selectedDate.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`; // YYYY-MM-DD format
       
       for (const slot of validSlots) {
+        // Convert 12-hour format to 24-hour format for proper time handling
+        const startTime24 = convertTo24Hour(slot.startTime);
+        const endTime24 = convertTo24Hour(slot.endTime);
+        
         // Create datetime strings in Pakistan Standard Time (UTC+5)
-        // Store the time directly in PKT format without converting to UTC
-        const startDateTime = `${dateStr}T${slot.startTime}:00.000+05:00`;
-        const endDateTime = `${dateStr}T${slot.endTime}:00.000+05:00`;
+        const startDateTime = `${dateStr}T${startTime24}:00.000+05:00`;
+        const endDateTime = `${dateStr}T${endTime24}:00.000+05:00`;
         
         await createSlotMutation.mutateAsync({
           date: dateStr,
