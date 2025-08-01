@@ -1,5 +1,7 @@
 import { UserModel, JobCriteriaModel, CandidateModel, TranscriptModel, AvailableSlotModel, type User, type InsertUser, type JobCriteria, type InsertJobCriteria, type Candidate, type InsertCandidate, type Transcript, type InsertTranscript, type AvailableSlot, type InsertAvailableSlot } from "@shared/schema";
 import { connectToDatabase } from "./db";
+import dotenv from 'dotenv';
+dotenv.config();
 
 // Define the structure for the data coming from the frontend form
 interface JobFormData {

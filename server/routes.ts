@@ -6,6 +6,8 @@ import bcrypt from "bcryptjs";
 import { z } from "zod"; // Import Zod for validation
 import { storage } from "./storage";
 import { insertUserSchema, insertCandidateSchema, insertTranscriptSchema, insertAvailableSlotSchema, type Candidate } from "@shared/schema";
+import dotenv from 'dotenv';
+dotenv.config();
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
