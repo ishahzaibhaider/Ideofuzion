@@ -6,7 +6,7 @@ pipeline {
     // Specify the NodeJS version to use, which must match the name
     // configured in Manage Jenkins > Tools.
     tools {
-        nodejs 'NodeJS-24'
+        nodejs 'NodeJS-24' // Make sure this matches your Jenkins tool name
     }
 
     // 2. Pipeline Stages
@@ -19,7 +19,6 @@ pipeline {
             steps {
                 echo 'Checking out code from the main branch...'
                 git branch: 'main', url: 'https://github.com/ishahzaibhaider/Ideofuzion.git'
-                // Note: Replace the URL with your actual repository URL.
             }
         }
 
@@ -34,7 +33,6 @@ pipeline {
 
         // Stage: Build Application
         // Creates a production-ready build of the application.
-        // The output is typically placed in a 'build' or 'dist' folder.
         stage('Build Application') {
             steps {
                 echo 'Creating a production build...'
@@ -51,15 +49,16 @@ pipeline {
                     echo "Deploying new build to the production server..."
                     
                     # --- IMPORTANT ---
-                    # Replace 'your_web_server_ip' with your EC2 instance's public IP address.
+                    # Using the private IP of your web server.
                     
-                    # Step A: Securely copy the contents of the 'build' folder to the web server.
+                    # Step A: Securely copy the contents of the 'dist' folder to the web server.
                     # The destination path '/home/ubuntu/Ideofuzion' was identified from your pm2 output.
-                    scp -r build/* ubuntu@172.31.80.177/:/home/ubuntu/Ideofuzion
+                    # CORRECTED: Changed 'build/*' to 'dist/*'
+                    scp -r dist/* ubuntu@172.31.80.177:/home/ubuntu/Ideofuzion
                     
                     # Step B: Connect to the web server and gracefully reload the PM2 application.
                     # The app name 'ideofuzion-app' was identified from your pm2 output.
-                    ssh ubuntu@172.31.80.177/ "pm2 reload ideofuzion-app"
+                    ssh ubuntu@172.31.80.177 "pm2 reload ideofuzion-app"
 
                     echo "Deployment complete."
                 '''
