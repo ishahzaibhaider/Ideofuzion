@@ -43,7 +43,7 @@ pipeline {
                     def appPort = 3000 // Port inside the container
                     def hostPort = 80  // Public port on the EC2 instance
 
-                    def dockerhubUser = 'your-dockerhub-username' // <-- VERY IMPORTANT: CHANGE THIS
+                    def dockerhubUser = 'syedalishoaibhassan' // <-- VERY IMPORTANT: CHANGE THIS
                     def imageName = "${dockerhubUser}/ideofuzion-app:latest"
 
                     // SSH into the production server and run the deployment commands
