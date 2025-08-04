@@ -37,9 +37,10 @@ app.use((req, res, next) => {
     await setupVite(app, server);
   } else {
     const __dirname = path.dirname(fileURLToPath(import.meta.url));
-    app.use(express.static(path.resolve(__dirname, 'public')));
+    // This path MUST have '../public'
+    app.use(express.static(path.resolve(__dirname, '../public')));
     app.get(/^(?!\/api).*/, (req, res) => {
-      res.sendFile(path.resolve(__dirname, 'public', 'index.html'));
+      res.sendFile(path.resolve(__dirname, '../public', 'index.html'));
     });
   }
 
