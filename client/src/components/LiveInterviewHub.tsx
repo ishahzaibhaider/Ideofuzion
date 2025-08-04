@@ -1,21 +1,15 @@
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Candidate, Transcript } from "@shared/schema";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Progress } from "@/components/ui/progress";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { RefreshCw, Lightbulb, FileText } from "lucide-react";
-import { wsManager } from "@/lib/websocket";
-import { authenticatedApiRequest } from "@/lib/auth";
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { RefreshCw, FileText, Lightbulb, Play, PhoneCall } from 'lucide-react';
+import { wsManager } from '@/lib/websocket';
+import { useQuery } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+import { type Candidate, type Transcript } from '@shared/schema';
 
 interface LiveInterviewHubProps {
   candidate: Candidate;
-  onStartSession: () => void;
-  onEndSession: () => void;
-  isSessionActive: boolean;
 }
 
 interface TranscriptEntry {
@@ -24,127 +18,74 @@ interface TranscriptEntry {
   timestamp: string;
 }
 
-interface AIAnalysis {
-  technicalKnowledge: number;
-  communication: number;
-  problemSolving: number;
-}
-
-export default function LiveInterviewHub({ 
-  candidate, 
-  onStartSession, 
-  onEndSession,
-  isSessionActive 
-}: LiveInterviewHubProps) {
+export default function LiveInterviewHub({ candidate }: LiveInterviewHubProps) {
+  const [isSessionActive, setIsSessionActive] = useState(false);
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
-  const [notes, setNotes] = useState("");
-  const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis>({
-    technicalKnowledge: 85,
-    communication: 90,
-    problemSolving: 75
-  });
+  const [aiAnalysis, setAiAnalysis] = useState('');
   const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [transcriptSummary, setTranscriptSummary] = useState<string>("");
+  const [transcriptSummary, setTranscriptSummary] = useState('');
 
-  // Query for latest transcript data
-  const { data: latestTranscript, refetch: refetchTranscript, isLoading: isTranscriptLoading } = useQuery({
+  // Query for latest transcript data for AI Assistant
+  const { data: latestTranscript, refetch: refetchLatestTranscript, isLoading: isTranscriptLoading } = useQuery({
     queryKey: ["/api/transcripts/latest"],
     queryFn: async () => {
-      const response = await authenticatedApiRequest("GET", "/api/transcripts/latest");
+      const response = await apiRequest("GET", "/api/transcripts/latest");
       return response.json() as Promise<Transcript>;
     },
     refetchOnWindowFocus: false,
   });
 
-  // Query for latest transcripts for live transcript display
-  const { data: allTranscripts, refetch: refetchAllTranscripts, isLoading: isAllTranscriptsLoading } = useQuery({
-    queryKey: ["/api/transcripts/latest-for-display"],
-    queryFn: async () => {
-      // Get the latest transcript for display
-      const response = await authenticatedApiRequest("GET", "/api/transcripts/latest");
-      const latestTranscript = await response.json() as Transcript;
-      return latestTranscript ? [latestTranscript] : [];
-    },
-    refetchOnWindowFocus: false,
-    enabled: !!candidate,
-  });
-
-  // Update suggestions and summary when transcript data changes
+  // Parse suggestions from database
   useEffect(() => {
-    if (latestTranscript) {
-      setSuggestions(latestTranscript.Suggested_Questions || []);
+    if (latestTranscript && latestTranscript.Suggested_Questions) {
+      const suggestedQuestions = (typeof latestTranscript.Suggested_Questions === 'string' 
+        ? latestTranscript.Suggested_Questions 
+        : latestTranscript.Suggested_Questions.join('\n')
+      ).split('\n')
+        .filter((line: string) => line.trim())
+        .map((line: string) => line.trim());
+      setSuggestions(suggestedQuestions);
       setTranscriptSummary(latestTranscript.Summary || "");
     }
   }, [latestTranscript]);
 
-  // Update transcript display with real data from database - latest first
-  useEffect(() => {
-    if (allTranscripts && allTranscripts.length > 0) {
-      const latestTranscript = allTranscripts[0]; // Get the most recent transcript
-      const formattedTranscripts: TranscriptEntry[] = [];
-      
-      // Create timestamp for this transcript
-      const baseTimestamp = latestTranscript.createdAt ? 
-        new Date(latestTranscript.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 
-        new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      
-      // Add each speaker's content as separate entries
-      if (latestTranscript.Speaker1) {
-        formattedTranscripts.push({
-          speaker: 'interviewer',
-          text: latestTranscript.Speaker1,
-          timestamp: baseTimestamp
-        });
-      }
-      
-      if (latestTranscript.Speaker2) {
-        formattedTranscripts.push({
-          speaker: 'candidate',
-          text: latestTranscript.Speaker2,
-          timestamp: baseTimestamp
-        });
-      }
-      
-      if (latestTranscript.Speaker3) {
-        formattedTranscripts.push({
-          speaker: 'interviewer',
-          text: latestTranscript.Speaker3,
-          timestamp: baseTimestamp
-        });
-      }
-      
-      // Clear any old transcript data and set new one
-      setTranscript(formattedTranscripts);
-      
-      console.log('Updated transcript with latest data:', {
-        transcriptId: latestTranscript.id,
-        hasS1: !!latestTranscript.Speaker1,
-        hasS2: !!latestTranscript.Speaker2,
-        hasS3: !!latestTranscript.Speaker3,
-        entriesCreated: formattedTranscripts.length
-      });
-    } else {
-      // Clear transcript if no data
-      setTranscript([]);
-    }
-  }, [allTranscripts]);
-
-  const handleReloadAIAssistant = async () => {
+  const handleStartInterview = async () => {
+    setIsSessionActive(true);
+    
     try {
-      await refetchTranscript();
-      console.log('AI Assistant data reloaded successfully');
+      const response = await apiRequest("POST", "/api/start-interview-bot", {
+        candidateId: candidate.id,
+        candidateName: candidate.name,
+        candidateEmail: candidate.email,
+        interviewTime: new Date().toISOString(),
+        googleMeetLink: candidate["Google Meet Id"] || `https://meet.google.com/example-${candidate.id}`
+      });
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('Failed to start interview bot:', errorData);
+        alert('Failed to start interview session. Please ensure N8N workflow is active.');
+        setIsSessionActive(false);
+      }
     } catch (error) {
-      console.error('Failed to reload AI Assistant data:', error);
+      console.error('Error starting interview:', error);
+      alert('Failed to start interview session. Please check your connection.');
+      setIsSessionActive(false);
     }
   };
 
-  const handleReloadTranscripts = async () => {
+  const handleStopInterview = () => {
+    setIsSessionActive(false);
+    setTranscript([]);
+  };
+
+  const handleReloadAIAssistant = async () => {
     try {
-      console.log('Reloading latest transcript data...');
-      await refetchAllTranscripts();
-      console.log('Latest transcript reloaded successfully');
+      console.log('Reloading AI Assistant data...');
+      await refetchLatestTranscript();
+      console.log('AI Assistant data reloaded successfully');
     } catch (error) {
-      console.error('Failed to reload latest transcript:', error);
+      console.error('Failed to reload AI Assistant data:', error);
     }
   };
 
@@ -172,44 +113,17 @@ export default function LiveInterviewHub({
     };
   }, [candidate.id]);
 
-  // Simulate real-time transcript for demo
-  useEffect(() => {
-    if (isSessionActive) {
-      const interval = setInterval(() => {
-        const sampleEntries = [
-          {
-            speaker: 'interviewer' as const,
-            text: 'Can you walk me through your experience with React and how you\'ve used it in your recent projects?',
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          },
-          {
-            speaker: 'candidate' as const,
-            text: 'Absolutely. I\'ve been working with React for about 5 years now. In my most recent role at TechCorp, I led the development of a customer dashboard using React 18 with hooks and context API for state management...',
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          }
-        ];
-
-        if (Math.random() > 0.7) {
-          const entry = sampleEntries[Math.floor(Math.random() * sampleEntries.length)];
-          setTranscript(prev => [...prev, entry]);
-        }
-      }, 8000);
-
-      return () => clearInterval(interval);
-    }
-  }, [isSessionActive]);
-
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 lg:gap-6 min-h-[calc(100vh-12rem)]">
+    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 min-h-[calc(100vh-12rem)]">
       {/* Left Panel: Candidate Info */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="p-4 lg:p-6 border-b border-gray-200">
+        <div className="p-6 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900">Candidate Profile</h3>
         </div>
-        <div className="p-4 lg:p-6">
+        <div className="p-6">
           <div className="text-center mb-6">
-            <div className="w-24 h-24 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center">
-              <span className="text-xl font-bold text-gray-600">
+            <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full mx-auto mb-4 flex items-center justify-center">
+              <span className="text-lg font-bold text-white">
                 {candidate.name.split(' ').map(n => n[0]).join('')}
               </span>
             </div>
@@ -242,7 +156,7 @@ export default function LiveInterviewHub({
               <p className="text-sm text-gray-600">{candidate.education}</p>
             </div>
             
-            <div className="pt-4 border-t border-gray-200">
+            <div className="pt-4 border-t border-gray-200 space-y-3">
               <Button 
                 className="w-full" 
                 variant="outline"
@@ -257,93 +171,47 @@ export default function LiveInterviewHub({
               >
                 View Full Resume
               </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Center Panel: Live Transcript */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="p-4 lg:p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900">Live Transcript</h3>
-            <div className="flex items-center space-x-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleReloadTranscripts}
-                disabled={isAllTranscriptsLoading}
-                className="p-2"
-              >
-                <RefreshCw className={`w-4 h-4 ${isAllTranscriptsLoading ? 'animate-spin' : ''}`} />
-              </Button>
-              <div className="flex items-center space-x-2">
-                <div className={`w-3 h-3 rounded-full ${isSessionActive ? 'bg-red-500 animate-pulse' : 'bg-gray-400'}`}></div>
-                <span className="text-sm text-gray-600">
-                  {isSessionActive ? 'Recording' : 'Not Recording'}
-                </span>
+              
+              {/* Start/Stop Interview Session */}
+              <div className="flex gap-3">
+                {!isSessionActive ? (
+                  <Button 
+                    onClick={handleStartInterview} 
+                    className="flex-1 bg-green-600 hover:bg-green-700"
+                  >
+                    <Play className="w-4 h-4 mr-2" />
+                    Start Session
+                  </Button>
+                ) : (
+                  <Button 
+                    onClick={handleStopInterview} 
+                    variant="destructive"
+                    className="flex-1"
+                  >
+                    <PhoneCall className="w-4 h-4 mr-2" />
+                    End Session
+                  </Button>
+                )}
               </div>
-            </div>
-          </div>
-        </div>
-        <div className="p-4 lg:p-6 h-64 md:h-80 lg:h-96 overflow-y-auto">
-          {transcript.length === 0 ? (
-            <div className="text-center py-8 text-gray-400">
-              <p className="text-sm">
-                {isAllTranscriptsLoading ? 'Loading latest transcript...' : 'No transcripts available yet'}
-              </p>
-              <p className="text-xs text-gray-400 mt-1">
-                {isAllTranscriptsLoading ? 'Please wait...' : 'Click reload to fetch the latest conversation data'}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {transcript.map((entry, index) => (
-                <div key={index} className="flex items-start space-x-3">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
-                    entry.speaker === 'interviewer' 
-                      ? 'bg-blue-100 text-blue-800' 
-                      : 'bg-green-100 text-green-800'
-                  }`}>
-                    {entry.speaker === 'interviewer' ? 'I' : 'C'}
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-sm text-gray-900 space-y-1">
-                      <strong className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                        {entry.speaker === 'interviewer' ? 'Interviewer' : 'Candidate'}
-                      </strong>
-                      <div className="space-y-1">
-                        {entry.text.split('\n').filter(line => line.trim()).map((line, lineIndex) => (
-                          <p key={lineIndex} className="text-sm leading-relaxed">
-                            {line.trim()}
-                          </p>
-                        ))}
-                      </div>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-2">{entry.timestamp}</p>
-                  </div>
+              
+              {isSessionActive && (
+                <div className="flex items-center justify-center space-x-2 text-sm text-green-600">
+                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                  <span>Interview session active</span>
                 </div>
-              ))}
+              )}
             </div>
-          )}
-        </div>
-        <div className="p-4 border-t border-gray-200 bg-gray-50">
-          <div className="flex items-center space-x-2 text-sm text-gray-600">
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd"></path>
-            </svg>
-            <span>Audio quality: Excellent</span>
           </div>
         </div>
       </div>
 
-      {/* Right Panel: AI Suggestions */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="p-4 lg:p-6 border-b border-gray-200">
+      {/* Right Panel: AI Interview Assistant - Enhanced Layout */}
+      <div className="bg-white rounded-lg shadow overflow-hidden flex flex-col">
+        <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold text-gray-900">AI Interview Assistant</h3>
-              <p className="text-sm text-gray-600">AI-powered suggestions from interview transcripts</p>
+              <p className="text-sm text-gray-600">AI-powered insights from interview transcripts</p>
             </div>
             <Button
               variant="outline"
@@ -356,55 +224,48 @@ export default function LiveInterviewHub({
             </Button>
           </div>
         </div>
-        <div className="p-4 lg:p-6 space-y-4 lg:space-y-6">
-          {/* Transcript Summary */}
+        
+        <div className="flex-1 p-6 space-y-6">
+          {/* Interview Summary - Prominent Display */}
           {transcriptSummary ? (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <FileText className="w-4 h-4" />
-                  Interview Summary
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="max-h-48 overflow-y-auto">
-                <div className="text-sm text-gray-700 leading-relaxed space-y-3">
-                  {transcriptSummary.split('\n').filter(line => line.trim()).map((line, index) => (
-                    <div key={index} className="flex items-start space-x-2">
-                      <div className="flex-shrink-0 w-2 h-2 bg-blue-400 rounded-full mt-2"></div>
-                      <p className="text-sm leading-relaxed">
-                        {line.trim()}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200">
+              <div className="flex items-center gap-2 mb-4">
+                <FileText className="w-5 h-5 text-blue-600" />
+                <h4 className="text-lg font-semibold text-gray-900">Interview Summary</h4>
+              </div>
+              <div className="max-h-40 overflow-y-auto space-y-3">
+                {transcriptSummary.split('\n').filter(line => line.trim()).map((line, index) => (
+                  <div key={index} className="flex items-start space-x-3">
+                    <div className="flex-shrink-0 w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                    <p className="text-sm text-gray-800 leading-relaxed">
+                      {line.trim()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
           ) : !isTranscriptLoading && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2 text-gray-400">
-                  <FileText className="w-4 h-4" />
-                  Interview Summary
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-500 italic">
-                  No summary available yet. Click reload to fetch latest data.
-                </p>
-              </CardContent>
-            </Card>
+            <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+              <div className="flex items-center gap-2 mb-2">
+                <FileText className="w-5 h-5 text-gray-400" />
+                <h4 className="text-lg font-semibold text-gray-500">Interview Summary</h4>
+              </div>
+              <p className="text-sm text-gray-500">
+                No summary available yet. Click reload to fetch latest data.
+              </p>
+            </div>
           )}
-          
-          {/* Suggested Questions */}
-          <div>
-            <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
-              <Lightbulb className="w-4 h-4" />
-              AI Suggested Questions
+
+          {/* Suggested Questions - Enhanced Layout */}
+          <div className="bg-gradient-to-r from-emerald-50 to-green-50 rounded-lg p-6 border border-emerald-200">
+            <div className="flex items-center gap-2 mb-4">
+              <Lightbulb className="w-5 h-5 text-emerald-600" />
+              <h4 className="text-lg font-semibold text-gray-900">AI Suggested Questions</h4>
               {isTranscriptLoading && (
                 <span className="text-xs text-gray-500">(Loading...)</span>
               )}
-            </h4>
-            <div className="space-y-3 max-h-48 overflow-y-auto">
+            </div>
+            <div className="space-y-3 max-h-60 overflow-y-auto">
               {suggestions.length > 0 ? (
                 (() => {
                   // Flatten all suggestions and split by line breaks
@@ -417,10 +278,10 @@ export default function LiveInterviewHub({
                   return allQuestions.map((question, index) => (
                     <div 
                       key={index}
-                      className="w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors"
+                      className="bg-white rounded-lg p-4 border border-emerald-200 hover:border-emerald-300 transition-colors"
                     >
-                      <div className="flex items-start space-x-2">
-                        <span className="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-medium">
+                      <div className="flex items-start space-x-3">
+                        <span className="flex-shrink-0 w-6 h-6 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center text-xs font-semibold">
                           {index + 1}
                         </span>
                         <p className="text-sm text-gray-800 leading-relaxed">
@@ -431,60 +292,17 @@ export default function LiveInterviewHub({
                   ));
                 })()
               ) : (
-                <div className="text-center py-4 text-gray-500">
+                <div className="text-center py-6 text-gray-500">
                   <Lightbulb className="w-8 h-8 mx-auto mb-2 text-gray-300" />
                   <p className="text-sm">
                     {isTranscriptLoading ? 'Loading suggestions...' : 'No AI suggestions available yet'}
                   </p>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-gray-400 mt-1">
                     {isTranscriptLoading ? 'Please wait...' : 'Click reload to fetch latest data'}
                   </p>
                 </div>
               )}
             </div>
-          </div>
-
-          <Separator />
-          
-          {/* Skills Assessment */}
-          <div>
-            <h4 className="font-medium text-gray-900 mb-3">Skills Assessment</h4>
-            <div className="space-y-3">
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-700">Technical Knowledge</span>
-                  <span className="font-medium text-success">{aiAnalysis.technicalKnowledge}/100</span>
-                </div>
-                <Progress value={aiAnalysis.technicalKnowledge} className="h-2" />
-              </div>
-              
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-700">Communication</span>
-                  <span className="font-medium text-success">{aiAnalysis.communication}/100</span>
-                </div>
-                <Progress value={aiAnalysis.communication} className="h-2" />
-              </div>
-              
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-700">Problem Solving</span>
-                  <span className="font-medium text-yellow-600">{aiAnalysis.problemSolving}/100</span>
-                </div>
-                <Progress value={aiAnalysis.problemSolving} className="h-2" />
-              </div>
-            </div>
-          </div>
-          
-          {/* Interview Notes */}
-          <div>
-            <h4 className="font-medium text-gray-900 mb-3">Quick Notes</h4>
-            <Textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add your interview notes here..."
-              className="h-24"
-            />
           </div>
         </div>
       </div>
