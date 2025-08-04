@@ -308,10 +308,19 @@ export default function LiveInterviewHub({
                     {entry.speaker === 'interviewer' ? 'I' : 'C'}
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm text-gray-900">
-                      <strong>{entry.speaker === 'interviewer' ? 'Interviewer' : 'Candidate'}:</strong> {entry.text}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">{entry.timestamp}</p>
+                    <div className="text-sm text-gray-900 space-y-1">
+                      <strong className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                        {entry.speaker === 'interviewer' ? 'Interviewer' : 'Candidate'}
+                      </strong>
+                      <div className="space-y-1">
+                        {entry.text.split('\n').filter(line => line.trim()).map((line, lineIndex) => (
+                          <p key={lineIndex} className="text-sm leading-relaxed">
+                            {line.trim()}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">{entry.timestamp}</p>
                   </div>
                 </div>
               ))}
@@ -357,10 +366,17 @@ export default function LiveInterviewHub({
                   Interview Summary
                 </CardTitle>
               </CardHeader>
-              <CardContent className="max-h-32 overflow-y-auto">
-                <p className="text-sm text-gray-700 leading-relaxed">
-                  {transcriptSummary}
-                </p>
+              <CardContent className="max-h-48 overflow-y-auto">
+                <div className="text-sm text-gray-700 leading-relaxed space-y-3">
+                  {transcriptSummary.split('\n').filter(line => line.trim()).map((line, index) => (
+                    <div key={index} className="flex items-start space-x-2">
+                      <div className="flex-shrink-0 w-2 h-2 bg-blue-400 rounded-full mt-2"></div>
+                      <p className="text-sm leading-relaxed">
+                        {line.trim()}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           ) : !isTranscriptLoading && (
@@ -388,16 +404,32 @@ export default function LiveInterviewHub({
                 <span className="text-xs text-gray-500">(Loading...)</span>
               )}
             </h4>
-            <div className="space-y-2 max-h-48 overflow-y-auto">
+            <div className="space-y-3 max-h-48 overflow-y-auto">
               {suggestions.length > 0 ? (
-                suggestions.map((question, index) => (
-                  <button 
-                    key={index}
-                    className="w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors"
-                  >
-                    <p className="text-sm text-gray-800">"{question}"</p>
-                  </button>
-                ))
+                (() => {
+                  // Flatten all suggestions and split by line breaks
+                  const allQuestions: string[] = [];
+                  suggestions.forEach(suggestion => {
+                    const lines = suggestion.split('\n').filter(line => line.trim());
+                    allQuestions.push(...lines);
+                  });
+                  
+                  return allQuestions.map((question, index) => (
+                    <div 
+                      key={index}
+                      className="w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors"
+                    >
+                      <div className="flex items-start space-x-2">
+                        <span className="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-medium">
+                          {index + 1}
+                        </span>
+                        <p className="text-sm text-gray-800 leading-relaxed">
+                          {question.trim()}
+                        </p>
+                      </div>
+                    </div>
+                  ));
+                })()
               ) : (
                 <div className="text-center py-4 text-gray-500">
                   <Lightbulb className="w-8 h-8 mx-auto mb-2 text-gray-300" />
