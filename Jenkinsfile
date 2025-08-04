@@ -47,16 +47,7 @@ pipeline {
                     def imageName = "${dockerhubUser}/ideofuzion-app:latest"
 
                     // SSH into the production server and run the deployment commands
-                    sh """
-                        ssh ${remoteUser}@${remoteHost} << EOF
-                            echo 'Deploying on production server...'
-                            docker pull ${imageName}
-                            docker stop ${containerName} || true
-                            docker rm ${containerName} || true
-                            docker run -d --name ${containerName} -p ${hostPort}:${appPort} ${imageName}
-                            echo 'Deployment complete.'
-                        EOF
-                    """
+                    sh "ssh ${remoteUser}@${remoteHost} 'docker pull ${imageName} && docker stop ${containerName} || true && docker rm ${containerName} || true && docker run -d --name ${containerName} -p ${hostPort}:${appPort} ${imageName}'"
                 }
             }
         }
