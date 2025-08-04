@@ -37,4 +37,4 @@ EXPOSE 3000
 
 # The command to run your production server
 # NOTE: Adjust this if your server entry point is different
-CMD [ "node", "dist/index.js" ]
+CMD [ "node", "dist/server/index.js" ]
