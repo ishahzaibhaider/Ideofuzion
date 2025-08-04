@@ -1,40 +1,33 @@
 # --- Stage 1: Build Stage ---
-# This stage builds your client and server code into a 'dist' folder.
 FROM node:18-alpine AS builder
-
 WORKDIR /app
 
-# Copy the single root package.json file
+# Copy package files and install all dependencies for building
 COPY package*.json ./
-
-# Install all dependencies for the entire project from the root
 RUN npm install
 
-# Copy the rest of the source code
+# Copy all source code
 COPY . .
 
-# Run the build script that creates the final /dist folder
+# Run the build script
 RUN npm run build
 
 
 # --- Stage 2: Final Production Stage ---
-# This stage creates the final, lightweight image for production.
 FROM node:18-alpine
-
 WORKDIR /app
 
-# Copy only the production server dependencies manifest
+# Copy package files for production
 COPY package*.json ./
 
-# Install ONLY production dependencies for the server
+# Install ONLY production dependencies
 RUN npm ci --only=production
 
-# Copy the built application artifacts from the 'builder' stage
+# Copy the entire 'dist' folder (with client and server code) from the builder stage
 COPY --from=builder /app/dist ./dist
 
-# Expose the port your server listens on (e.g., 3000)
+# Expose the port the app runs on
 EXPOSE 3000
 
-# The command to run your production server
-# NOTE: Adjust this if your server entry point is different
+# The command to run the production server
 CMD [ "node", "dist/server/index.js" ]
