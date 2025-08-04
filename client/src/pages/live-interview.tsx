@@ -33,10 +33,11 @@ export default function LiveInterviewPage() {
         description: "Interview session started successfully",
       });
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error('Interview start error:', error);
       toast({
         title: "Error",
-        description: "Failed to start interview session",
+        description: error?.error || error?.message || "Failed to start interview session",
         variant: "destructive",
       });
     },

@@ -56,14 +56,16 @@ export default function LiveInterviewHub({
     refetchOnWindowFocus: false,
   });
 
-  // Query for all transcripts for live transcript display
+  // Query for transcripts by Meet ID for live transcript display
   const { data: allTranscripts, refetch: refetchAllTranscripts, isLoading: isAllTranscriptsLoading } = useQuery({
-    queryKey: ["/api/transcripts"],
+    queryKey: ["/api/transcripts", candidate["Google Meet Id"]],
     queryFn: async () => {
-      const response = await authenticatedApiRequest("GET", "/api/transcripts");
+      const meetId = candidate["Google Meet Id"] || candidate.id;
+      const response = await authenticatedApiRequest("GET", `/api/transcripts?meetId=${meetId}`);
       return response.json() as Promise<Transcript[]>;
     },
     refetchOnWindowFocus: false,
+    enabled: !!candidate,
   });
 
   // Update suggestions and summary when transcript data changes
@@ -112,12 +114,22 @@ export default function LiveInterviewHub({
     }
   }, [allTranscripts]);
 
-  const handleReloadAIAssistant = () => {
-    refetchTranscript();
+  const handleReloadAIAssistant = async () => {
+    try {
+      await refetchTranscript();
+      console.log('AI Assistant data reloaded successfully');
+    } catch (error) {
+      console.error('Failed to reload AI Assistant data:', error);
+    }
   };
 
-  const handleReloadTranscripts = () => {
-    refetchAllTranscripts();
+  const handleReloadTranscripts = async () => {
+    try {
+      await refetchAllTranscripts();
+      console.log('Transcripts reloaded successfully');
+    } catch (error) {
+      console.error('Failed to reload transcripts:', error);
+    }
   };
 
   useEffect(() => {
@@ -261,8 +273,12 @@ export default function LiveInterviewHub({
         <div className="p-4 lg:p-6 h-64 md:h-80 lg:h-96 overflow-y-auto">
           {transcript.length === 0 ? (
             <div className="text-center py-8 text-gray-400">
-              <p className="text-sm">No transcripts available</p>
-              <p className="text-xs text-gray-400 mt-1">Click reload to fetch latest transcripts</p>
+              <p className="text-sm">
+                {isAllTranscriptsLoading ? 'Loading transcripts...' : 'No transcripts available for this meeting'}
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                {isAllTranscriptsLoading ? 'Please wait...' : `Meet ID: ${candidate["Google Meet Id"] || candidate.id}`}
+              </p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -317,7 +333,7 @@ export default function LiveInterviewHub({
         </div>
         <div className="p-4 lg:p-6 space-y-4 lg:space-y-6">
           {/* Transcript Summary */}
-          {transcriptSummary && (
+          {transcriptSummary ? (
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm flex items-center gap-2">
@@ -331,6 +347,20 @@ export default function LiveInterviewHub({
                 </p>
               </CardContent>
             </Card>
+          ) : !isTranscriptLoading && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center gap-2 text-gray-400">
+                  <FileText className="w-4 h-4" />
+                  Interview Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-500 italic">
+                  No summary available yet. Click reload to fetch latest data.
+                </p>
+              </CardContent>
+            </Card>
           )}
           
           {/* Suggested Questions */}
@@ -338,6 +368,9 @@ export default function LiveInterviewHub({
             <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
               <Lightbulb className="w-4 h-4" />
               AI Suggested Questions
+              {isTranscriptLoading && (
+                <span className="text-xs text-gray-500">(Loading...)</span>
+              )}
             </h4>
             <div className="space-y-2">
               {suggestions.length > 0 ? (
@@ -352,8 +385,12 @@ export default function LiveInterviewHub({
               ) : (
                 <div className="text-center py-4 text-gray-500">
                   <Lightbulb className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                  <p className="text-sm">No AI suggestions available yet</p>
-                  <p className="text-xs text-gray-400">Click reload to fetch latest data</p>
+                  <p className="text-sm">
+                    {isTranscriptLoading ? 'Loading suggestions...' : 'No AI suggestions available yet'}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {isTranscriptLoading ? 'Please wait...' : 'Click reload to fetch latest data'}
+                  </p>
                 </div>
               )}
             </div>

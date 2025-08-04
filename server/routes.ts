@@ -691,7 +691,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true, message: 'Interview bot started successfully', data: responseData });
     } catch (error: any) {
       console.error('Interview bot error:', error);
-      res.status(500).json({ message: 'Failed to start interview bot', error: error.message });
+      
+      // Provide specific error message for connection refused
+      if (error.code === 'ECONNREFUSED') {
+        res.status(503).json({ 
+          message: 'N8N service is not running', 
+          error: 'Please ensure N8N is running on localhost:5678 before starting the interview session.',
+          suggestion: 'Start your N8N instance and activate the workflow first.'
+        });
+      } else {
+        res.status(500).json({ message: 'Failed to start interview bot', error: error.message });
+      }
     }
   });
 
@@ -818,8 +828,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Transcript routes
   app.get("/api/transcripts", authenticateToken, async (req, res) => {
     try {
-      const transcripts = await storage.getTranscripts();
-      res.json(transcripts);
+      const { meetId } = req.query;
+      
+      if (meetId && typeof meetId === 'string') {
+        const transcripts = await storage.getTranscriptsByMeetId(meetId);
+        res.json(transcripts);
+      } else {
+        const transcripts = await storage.getTranscripts();
+        res.json(transcripts);
+      }
     } catch (error) {
       console.error("Error getting transcripts:", error);
       res.status(500).json({ error: "Failed to get transcripts" });

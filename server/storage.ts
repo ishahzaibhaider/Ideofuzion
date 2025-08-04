@@ -35,6 +35,7 @@ export interface IStorage {
 
   // Transcripts
   getTranscripts(): Promise<Transcript[]>;
+  getTranscriptsByMeetId(meetId: string): Promise<Transcript[]>;
   getLatestTranscript(): Promise<Transcript | undefined>;
   createTranscript(transcript: InsertTranscript): Promise<Transcript>;
 
@@ -310,8 +311,8 @@ export class MongoStorage implements IStorage {
       Speaker1: doc.Speaker1,
       Speaker2: doc.Speaker2,
       Speaker3: doc.Speaker3,
-      suggestedQuestions: doc.suggestedQuestions || [],
-      summary: doc.summary,
+      Suggested_Questions: doc.Suggested_Questions || [],
+      Summary: doc.Summary,
       createdAt: doc.createdAt
     };
   }
@@ -322,6 +323,18 @@ export class MongoStorage implements IStorage {
       return transcripts.map(transcript => this.mongoDocToTranscript(transcript));
     } catch (error) {
       console.error('Error getting transcripts:', error);
+      return [];
+    }
+  }
+
+  async getTranscriptsByMeetId(meetId: string): Promise<Transcript[]> {
+    try {
+      // Convert meetId to fid number if needed
+      const fid = parseInt(meetId) || meetId;
+      const transcripts = await TranscriptModel.find({ fid }).sort({ createdAt: 1 });
+      return transcripts.map(transcript => this.mongoDocToTranscript(transcript));
+    } catch (error) {
+      console.error('Error getting transcripts by meet ID:', error);
       return [];
     }
   }
