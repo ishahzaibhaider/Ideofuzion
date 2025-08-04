@@ -4,13 +4,11 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files for both root and client
+# Copy the single root package.json file
 COPY package*.json ./
-COPY client/package*.json ./client/
 
-# Install all dependencies (dev included)
+# Install all dependencies for the entire project from the root
 RUN npm install
-RUN cd client && npm install
 
 # Copy the rest of the source code
 COPY . .
@@ -38,4 +36,5 @@ COPY --from=builder /app/dist ./dist
 EXPOSE 3000
 
 # The command to run your production server
+# NOTE: Adjust this if your server entry point is different
 CMD [ "node", "dist/index.js" ]
