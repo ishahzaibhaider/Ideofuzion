@@ -92,7 +92,7 @@ export default function DashboardPage() {
             <MetricCard
               title="Avg. Time to Hire"
               value={metrics?.avgTimeToHire || "0d"}
-              change="-2d"
+              change="2d"
               trend="down"
               icon={<Clock className="w-6 h-6 text-orange-600" />}
               changeType="positive"
