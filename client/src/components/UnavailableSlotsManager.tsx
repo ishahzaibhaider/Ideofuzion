@@ -108,9 +108,9 @@ function EditSlotDialog({ slot, open, onOpenChange }: EditSlotDialogProps) {
       const startTime24 = convertTo24Hour(startTime);
       const endTime24 = convertTo24Hour(endTime);
       
-      // Create datetime strings in Pakistan Standard Time (UTC+5)
-      const startDateTime = `${dateStr}T${startTime24}:00.000+05:00`;
-      const endDateTime = `${dateStr}T${endTime24}:00.000+05:00`;
+      // Create datetime strings in UTC format for database storage
+      const startDateTime = `${dateStr}T${startTime24}:00.000Z`;
+      const endDateTime = `${dateStr}T${endTime24}:00.000Z`;
 
       await updateSlotMutation.mutateAsync({
         date: dateStr,

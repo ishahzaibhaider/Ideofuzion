@@ -111,9 +111,9 @@ export default function AddUnavailableSlotsDialog() {
         const startTime24 = convertTo24Hour(slot.startTime);
         const endTime24 = convertTo24Hour(slot.endTime);
         
-        // Create datetime strings in Pakistan Standard Time (UTC+5)
-        const startDateTime = `${dateStr}T${startTime24}:00.000+05:00`;
-        const endDateTime = `${dateStr}T${endTime24}:00.000+05:00`;
+        // Create datetime strings in UTC format for database storage
+        const startDateTime = `${dateStr}T${startTime24}:00.000Z`;
+        const endDateTime = `${dateStr}T${endTime24}:00.000Z`;
         
         await createSlotMutation.mutateAsync({
           date: dateStr,
@@ -165,7 +165,11 @@ export default function AddUnavailableSlotsDialog() {
                   mode="single"
                   selected={selectedDate}
                   onSelect={setSelectedDate}
-                  disabled={(date) => date < new Date()}
+                  disabled={(date) => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    return date < today;
+                  }}
                   initialFocus
                 />
               </PopoverContent>
