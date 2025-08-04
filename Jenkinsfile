@@ -16,7 +16,7 @@ pipeline {
             steps {
                 script {
                     // Define your Docker Hub username and image name
-                    def dockerhubUser = 'your-dockerhub-username' // <-- VERY IMPORTANT: CHANGE THIS
+                    def dockerhubUser = 'syedalishoaibhassan' // <-- VERY IMPORTANT: CHANGE THIS
                     def imageName = "${dockerhubUser}/ideofuzion-app:latest"
 
                     // Build the Docker image using the Dockerfile in your repo
