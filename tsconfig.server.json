@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,             // CRITICAL: Allows JavaScript output.
+    "module": "NodeNext",        // Best module system for modern Node.js.
+    "moduleResolution": "NodeNext",
+    "outDir": "dist"             // Output compiled files to the 'dist' folder.
+  },
+  "include": ["server/**/*.ts"],   // ONLY compile files from your 'server' folder.
+  "exclude": ["node_modules", "client", "dist"]
+}
