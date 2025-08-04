@@ -7,6 +7,13 @@
     "outDir": "dist",
     "allowImportingTsExtensions": false
   },
-  "include": ["server/**/*.ts"],
-  "exclude": ["node_modules", "client", "dist"]
+  "include": [
+    "server/**/*.ts",
+    "shared/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "client",
+    "dist"
+  ]
 }
