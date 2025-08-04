@@ -47,8 +47,11 @@ pipeline {
         
                     // Securely load the MongoDB URI into an environment variable
                     withCredentials([string(credentialsId: 'mongodb-uri', variable: 'MONGODB_URI')]) {
-                        // The MONGODB_URI variable is now available inside this block
-                        sh "ssh ${remoteUser}@${remoteHost} 'docker pull ${imageName} && docker stop ${containerName} || true && docker rm ${containerName} || true && docker run -d --name ${containerName} -p ${hostPort}:${appPort} -e MONGODB_URI=\"${MONGODB_URI}\" ${imageName}'"
+                        // This command now uses double quotes for the remote command,
+                        // which allows the MONGODB_URI variable to be expanded correctly.
+                        sh """
+                           ssh ${remoteUser}@${remoteHost} "docker pull ${imageName} && docker stop ${containerName} || true && docker rm ${containerName} || true && docker run -d --name ${containerName} -p ${hostPort}:${appPort} -e MONGODB_URI='${MONGODB_URI}' ${imageName}"
+                        """
                     }
                 }
             }
