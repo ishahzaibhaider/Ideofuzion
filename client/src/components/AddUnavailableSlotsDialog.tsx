@@ -25,7 +25,7 @@ export default function AddUnavailableSlotsDialog() {
   const { toast } = useToast();
 
   const createSlotMutation = useMutation({
-    mutationFn: async (slotData: { date: string; startTime: string; endTime: string }) => {
+    mutationFn: async (slotData: { date: string; startTime: string; endTime: string; reason: string }) => {
       const response = await authenticatedApiRequest("POST", "/api/unavailable-slots", slotData);
       return response.json();
     },
@@ -100,25 +100,30 @@ export default function AddUnavailableSlotsDialog() {
     }
 
     try {
-      // Fix date issue: Use local date format to avoid timezone conversion
+      // Format the local date as YYYY-MM-DD
       const year = selectedDate.getFullYear();
       const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
       const day = String(selectedDate.getDate()).padStart(2, '0');
-      const dateStr = `${year}-${month}-${day}`; // YYYY-MM-DD format
+      const dateStr = `${year}-${month}-${day}`;
       
       for (const slot of validSlots) {
-        // Convert 12-hour format to 24-hour format for proper time handling
+        // Convert 12-hour format to 24-hour format
         const startTime24 = convertTo24Hour(slot.startTime);
         const endTime24 = convertTo24Hour(slot.endTime);
         
-        // Create datetime strings in UTC format for database storage
-        const startDateTime = `${dateStr}T${startTime24}:00.000Z`;
-        const endDateTime = `${dateStr}T${endTime24}:00.000Z`;
+        // Create local Date objects for start and end times
+        const startDate = new Date(`${dateStr}T${startTime24}:00`);
+        const endDate = new Date(`${dateStr}T${endTime24}:00`);
         
+        // Convert to UTC ISO strings using .toISOString()
+        const startTimeUTC = startDate.toISOString();
+        const endTimeUTC = endDate.toISOString();
+
         await createSlotMutation.mutateAsync({
           date: dateStr,
-          startTime: startDateTime,
-          endTime: endDateTime,
+          startTime: startTimeUTC,
+          endTime: endTimeUTC,
+          reason: "Unavailable",
         });
       }
 
