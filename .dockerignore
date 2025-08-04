@@ -1,0 +1,11 @@
+# Ignore local dependencies, they are installed inside the container
+node_modules
+
+# Ignore local build output
+dist
+build
+
+# Ignore git and environment files
+.git
+.gitignore
+.env
