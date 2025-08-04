@@ -1,69 +1,70 @@
+
+// Jenkinsfile
+
 pipeline {
-    // 1. Agent and Tools Configuration
-    // Run this pipeline on any available Jenkins agent.
     agent any
 
-    // Specify the NodeJS version to use, which must match the name
-    // configured in Manage Jenkins > Tools.
-    tools {
-        nodejs 'NodeJS-24'
-    }
-
-    // 2. Pipeline Stages
-    // The pipeline is broken down into logical stages.
     stages {
-
-        // Stage: Checkout
-        // Clones the source code from the GitHub repository.
         stage('Checkout') {
             steps {
                 echo 'Checking out code from the main branch...'
                 git branch: 'main', url: 'https://github.com/ishahzaibhaider/Ideofuzion.git'
-                // Note: Replace the URL with your actual repository URL.
             }
         }
 
-        // Stage: Install Dependencies
-        // Installs the required Node.js packages using npm.
-        stage('Install Dependencies') {
+        stage('Build and Push Docker Image') {
             steps {
-                echo 'Installing npm project dependencies...'
-                sh 'npm install'
+                script {
+                    // Define your Docker Hub username and image name
+                    def dockerhubUser = 'your-dockerhub-username' // <-- VERY IMPORTANT: CHANGE THIS
+                    def imageName = "${dockerhubUser}/ideofuzion-app:latest"
+
+                    // Build the Docker image using the Dockerfile in your repo
+                    sh "docker build -t ${imageName} ."
+
+                    // Login to Docker Hub using credentials stored in Jenkins
+                    withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                        sh "echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin"
+                    }
+
+                    // Push the newly built image to Docker Hub
+                    sh "docker push ${imageName}"
+                }
             }
         }
 
-        // Stage: Build Application
-        // Creates a production-ready build of the application.
-        // The output is typically placed in a 'build' or 'dist' folder.
-        stage('Build Application') {
-            steps {
-                echo 'Creating a production build...'
-                sh 'npm run build'
-            }
-        }
-
-        // Stage: Deploy to Production
-        // Copies the built files to the web server and restarts the
-        // application using PM2 for a zero-downtime update.
         stage('Deploy to Production') {
             steps {
-                sh '''
-                    echo "Deploying new build to the production server..."
-                    
-                    # --- IMPORTANT ---
-                    # Replace 'your_web_server_ip' with your EC2 instance's public IP address.
-                    
-                    # Step A: Securely copy the contents of the 'build' folder to the web server.
-                    # The destination path '/home/ubuntu/Ideofuzion' was identified from your pm2 output.
-                    scp -r build/* ubuntu@172.31.80.177/:/home/ubuntu/Ideofuzion
-                    
-                    # Step B: Connect to the web server and gracefully reload the PM2 application.
-                    # The app name 'ideofuzion-app' was identified from your pm2 output.
-                    ssh ubuntu@172.31.80.177/ "pm2 reload ideofuzion-app"
+                script {
+                    // This is CORRECT. It uses the stable Private IP.
+                    def remoteUser = 'ubuntu'
+                    def remoteHost = '172.31.80.177'
+                    def containerName = 'ideofuzion-app-container'
+                    def appPort = 3000 // Port inside the container
+                    def hostPort = 80  // Public port on the EC2 instance
 
-                    echo "Deployment complete."
-                '''
+                    def dockerhubUser = 'your-dockerhub-username' // <-- VERY IMPORTANT: CHANGE THIS
+                    def imageName = "${dockerhubUser}/ideofuzion-app:latest"
+
+                    // SSH into the production server and run the deployment commands
+                    sh """
+                        ssh ${remoteUser}@${remoteHost} << EOF
+                            echo 'Deploying on production server...'
+                            docker pull ${imageName}
+                            docker stop ${containerName} || true
+                            docker rm ${containerName} || true
+                            docker run -d --name ${containerName} -p ${hostPort}:${appPort} ${imageName}
+                            echo 'Deployment complete.'
+                        EOF
+                    """
+                }
             }
+        }
+    }
+    post {
+        always {
+            sh "docker logout"
+            cleanWs()
         }
     }
 }

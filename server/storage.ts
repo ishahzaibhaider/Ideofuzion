@@ -1,7 +1,5 @@
-import { UserModel, JobCriteriaModel, CandidateModel, TranscriptModel, AvailableSlotModel, type User, type InsertUser, type JobCriteria, type InsertJobCriteria, type Candidate, type InsertCandidate, type Transcript, type InsertTranscript, type AvailableSlot, type InsertAvailableSlot } from "@shared/schema";
+import { UserModel, JobCriteriaModel, CandidateModel, TranscriptModel, UnavailableSlotModel, type User, type InsertUser, type JobCriteria, type InsertJobCriteria, type Candidate, type InsertCandidate, type Transcript, type InsertTranscript, type UnavailableSlot, type InsertUnavailableSlot } from "@shared/schema";
 import { connectToDatabase } from "./db";
-import dotenv from 'dotenv';
-dotenv.config();
 
 // Define the structure for the data coming from the frontend form
 interface JobFormData {
@@ -40,10 +38,11 @@ export interface IStorage {
   getLatestTranscript(): Promise<Transcript | undefined>;
   createTranscript(transcript: InsertTranscript): Promise<Transcript>;
 
-  // Available Slots
-  getAvailableSlots(): Promise<AvailableSlot[]>;
-  createAvailableSlot(slot: InsertAvailableSlot): Promise<AvailableSlot>;
-  deleteAvailableSlot(id: string): Promise<boolean>;
+  // Unavailable Slots
+  getUnavailableSlots(): Promise<UnavailableSlot[]>;
+  createUnavailableSlot(slot: InsertUnavailableSlot): Promise<UnavailableSlot>;
+  updateUnavailableSlot(id: string, updates: Partial<InsertUnavailableSlot>): Promise<UnavailableSlot | undefined>;
+  deleteUnavailableSlot(id: string): Promise<boolean>;
 }
 
 export class MongoStorage implements IStorage {
@@ -347,44 +346,54 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  // Helper method to convert MongoDB document to AvailableSlot
-  private mongoDocToAvailableSlot(doc: any): AvailableSlot {
+  // Helper method to convert MongoDB document to UnavailableSlot
+  private mongoDocToUnavailableSlot(doc: any): UnavailableSlot {
     return {
       id: doc._id.toString(),
       date: doc.date,
       startTime: doc.startTime,
       endTime: doc.endTime,
-      isBooked: doc.isBooked,
+      reason: doc.reason || "Unavailable",
       createdAt: doc.createdAt
     };
   }
 
-  async getAvailableSlots(): Promise<AvailableSlot[]> {
+  async getUnavailableSlots(): Promise<UnavailableSlot[]> {
     try {
-      const slots = await AvailableSlotModel.find().sort({ date: 1, startTime: 1 });
-      return slots.map(slot => this.mongoDocToAvailableSlot(slot));
+      const slots = await UnavailableSlotModel.find().sort({ date: 1, startTime: 1 });
+      return slots.map(slot => this.mongoDocToUnavailableSlot(slot));
     } catch (error) {
-      console.error('Error getting available slots:', error);
+      console.error('Error getting unavailable slots:', error);
       return [];
     }
   }
 
-  async createAvailableSlot(insertSlot: InsertAvailableSlot): Promise<AvailableSlot> {
+  async createUnavailableSlot(insertSlot: InsertUnavailableSlot): Promise<UnavailableSlot> {
     try {
-      const slot = await AvailableSlotModel.create(insertSlot);
-      return this.mongoDocToAvailableSlot(slot);
+      const slot = await UnavailableSlotModel.create(insertSlot);
+      return this.mongoDocToUnavailableSlot(slot);
     } catch (error) {
-      console.error('Error creating available slot:', error);
+      console.error('Error creating unavailable slot:', error);
       throw error;
     }
   }
 
-  async deleteAvailableSlot(id: string): Promise<boolean> {
+  async updateUnavailableSlot(id: string, updates: Partial<InsertUnavailableSlot>): Promise<UnavailableSlot | undefined> {
     try {
-      const result = await AvailableSlotModel.findByIdAndDelete(id);
+      const slot = await UnavailableSlotModel.findByIdAndUpdate(id, updates, { new: true });
+      return slot ? this.mongoDocToUnavailableSlot(slot) : undefined;
+    } catch (error) {
+      console.error('Error updating unavailable slot:', error);
+      return undefined;
+    }
+  }
+
+  async deleteUnavailableSlot(id: string): Promise<boolean> {
+    try {
+      const result = await UnavailableSlotModel.findByIdAndDelete(id);
       return result !== null;
     } catch (error) {
-      console.error('Error deleting available slot:', error);
+      console.error('Error deleting unavailable slot:', error);
       return false;
     }
   }

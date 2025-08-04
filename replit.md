@@ -32,6 +32,11 @@ This is a full-stack hiring pipeline and intelligence platform built with React,
 - **LATEST:** Created calendar component with date picker and multiple time slot management
 - **LATEST:** Added available slots API endpoints with MongoDB integration storing data in ISO format
 - **LATEST:** Updated README.md to reflect current project state with MongoDB Atlas, N8N integration, and latest features
+- **LATEST (August 1, 2025):** Successfully migrated from Replit Agent to Replit environment with MongoDB Atlas
+- **LATEST:** Changed "Add Available Slots" to "Add Unavailable Slots" button on dashboard
+- **LATEST:** Updated database collection from "available_slots" to "unavailable_slots"  
+- **LATEST:** Implemented complete unavailable slots functionality with API endpoints and UI components
+- **LATEST:** Fixed timezone issue - unavailable slots now properly store times in Pakistan Standard Time (+05:00) format
 
 ## User Preferences
 

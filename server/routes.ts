@@ -5,9 +5,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { z } from "zod"; // Import Zod for validation
 import { storage } from "./storage";
-import { insertUserSchema, insertCandidateSchema, insertTranscriptSchema, insertAvailableSlotSchema, type Candidate } from "@shared/schema";
-import dotenv from 'dotenv';
-dotenv.config();
+import { insertUserSchema, insertCandidateSchema, insertTranscriptSchema, insertUnavailableSlotSchema, type Candidate } from "@shared/schema";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
@@ -856,42 +854,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Available Slots routes
-  app.get("/api/available-slots", authenticateToken, async (req, res) => {
+  // Unavailable Slots routes
+  app.get("/api/unavailable-slots", authenticateToken, async (req, res) => {
     try {
-      const slots = await storage.getAvailableSlots();
+      const slots = await storage.getUnavailableSlots();
       res.json(slots);
     } catch (error) {
-      console.error("Error getting available slots:", error);
-      res.status(500).json({ error: "Failed to get available slots" });
+      console.error("Error getting unavailable slots:", error);
+      res.status(500).json({ error: "Failed to get unavailable slots" });
     }
   });
 
-  app.post("/api/available-slots", authenticateToken, async (req, res) => {
+  app.post("/api/unavailable-slots", authenticateToken, async (req, res) => {
     try {
-      const { error, data } = insertAvailableSlotSchema.safeParse(req.body);
+      const { error, data } = insertUnavailableSlotSchema.safeParse(req.body);
       if (error) {
         return res.status(400).json({ error: "Invalid input", details: error.issues });
       }
-      const slot = await storage.createAvailableSlot(data);
+      const slot = await storage.createUnavailableSlot(data);
       res.status(201).json(slot);
     } catch (error) {
-      console.error("Error creating available slot:", error);
-      res.status(500).json({ error: "Failed to create available slot" });
+      console.error("Error creating unavailable slot:", error);
+      res.status(500).json({ error: "Failed to create unavailable slot" });
     }
   });
 
-  app.delete("/api/available-slots/:id", authenticateToken, async (req, res) => {
+  app.put("/api/unavailable-slots/:id", authenticateToken, async (req, res) => {
     try {
-      const success = await storage.deleteAvailableSlot(req.params.id);
+      const { error, data } = insertUnavailableSlotSchema.safeParse(req.body);
+      if (error) {
+        return res.status(400).json({ error: "Invalid input", details: error.issues });
+      }
+      const slot = await storage.updateUnavailableSlot(req.params.id, data);
+      if (slot) {
+        res.json(slot);
+      } else {
+        res.status(404).json({ error: "Unavailable slot not found" });
+      }
+    } catch (error) {
+      console.error("Error updating unavailable slot:", error);
+      res.status(500).json({ error: "Failed to update unavailable slot" });
+    }
+  });
+
+  app.delete("/api/unavailable-slots/:id", authenticateToken, async (req, res) => {
+    try {
+      const success = await storage.deleteUnavailableSlot(req.params.id);
       if (success) {
         res.json({ success: true });
       } else {
-        res.status(404).json({ error: "Available slot not found" });
+        res.status(404).json({ error: "Unavailable slot not found" });
       }
     } catch (error) {
-      console.error("Error deleting available slot:", error);
-      res.status(500).json({ error: "Failed to delete available slot" });
+      console.error("Error deleting unavailable slot:", error);
+      res.status(500).json({ error: "Failed to delete unavailable slot" });
     }
   });
 

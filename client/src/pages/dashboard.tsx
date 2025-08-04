@@ -5,7 +5,8 @@ import Navbar from "@/components/Navbar";
 import MetricCard from "@/components/DashboardWidgets/MetricCard";
 import HiringFunnel from "@/components/DashboardWidgets/HiringFunnel";
 import UpcomingInterviews from "@/components/DashboardWidgets/UpcomingInterviews";
-import AddAvailableSlotsDialog from "@/components/AddAvailableSlotsDialog";
+import AddUnavailableSlotsDialog from "@/components/AddUnavailableSlotsDialog";
+import UnavailableSlotsManager from "@/components/UnavailableSlotsManager";
 import { Users, Video, BarChart3, Clock, Plus } from "lucide-react";
 
 export default function DashboardPage() {
@@ -63,7 +64,7 @@ export default function DashboardPage() {
             </div>
             {/* Action Buttons */}
             <div className="flex space-x-3">
-              <AddAvailableSlotsDialog />
+              <AddUnavailableSlotsDialog />
               <Link href="/create-jobs" className="bg-primary text-white font-bold py-2 px-4 rounded-lg flex items-center space-x-2 hover:bg-primary/90 transition-colors">
                 <Plus className="w-5 h-5" />
                 <span>Create New Job</span>
@@ -82,7 +83,7 @@ export default function DashboardPage() {
             />
            
             <MetricCard
-              title="Hire Rate"
+              title="Hiring Rate"
               value={`${metrics?.hireRate || 0}%`}
               change="+5%"
               trend="up"
@@ -102,6 +103,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <HiringFunnel stages={metrics?.funnelStages || []} />
             <UpcomingInterviews interviews={metrics?.upcomingInterviews || []} />
+            <UnavailableSlotsManager />
           </div>
         </div>
       </div>

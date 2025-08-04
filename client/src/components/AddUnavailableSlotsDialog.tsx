@@ -18,7 +18,7 @@ interface TimeSlot {
   endTime: string;
 }
 
-export default function AddAvailableSlotsDialog() {
+export default function AddUnavailableSlotsDialog() {
   const [open, setOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([{ startTime: "", endTime: "" }]);
@@ -26,20 +26,20 @@ export default function AddAvailableSlotsDialog() {
 
   const createSlotMutation = useMutation({
     mutationFn: async (slotData: { date: string; startTime: string; endTime: string }) => {
-      const response = await authenticatedApiRequest("POST", "/api/available-slots", slotData);
+      const response = await authenticatedApiRequest("POST", "/api/unavailable-slots", slotData);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/available-slots"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/unavailable-slots"] });
       toast({
         title: "Success",
-        description: "Available slots added successfully",
+        description: "Unavailable slots added successfully",
       });
     },
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to add available slots",
+        description: "Failed to add unavailable slots",
         variant: "destructive",
       });
     },
@@ -58,6 +58,25 @@ export default function AddAvailableSlotsDialog() {
       i === index ? { ...slot, [field]: value } : slot
     );
     setTimeSlots(updated);
+  };
+
+  // Helper function to convert 12-hour format to 24-hour format
+  const convertTo24Hour = (time12h: string): string => {
+    const [time, modifier] = time12h.split(' ');
+    let [hours, minutes] = time.split(':');
+    let hour = parseInt(hours, 10);
+    
+    if (modifier === 'AM') {
+      if (hour === 12) {
+        hour = 0; // 12:00 AM becomes 00:00
+      }
+    } else if (modifier === 'PM') {
+      if (hour !== 12) {
+        hour += 12; // 1:00 PM becomes 13:00, but 12:00 PM stays 12:00
+      }
+    }
+    
+    return `${hour.toString().padStart(2, '0')}:${minutes}`;
   };
 
   const handleSave = async () => {
@@ -81,12 +100,20 @@ export default function AddAvailableSlotsDialog() {
     }
 
     try {
-      const dateStr = selectedDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+      // Fix date issue: Use local date format to avoid timezone conversion
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(selectedDate.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`; // YYYY-MM-DD format
       
       for (const slot of validSlots) {
-        // Create ISO datetime strings
-        const startDateTime = new Date(`${dateStr}T${slot.startTime}:00.000Z`).toISOString();
-        const endDateTime = new Date(`${dateStr}T${slot.endTime}:00.000Z`).toISOString();
+        // Convert 12-hour format to 24-hour format for proper time handling
+        const startTime24 = convertTo24Hour(slot.startTime);
+        const endTime24 = convertTo24Hour(slot.endTime);
+        
+        // Create datetime strings in Pakistan Standard Time (UTC+5)
+        const startDateTime = `${dateStr}T${startTime24}:00.000+05:00`;
+        const endDateTime = `${dateStr}T${endTime24}:00.000+05:00`;
         
         await createSlotMutation.mutateAsync({
           date: dateStr,
@@ -109,12 +136,12 @@ export default function AddAvailableSlotsDialog() {
       <DialogTrigger asChild>
         <Button className="bg-primary text-white font-bold py-2 px-4 rounded-lg flex items-center space-x-2 hover:bg-primary/90 transition-colors">
           <Plus className="w-5 h-5" />
-          <span>Add Available Slots</span>
+          <span>Add Unavailable Slots</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Add Available Time Slots</DialogTitle>
+          <DialogTitle>Add Unavailable Time Slots</DialogTitle>
         </DialogHeader>
         <div className="space-y-6">
           {/* Date Picker */}
@@ -193,15 +220,12 @@ export default function AddAvailableSlotsDialog() {
             ))}
           </div>
 
-          {/* Actions */}
+          {/* Save Button */}
           <div className="flex justify-end space-x-2">
-            <Button
-              variant="outline"
-              onClick={() => setOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button
+            <Button 
               onClick={handleSave}
               disabled={createSlotMutation.isPending}
             >
