@@ -665,7 +665,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp: new Date().toISOString()
       });
 
-      const webhookUrl = `http://localhost:5678/webhook/f04e8b6a-39c9-4654-ac7b-0aee4b6bd4fb?${params}`;
+      const webhookUrl = `http://54.226.92.93:5678/webhook/f04e8b6a-39c9-4654-ac7b-0aee4b6bd4fb?${params}`;
 
       const response = await fetch(webhookUrl, {
         method: 'GET',

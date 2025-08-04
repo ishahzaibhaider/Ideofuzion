@@ -56,13 +56,14 @@ export default function LiveInterviewHub({
     refetchOnWindowFocus: false,
   });
 
-  // Query for transcripts by Meet ID for live transcript display
+  // Query for latest transcripts for live transcript display
   const { data: allTranscripts, refetch: refetchAllTranscripts, isLoading: isAllTranscriptsLoading } = useQuery({
-    queryKey: ["/api/transcripts", candidate["Google Meet Id"]],
+    queryKey: ["/api/transcripts/latest-for-display"],
     queryFn: async () => {
-      const meetId = candidate["Google Meet Id"] || candidate.id;
-      const response = await authenticatedApiRequest("GET", `/api/transcripts?meetId=${meetId}`);
-      return response.json() as Promise<Transcript[]>;
+      // Get the latest transcript for display
+      const response = await authenticatedApiRequest("GET", "/api/transcripts/latest");
+      const latestTranscript = await response.json() as Transcript;
+      return latestTranscript ? [latestTranscript] : [];
     },
     refetchOnWindowFocus: false,
     enabled: !!candidate,
@@ -76,41 +77,55 @@ export default function LiveInterviewHub({
     }
   }, [latestTranscript]);
 
-  // Update transcript display with real data from database
+  // Update transcript display with real data from database - latest first
   useEffect(() => {
     if (allTranscripts && allTranscripts.length > 0) {
+      const latestTranscript = allTranscripts[0]; // Get the most recent transcript
       const formattedTranscripts: TranscriptEntry[] = [];
       
-      allTranscripts.forEach((transcript, transcriptIndex) => {
-        // Add Speaker1 (usually interviewer)
-        if (transcript.Speaker1) {
-          formattedTranscripts.push({
-            speaker: 'interviewer',
-            text: transcript.Speaker1,
-            timestamp: transcript.createdAt ? new Date(transcript.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : `Entry ${transcriptIndex + 1}`
-          });
-        }
-        
-        // Add Speaker2 (usually candidate)
-        if (transcript.Speaker2) {
-          formattedTranscripts.push({
-            speaker: 'candidate',
-            text: transcript.Speaker2,
-            timestamp: transcript.createdAt ? new Date(transcript.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : `Entry ${transcriptIndex + 1}`
-          });
-        }
-        
-        // Add Speaker3 if present
-        if (transcript.Speaker3) {
-          formattedTranscripts.push({
-            speaker: 'interviewer',
-            text: transcript.Speaker3,
-            timestamp: transcript.createdAt ? new Date(transcript.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : `Entry ${transcriptIndex + 1}`
-          });
-        }
-      });
+      // Create timestamp for this transcript
+      const baseTimestamp = latestTranscript.createdAt ? 
+        new Date(latestTranscript.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 
+        new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       
+      // Add each speaker's content as separate entries
+      if (latestTranscript.Speaker1) {
+        formattedTranscripts.push({
+          speaker: 'interviewer',
+          text: latestTranscript.Speaker1,
+          timestamp: baseTimestamp
+        });
+      }
+      
+      if (latestTranscript.Speaker2) {
+        formattedTranscripts.push({
+          speaker: 'candidate',
+          text: latestTranscript.Speaker2,
+          timestamp: baseTimestamp
+        });
+      }
+      
+      if (latestTranscript.Speaker3) {
+        formattedTranscripts.push({
+          speaker: 'interviewer',
+          text: latestTranscript.Speaker3,
+          timestamp: baseTimestamp
+        });
+      }
+      
+      // Clear any old transcript data and set new one
       setTranscript(formattedTranscripts);
+      
+      console.log('Updated transcript with latest data:', {
+        transcriptId: latestTranscript.id,
+        hasS1: !!latestTranscript.Speaker1,
+        hasS2: !!latestTranscript.Speaker2,
+        hasS3: !!latestTranscript.Speaker3,
+        entriesCreated: formattedTranscripts.length
+      });
+    } else {
+      // Clear transcript if no data
+      setTranscript([]);
     }
   }, [allTranscripts]);
 
@@ -125,10 +140,11 @@ export default function LiveInterviewHub({
 
   const handleReloadTranscripts = async () => {
     try {
+      console.log('Reloading latest transcript data...');
       await refetchAllTranscripts();
-      console.log('Transcripts reloaded successfully');
+      console.log('Latest transcript reloaded successfully');
     } catch (error) {
-      console.error('Failed to reload transcripts:', error);
+      console.error('Failed to reload latest transcript:', error);
     }
   };
 
@@ -274,10 +290,10 @@ export default function LiveInterviewHub({
           {transcript.length === 0 ? (
             <div className="text-center py-8 text-gray-400">
               <p className="text-sm">
-                {isAllTranscriptsLoading ? 'Loading transcripts...' : 'No transcripts available for this meeting'}
+                {isAllTranscriptsLoading ? 'Loading latest transcript...' : 'No transcripts available yet'}
               </p>
               <p className="text-xs text-gray-400 mt-1">
-                {isAllTranscriptsLoading ? 'Please wait...' : `Meet ID: ${candidate["Google Meet Id"] || candidate.id}`}
+                {isAllTranscriptsLoading ? 'Please wait...' : 'Click reload to fetch the latest conversation data'}
               </p>
             </div>
           ) : (
@@ -341,7 +357,7 @@ export default function LiveInterviewHub({
                   Interview Summary
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="max-h-32 overflow-y-auto">
                 <p className="text-sm text-gray-700 leading-relaxed">
                   {transcriptSummary}
                 </p>
@@ -372,7 +388,7 @@ export default function LiveInterviewHub({
                 <span className="text-xs text-gray-500">(Loading...)</span>
               )}
             </h4>
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-48 overflow-y-auto">
               {suggestions.length > 0 ? (
                 suggestions.map((question, index) => (
                   <button 
