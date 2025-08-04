@@ -1,5 +1,5 @@
-import { UserModel, JobCriteriaModel, CandidateModel, TranscriptModel, UnavailableSlotModel, type User, type InsertUser, type JobCriteria, type InsertJobCriteria, type Candidate, type InsertCandidate, type Transcript, type InsertTranscript, type UnavailableSlot, type InsertUnavailableSlot } from "@shared/schema";
-import { connectToDatabase } from "./db";
+import { UserModel, JobCriteriaModel, CandidateModel, TranscriptModel, UnavailableSlotModel, type User, type InsertUser, type JobCriteria, type InsertJobCriteria, type Candidate, type InsertCandidate, type Transcript, type InsertTranscript, type UnavailableSlot, type InsertUnavailableSlot } from "../shared/schema.js";
+import { connectToDatabase } from "./db.js";
 
 // Define the structure for the data coming from the frontend form
 interface JobFormData {
