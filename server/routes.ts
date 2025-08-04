@@ -4,8 +4,8 @@ import { WebSocketServer, WebSocket } from "ws";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { z } from "zod"; // Import Zod for validation
-import { storage } from "./storage";
-import { insertUserSchema, insertCandidateSchema, insertTranscriptSchema, insertUnavailableSlotSchema, type Candidate } from "@shared/schema";
+import { storage } from "./storage.js";
+import { insertUserSchema, insertCandidateSchema, insertTranscriptSchema, insertUnavailableSlotSchema, type Candidate } from "../shared/schema.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
