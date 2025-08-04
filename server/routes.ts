@@ -665,7 +665,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp: new Date().toISOString()
       });
 
-      const webhookUrl = `https://ali-shoaib.app.n8n.cloud/webhook-test/022f198b-9bb8-4ec8-8457-53df00516dbb?${params}`;
+      const webhookUrl = `http://localhost:5678/webhook/f04e8b6a-39c9-4654-ac7b-0aee4b6bd4fb?${params}`;
 
       const response = await fetch(webhookUrl, {
         method: 'GET',

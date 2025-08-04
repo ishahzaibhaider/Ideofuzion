@@ -100,8 +100,8 @@ export interface ITranscript extends Document {
   Speaker1?: string;
   Speaker2?: string;
   Speaker3?: string;
-  suggestedQuestions?: string[];
-  summary?: string;
+  Suggested_Questions?: string[];
+  Summary?: string;
   createdAt?: Date;
 }
 
@@ -110,8 +110,8 @@ const transcriptSchema = new Schema<ITranscript>({
   Speaker1: { type: String },
   Speaker2: { type: String },
   Speaker3: { type: String },
-  suggestedQuestions: [{ type: String }],
-  summary: { type: String },
+  Suggested_Questions: [{ type: String }],
+  Summary: { type: String },
   createdAt: { type: Date, default: Date.now }
 }, { collection: 'transcripts' });
 
@@ -158,8 +158,8 @@ export const insertTranscriptSchema = z.object({
   Speaker1: z.string().optional(),
   Speaker2: z.string().optional(),
   Speaker3: z.string().optional(),
-  suggestedQuestions: z.array(z.string()).optional(),
-  summary: z.string().optional()
+  Suggested_Questions: z.array(z.string()).optional(),
+  Summary: z.string().optional()
 });
 
 // Types
@@ -225,8 +225,8 @@ export type Transcript = {
   Speaker1?: string;
   Speaker2?: string;
   Speaker3?: string;
-  suggestedQuestions?: string[];
-  summary?: string;
+  Suggested_Questions?: string[];
+  Summary?: string;
   createdAt?: Date;
 };
 

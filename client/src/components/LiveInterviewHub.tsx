@@ -56,16 +56,68 @@ export default function LiveInterviewHub({
     refetchOnWindowFocus: false,
   });
 
+  // Query for all transcripts for live transcript display
+  const { data: allTranscripts, refetch: refetchAllTranscripts, isLoading: isAllTranscriptsLoading } = useQuery({
+    queryKey: ["/api/transcripts"],
+    queryFn: async () => {
+      const response = await authenticatedApiRequest("GET", "/api/transcripts");
+      return response.json() as Promise<Transcript[]>;
+    },
+    refetchOnWindowFocus: false,
+  });
+
   // Update suggestions and summary when transcript data changes
   useEffect(() => {
     if (latestTranscript) {
-      setSuggestions(latestTranscript.suggestedQuestions || []);
-      setTranscriptSummary(latestTranscript.summary || "");
+      setSuggestions(latestTranscript.Suggested_Questions || []);
+      setTranscriptSummary(latestTranscript.Summary || "");
     }
   }, [latestTranscript]);
 
+  // Update transcript display with real data from database
+  useEffect(() => {
+    if (allTranscripts && allTranscripts.length > 0) {
+      const formattedTranscripts: TranscriptEntry[] = [];
+      
+      allTranscripts.forEach((transcript, transcriptIndex) => {
+        // Add Speaker1 (usually interviewer)
+        if (transcript.Speaker1) {
+          formattedTranscripts.push({
+            speaker: 'interviewer',
+            text: transcript.Speaker1,
+            timestamp: transcript.createdAt ? new Date(transcript.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : `Entry ${transcriptIndex + 1}`
+          });
+        }
+        
+        // Add Speaker2 (usually candidate)
+        if (transcript.Speaker2) {
+          formattedTranscripts.push({
+            speaker: 'candidate',
+            text: transcript.Speaker2,
+            timestamp: transcript.createdAt ? new Date(transcript.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : `Entry ${transcriptIndex + 1}`
+          });
+        }
+        
+        // Add Speaker3 if present
+        if (transcript.Speaker3) {
+          formattedTranscripts.push({
+            speaker: 'interviewer',
+            text: transcript.Speaker3,
+            timestamp: transcript.createdAt ? new Date(transcript.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : `Entry ${transcriptIndex + 1}`
+          });
+        }
+      });
+      
+      setTranscript(formattedTranscripts);
+    }
+  }, [allTranscripts]);
+
   const handleReloadAIAssistant = () => {
     refetchTranscript();
+  };
+
+  const handleReloadTranscripts = () => {
+    refetchAllTranscripts();
   };
 
   useEffect(() => {
@@ -187,18 +239,30 @@ export default function LiveInterviewHub({
         <div className="p-4 lg:p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">Live Transcript</h3>
-            <div className="flex items-center space-x-2">
-              <div className={`w-3 h-3 rounded-full ${isSessionActive ? 'bg-red-500 animate-pulse' : 'bg-gray-400'}`}></div>
-              <span className="text-sm text-gray-600">
-                {isSessionActive ? 'Recording' : 'Not Recording'}
-              </span>
+            <div className="flex items-center space-x-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleReloadTranscripts}
+                disabled={isAllTranscriptsLoading}
+                className="p-2"
+              >
+                <RefreshCw className={`w-4 h-4 ${isAllTranscriptsLoading ? 'animate-spin' : ''}`} />
+              </Button>
+              <div className="flex items-center space-x-2">
+                <div className={`w-3 h-3 rounded-full ${isSessionActive ? 'bg-red-500 animate-pulse' : 'bg-gray-400'}`}></div>
+                <span className="text-sm text-gray-600">
+                  {isSessionActive ? 'Recording' : 'Not Recording'}
+                </span>
+              </div>
             </div>
           </div>
         </div>
         <div className="p-4 lg:p-6 h-64 md:h-80 lg:h-96 overflow-y-auto">
           {transcript.length === 0 ? (
             <div className="text-center py-8 text-gray-400">
-              <p className="text-sm">Transcript will appear here when the session starts</p>
+              <p className="text-sm">No transcripts available</p>
+              <p className="text-xs text-gray-400 mt-1">Click reload to fetch latest transcripts</p>
             </div>
           ) : (
             <div className="space-y-4">
