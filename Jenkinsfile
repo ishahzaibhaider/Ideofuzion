@@ -36,18 +36,20 @@ pipeline {
         stage('Deploy to Production') {
             steps {
                 script {
-                    // This is CORRECT. It uses the stable Private IP.
+                    // Define variables for the remote deployment
                     def remoteUser = 'ubuntu'
                     def remoteHost = '172.31.80.177'
                     def containerName = 'ideofuzion-app-container'
                     def appPort = 3000 // Port inside the container
                     def hostPort = 80  // Public port on the EC2 instance
-
-                    def dockerhubUser = 'syedalishoaibhassan' // <-- VERY IMPORTANT: CHANGE THIS
+                    def dockerhubUser = 'syedalishoaibhassan'
                     def imageName = "${dockerhubUser}/ideofuzion-app:latest"
-
-                    // SSH into the production server and run the deployment commands
-                    sh "ssh ${remoteUser}@${remoteHost} 'docker pull ${imageName} && docker stop ${containerName} || true && docker rm ${containerName} || true && docker run -d --name ${containerName} -p ${hostPort}:${appPort} ${imageName}'"
+        
+                    // Securely load the MongoDB URI into an environment variable
+                    withCredentials([string(credentialsId: 'mongodb-uri', variable: 'MONGODB_URI')]) {
+                        // The MONGODB_URI variable is now available inside this block
+                        sh "ssh ${remoteUser}@${remoteHost} 'docker pull ${imageName} && docker stop ${containerName} || true && docker rm ${containerName} || true && docker run -d --name ${containerName} -p ${hostPort}:${appPort} -e MONGODB_URI=\"${MONGODB_URI}\" ${imageName}'"
+                    }
                 }
             }
         }
