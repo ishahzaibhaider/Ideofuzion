@@ -301,7 +301,7 @@ export default function LiveInterviewPage() {
                     {allCandidates?.map((candidate) => (
                       <CommandItem
                         key={candidate.id}
-                        value={`${candidate["Candidate Name"]} ${candidate["Job Title"]} ${candidate.Email}`}
+                        value={`${candidate["Candidate Name"]} ${candidate["Job Title"]} ${candidate.Email} ${candidate.id}`}
                         onSelect={() => {
                           handleCandidateSelect(candidate.id);
                           setOpen(false);
@@ -318,16 +318,17 @@ export default function LiveInterviewPage() {
                           <div>
                             <span className="font-medium">{candidate["Candidate Name"]}</span>
                             <span className="text-sm text-gray-500 ml-2">
-                              {candidate["Job Title"]}
+                              {candidate["Job Title"]} • ID: {candidate.id.slice(-6)}
                             </span>
                           </div>
                           <div className="text-right">
                             {candidate["Interview Start"] && (
-                              <span className="text-xs text-gray-400">
-                                {new Date(candidate["Interview Start"]).toLocaleDateString()}
-                              </span>
+                              <div className="text-xs text-gray-400">
+                                {new Date(candidate["Interview Start"]).toLocaleDateString()} at{" "}
+                                {new Date(candidate["Interview Start"]).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </div>
                             )}
-                            <span className={`ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium ${
+                            <span className={`mt-1 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium ${
                               candidate.status === 'Hired' ? 'bg-emerald-100 text-emerald-800' :
                               candidate.status === 'Interview Scheduled' ? 'bg-blue-100 text-blue-800' :
                               candidate.status === 'Analysis Complete' ? 'bg-yellow-100 text-yellow-800' :
@@ -389,52 +390,7 @@ export default function LiveInterviewPage() {
             </div>
           </div>
 
-          {/* Current Candidate Info */}
-          <div className="mb-6 bg-white rounded-lg shadow p-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900" data-testid="text-candidate-name">
-                  {displayCandidate["Candidate Name"]}
-                </h2>
-                <p className="text-gray-600" data-testid="text-job-title">
-                  {displayCandidate["Job Title"]}
-                </p>
-                <p className="text-sm text-gray-500" data-testid="text-email">
-                  {displayCandidate.Email}
-                </p>
-                {displayCandidate.status && (
-                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mt-2 ${
-                    displayCandidate.status === 'Hired' ? 'bg-emerald-100 text-emerald-800' :
-                    displayCandidate.status === 'Interview Scheduled' ? 'bg-blue-100 text-blue-800' :
-                    displayCandidate.status === 'Analysis Complete' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`} data-testid="badge-candidate-status">
-                    {displayCandidate.status}
-                  </span>
-                )}
-              </div>
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">Interview Time</p>
-                <p className="text-sm text-gray-500" data-testid="text-interview-date">
-                  {displayCandidate && getInterviewDateTime(displayCandidate).date}
-                </p>
-                <p className="text-sm text-gray-500" data-testid="text-interview-time">
-                  {displayCandidate && getInterviewDateTime(displayCandidate).time}
-                </p>
-                {displayCandidate["Google Meet Id"] && (
-                  <a 
-                    href={`https://${displayCandidate["Google Meet Id"]}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-blue-600 hover:text-blue-800 underline mt-1 inline-block"
-                    data-testid="link-join-meeting"
-                  >
-                    Join Meeting
-                  </a>
-                )}
-              </div>
-            </div>
-          </div>
+
 
           {/* LiveInterviewHub Component */}
           <LiveInterviewHub candidate={displayCandidate} />

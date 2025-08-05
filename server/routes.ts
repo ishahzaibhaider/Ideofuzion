@@ -881,6 +881,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get analysis by Meet ID (for candidate final analysis)
+  app.get("/api/analysis/by-meet-id/:meetId", authenticateToken, async (req, res) => {
+    try {
+      const { meetId } = req.params;
+      console.log(`Fetching analysis for Meet ID: ${meetId}`);
+      
+      const analysis = await storage.getAnalysisByMeetId(meetId);
+      
+      if (!analysis) {
+        console.log(`No analysis found for Meet ID: ${meetId}`);
+        return res.status(404).json({ message: "No analysis found for this Meet ID" });
+      }
+      
+      console.log(`Found analysis for Meet ID ${meetId}:`, { 
+        id: analysis.id, 
+        recommendation: analysis["Recommended for Hire"]
+      });
+      
+      res.json(analysis);
+    } catch (error) {
+      console.error("Error getting analysis by Meet ID:", error);
+      res.status(500).json({ error: "Failed to get analysis" });
+    }
+  });
+
   app.get("/api/transcripts/latest", authenticateToken, async (req, res) => {
     try {
       const transcript = await storage.getLatestTranscript();

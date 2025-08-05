@@ -117,6 +117,26 @@ const transcriptSchema = new Schema<ITranscript>({
 
 export const TranscriptModel = mongoose.model<ITranscript>('Transcript', transcriptSchema);
 
+// MongoDB Analysis Schema
+export interface IAnalysis extends Document {
+  _id: string;
+  "Psychometric Analysis": string;
+  "Technical Analysis": string;
+  "Behavioural Analysis": string;
+  "Recommended for Hire": string;
+  Meet_id: string;
+}
+
+const analysisSchema = new Schema<IAnalysis>({
+  "Psychometric Analysis": { type: String, required: true },
+  "Technical Analysis": { type: String, required: true },
+  "Behavioural Analysis": { type: String, required: true },
+  "Recommended for Hire": { type: String, required: true },
+  Meet_id: { type: String, required: true }
+}, { collection: 'analysis' });
+
+export const AnalysisModel = mongoose.model<IAnalysis>('Analysis', analysisSchema);
+
 // Zod validation schemas
 export const insertUserSchema = z.object({
   name: z.string(),
@@ -160,6 +180,14 @@ export const insertTranscriptSchema = z.object({
   Meet_id: z.string(),
   Suggested_Questions: z.array(z.string()).optional(),
   Summary: z.string().optional()
+});
+
+export const insertAnalysisSchema = z.object({
+  "Psychometric Analysis": z.string(),
+  "Technical Analysis": z.string(),
+  "Behavioural Analysis": z.string(),
+  "Recommended for Hire": z.string(),
+  Meet_id: z.string()
 });
 
 // Types
@@ -228,6 +256,16 @@ export type Transcript = {
   Suggested_Questions?: string[];
   Summary?: string;
   createdAt?: Date;
+};
+
+export type InsertAnalysis = z.infer<typeof insertAnalysisSchema>;
+export type Analysis = {
+  id: string;
+  "Psychometric Analysis": string;
+  "Technical Analysis": string;
+  "Behavioural Analysis": string;
+  "Recommended for Hire": string;
+  Meet_id: string;
 };
 
 // MongoDB Unavailable Slot Schema

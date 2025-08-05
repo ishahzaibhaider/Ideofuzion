@@ -1,4 +1,4 @@
-import { UserModel, JobCriteriaModel, CandidateModel, TranscriptModel, UnavailableSlotModel, type User, type InsertUser, type JobCriteria, type InsertJobCriteria, type Candidate, type InsertCandidate, type Transcript, type InsertTranscript, type UnavailableSlot, type InsertUnavailableSlot } from "../shared/schema.js";
+import { UserModel, JobCriteriaModel, CandidateModel, TranscriptModel, UnavailableSlotModel, AnalysisModel, type User, type InsertUser, type JobCriteria, type InsertJobCriteria, type Candidate, type InsertCandidate, type Transcript, type InsertTranscript, type UnavailableSlot, type InsertUnavailableSlot, type Analysis, type InsertAnalysis } from "../shared/schema.js";
 import { connectToDatabase } from "./db.js";
 
 // Define the structure for the data coming from the frontend form
@@ -44,6 +44,10 @@ export interface IStorage {
   createUnavailableSlot(slot: InsertUnavailableSlot): Promise<UnavailableSlot>;
   updateUnavailableSlot(id: string, updates: Partial<InsertUnavailableSlot>): Promise<UnavailableSlot | undefined>;
   deleteUnavailableSlot(id: string): Promise<boolean>;
+
+  // Analysis
+  getAnalysisByMeetId(meetId: string): Promise<Analysis | undefined>;
+  createAnalysis(analysis: InsertAnalysis): Promise<Analysis>;
 }
 
 export class MongoStorage implements IStorage {
@@ -453,6 +457,44 @@ export class MongoStorage implements IStorage {
     } catch (error) {
       console.error('Error deleting unavailable slot:', error);
       return false;
+    }
+  }
+
+  // Helper function to convert MongoDB document to our Analysis type format
+  private mongoDocToAnalysis(doc: any): Analysis {
+    return {
+      id: doc._id.toString(),
+      "Psychometric Analysis": doc["Psychometric Analysis"],
+      "Technical Analysis": doc["Technical Analysis"],
+      "Behavioural Analysis": doc["Behavioural Analysis"],
+      "Recommended for Hire": doc["Recommended for Hire"],
+      Meet_id: doc.Meet_id
+    };
+  }
+
+  async getAnalysisByMeetId(meetId: string): Promise<Analysis | undefined> {
+    try {
+      console.log(`Searching for analysis with Meet_id: ${meetId}`);
+      const analysis = await AnalysisModel.findOne({ Meet_id: meetId });
+      if (!analysis) {
+        console.log(`No analysis found for Meet_id: ${meetId}`);
+        return undefined;
+      }
+      console.log(`Found analysis for Meet_id: ${meetId}`);
+      return this.mongoDocToAnalysis(analysis);
+    } catch (error) {
+      console.error('Error getting analysis by meet ID:', error);
+      return undefined;
+    }
+  }
+
+  async createAnalysis(insertAnalysis: InsertAnalysis): Promise<Analysis> {
+    try {
+      const analysis = await AnalysisModel.create(insertAnalysis);
+      return this.mongoDocToAnalysis(analysis);
+    } catch (error) {
+      console.error('Error creating analysis:', error);
+      throw error;
     }
   }
 }

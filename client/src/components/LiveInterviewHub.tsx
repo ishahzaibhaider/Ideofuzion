@@ -6,7 +6,7 @@ import { RefreshCw, FileText, Lightbulb, Play, PhoneCall } from 'lucide-react';
 import { wsManager } from '@/lib/websocket';
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
-import { type Candidate, type Transcript } from '@shared/schema';
+import { type Candidate, type Transcript, type Analysis } from '@shared/schema';
 
 interface LiveInterviewHubProps {
   candidate: Candidate;
@@ -62,6 +62,45 @@ export default function LiveInterviewHub({ candidate }: LiveInterviewHubProps) {
       const transcriptData = await response.json();
       console.log('Fetched transcript for candidate:', candidate["Candidate Name"], transcriptData);
       return transcriptData as Transcript;
+    },
+    refetchOnWindowFocus: false,
+    retry: 3,
+    enabled: !!candidateMeetId, // Only run query if we have a Meet ID
+  });
+
+  // Query for candidate-specific analysis data
+  const { data: candidateAnalysis, refetch: refetchAnalysis, isLoading: isAnalysisLoading } = useQuery({
+    queryKey: ["/api/analysis/by-meet-id", candidateMeetId, candidate.id],
+    queryFn: async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+      
+      if (!candidateMeetId) {
+        console.log('No Google Meet ID found for analysis:', candidate["Candidate Name"]);
+        return null;
+      }
+      
+      const response = await fetch(`/api/analysis/by-meet-id/${candidateMeetId}`, {
+        method: "GET",
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          console.log('No analysis found for Meet ID:', candidateMeetId);
+          return null;
+        }
+        throw new Error(`Failed to fetch analysis: ${response.status}`);
+      }
+      
+      const analysisData = await response.json();
+      console.log('Fetched analysis for candidate:', candidate["Candidate Name"], analysisData);
+      return analysisData as Analysis;
     },
     refetchOnWindowFocus: false,
     retry: 3,
@@ -125,11 +164,11 @@ export default function LiveInterviewHub({ candidate }: LiveInterviewHubProps) {
 
   const handleReloadAIAssistant = async () => {
     try {
-      console.log('Reloading AI Assistant data...');
-      await refetchLatestTranscript();
-      console.log('AI Assistant data reloaded successfully');
+      console.log('Reloading AI Assistant and Analysis data...');
+      await Promise.all([refetchLatestTranscript(), refetchAnalysis()]);
+      console.log('AI Assistant and Analysis data reloaded successfully');
     } catch (error) {
-      console.error('Failed to reload AI Assistant data:', error);
+      console.error('Failed to reload AI Assistant and Analysis data:', error);
     }
   };
 
@@ -296,6 +335,79 @@ export default function LiveInterviewHub({ candidate }: LiveInterviewHubProps) {
               </div>
               <p className="text-sm text-gray-500">
                 No summary available yet. Click reload to fetch latest data.
+              </p>
+            </div>
+          )}
+
+          {/* Final Analysis - Comprehensive Display */}
+          {candidateAnalysis ? (
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-6 border border-purple-200">
+              <div className="flex items-center gap-2 mb-4">
+                <FileText className="w-5 h-5 text-purple-600" />
+                <h4 className="text-lg font-semibold text-gray-900">Final Analysis</h4>
+              </div>
+              <div className="space-y-4">
+                {/* Psychometric Analysis */}
+                {candidateAnalysis["Psychometric Analysis"] && (
+                  <div className="bg-white rounded-lg p-4 border border-purple-200">
+                    <h5 className="text-sm font-semibold text-purple-700 mb-2">Psychometric Analysis</h5>
+                    <p className="text-sm text-gray-800 leading-relaxed">
+                      {candidateAnalysis["Psychometric Analysis"]}
+                    </p>
+                  </div>
+                )}
+                
+                {/* Technical Analysis */}
+                {candidateAnalysis["Technical Analysis"] && (
+                  <div className="bg-white rounded-lg p-4 border border-purple-200">
+                    <h5 className="text-sm font-semibold text-purple-700 mb-2">Technical Analysis</h5>
+                    <p className="text-sm text-gray-800 leading-relaxed">
+                      {candidateAnalysis["Technical Analysis"]}
+                    </p>
+                  </div>
+                )}
+                
+                {/* Behavioural Analysis */}
+                {candidateAnalysis["Behavioural Analysis"] && (
+                  <div className="bg-white rounded-lg p-4 border border-purple-200">
+                    <h5 className="text-sm font-semibold text-purple-700 mb-2">Behavioural Analysis</h5>
+                    <p className="text-sm text-gray-800 leading-relaxed">
+                      {candidateAnalysis["Behavioural Analysis"]}
+                    </p>
+                  </div>
+                )}
+                
+                {/* Hiring Recommendation */}
+                {candidateAnalysis["Recommended for Hire"] && (
+                  <div className={`rounded-lg p-4 border-2 ${
+                    candidateAnalysis["Recommended for Hire"].toLowerCase().includes('yes') || 
+                    candidateAnalysis["Recommended for Hire"].toLowerCase().includes('recommend')
+                      ? 'bg-emerald-50 border-emerald-300' 
+                      : 'bg-red-50 border-red-300'
+                  }`}>
+                    <h5 className={`text-sm font-bold mb-2 ${
+                      candidateAnalysis["Recommended for Hire"].toLowerCase().includes('yes') || 
+                      candidateAnalysis["Recommended for Hire"].toLowerCase().includes('recommend')
+                        ? 'text-emerald-700' 
+                        : 'text-red-700'
+                    }`}>
+                      Hiring Recommendation
+                    </h5>
+                    <p className="text-sm text-gray-800 leading-relaxed font-medium">
+                      {candidateAnalysis["Recommended for Hire"]}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : !isAnalysisLoading && (
+            <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+              <div className="flex items-center gap-2 mb-2">
+                <FileText className="w-5 h-5 text-gray-400" />
+                <h4 className="text-lg font-semibold text-gray-500">Final Analysis</h4>
+              </div>
+              <p className="text-sm text-gray-500">
+                No analysis available yet. Analysis will appear after interview completion.
               </p>
             </div>
           )}
