@@ -7,14 +7,17 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Users, Clock } from "lucide-react";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Search, Users, Clock, Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { Candidate } from "@shared/schema";
 
 export default function LiveInterviewPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
   const [manualSelection, setManualSelection] = useState(false);
+  const [open, setOpen] = useState(false);
   const { toast } = useToast();
 
   // Get all candidates for dropdown
@@ -51,18 +54,25 @@ export default function LiveInterviewPage() {
     enabled: !!selectedCandidateId && !!allCandidates,
   });
 
-  // Filter candidates for search and dropdown
-  const filteredCandidates = allCandidates?.filter(candidate =>
-    candidate["Candidate Name"]?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    candidate["Job Title"]?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    candidate.Email?.toLowerCase().includes(searchQuery.toLowerCase())
-  ) || [];
-
   // Determine which candidate to display
   const displayCandidate = manualSelection && selectedCandidateData 
     ? selectedCandidateData 
     : currentInterviewData?.candidate;
   const timeStatus = manualSelection ? 'manual' : currentInterviewData?.timeStatus;
+
+  // Get the selected candidate object for display in combobox
+  const selectedCandidate = allCandidates?.find(c => c.id === selectedCandidateId);
+
+  // Helper function to format interview date and time from candidate data
+  const getInterviewDateTime = (candidate: Candidate) => {
+    if (!candidate["Interview Start"]) return { date: "N/A", time: "N/A" };
+    
+    const interviewStart = new Date(candidate["Interview Start"]);
+    const date = interviewStart.toLocaleDateString();
+    const time = interviewStart.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    return { date, time };
+  };
 
   // Handle candidate selection from dropdown
   const handleCandidateSelect = (candidateId: string) => {
@@ -81,7 +91,7 @@ export default function LiveInterviewPage() {
   const handleResetToCurrent = () => {
     setManualSelection(false);
     setSelectedCandidateId(null);
-    setSearchQuery("");
+    setOpen(false);
     refetch();
     toast({
       title: "Reset to Current",
@@ -143,50 +153,79 @@ export default function LiveInterviewPage() {
                 Select a Candidate for Interview
               </h2>
               
-              {/* Search Input */}
-              <div className="relative mb-4">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  type="text"
-                  placeholder="Search candidates by name, job title, or email..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                  data-testid="input-candidate-search"
-                />
-              </div>
-
-              {/* Candidate Dropdown */}
-              <Select onValueChange={handleCandidateSelect} data-testid="select-candidate">
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Choose a candidate from the list" />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredCandidates.length > 0 ? (
-                    filteredCandidates.map((candidate) => (
-                      <SelectItem key={candidate.id} value={candidate.id}>
-                        <div className="flex justify-between items-center w-full">
-                          <div>
-                            <span className="font-medium">{candidate["Candidate Name"]}</span>
-                            <span className="text-sm text-gray-500 ml-2">
-                              {candidate["Job Title"]}
-                            </span>
+              {/* Searchable Candidate Combobox */}
+              <Popover open={open} onOpenChange={setOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    className="w-full justify-between"
+                    data-testid="button-select-candidate"
+                  >
+                    {selectedCandidate ? (
+                      <div className="flex items-center">
+                        <span className="font-medium">{selectedCandidate["Candidate Name"]}</span>
+                        <span className="text-sm text-gray-500 ml-2">
+                          {selectedCandidate["Job Title"]}
+                        </span>
+                      </div>
+                    ) : (
+                      "Search and select a candidate..."
+                    )}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0">
+                  <Command>
+                    <CommandInput placeholder="Search candidates by name, job title, or email..." />
+                    <CommandEmpty>No candidates found.</CommandEmpty>
+                    <CommandGroup>
+                      {allCandidates?.map((candidate) => (
+                        <CommandItem
+                          key={candidate.id}
+                          value={`${candidate["Candidate Name"]} ${candidate["Job Title"]} ${candidate.Email}`}
+                          onSelect={() => {
+                            handleCandidateSelect(candidate.id);
+                            setOpen(false);
+                          }}
+                          data-testid={`item-candidate-${candidate.id}`}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedCandidateId === candidate.id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          <div className="flex justify-between items-center w-full">
+                            <div>
+                              <span className="font-medium">{candidate["Candidate Name"]}</span>
+                              <span className="text-sm text-gray-500 ml-2">
+                                {candidate["Job Title"]}
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              {candidate["Interview Start"] && (
+                                <span className="text-xs text-gray-400">
+                                  {new Date(candidate["Interview Start"]).toLocaleDateString()}
+                                </span>
+                              )}
+                              <span className={`ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium ${
+                                candidate.status === 'Hired' ? 'bg-emerald-100 text-emerald-800' :
+                                candidate.status === 'Interview Scheduled' ? 'bg-blue-100 text-blue-800' :
+                                candidate.status === 'Analysis Complete' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {candidate.status}
+                              </span>
+                            </div>
                           </div>
-                          {candidate["Interview Start"] && (
-                            <span className="text-xs text-gray-400">
-                              {new Date(candidate["Interview Start"]).toLocaleDateString()}
-                            </span>
-                          )}
-                        </div>
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="no-candidates" disabled>
-                      No candidates found
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="text-center py-12">
@@ -228,29 +267,50 @@ export default function LiveInterviewPage() {
               )}
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Search Input */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  type="text"
-                  placeholder="Search candidates by name, job title, or email..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                  data-testid="input-candidate-search"
-                />
-              </div>
-
-              {/* Candidate Dropdown */}
-              <Select onValueChange={handleCandidateSelect} data-testid="select-candidate">
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Choose a candidate from the list" />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredCandidates.length > 0 ? (
-                    filteredCandidates.map((candidate) => (
-                      <SelectItem key={candidate.id} value={candidate.id}>
+            {/* Searchable Candidate Combobox */}
+            <Popover open={open} onOpenChange={setOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={open}
+                  className="w-full justify-between"
+                  data-testid="button-select-candidate"
+                >
+                  {selectedCandidate ? (
+                    <div className="flex items-center">
+                      <span className="font-medium">{selectedCandidate["Candidate Name"]}</span>
+                      <span className="text-sm text-gray-500 ml-2">
+                        {selectedCandidate["Job Title"]}
+                      </span>
+                    </div>
+                  ) : (
+                    "Search and select a candidate..."
+                  )}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-0">
+                <Command>
+                  <CommandInput placeholder="Search candidates by name, job title, or email..." />
+                  <CommandEmpty>No candidates found.</CommandEmpty>
+                  <CommandGroup>
+                    {allCandidates?.map((candidate) => (
+                      <CommandItem
+                        key={candidate.id}
+                        value={`${candidate["Candidate Name"]} ${candidate["Job Title"]} ${candidate.Email}`}
+                        onSelect={() => {
+                          handleCandidateSelect(candidate.id);
+                          setOpen(false);
+                        }}
+                        data-testid={`item-candidate-${candidate.id}`}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            selectedCandidateId === candidate.id ? "opacity-100" : "opacity-0"
+                          )}
+                        />
                         <div className="flex justify-between items-center w-full">
                           <div>
                             <span className="font-medium">{candidate["Candidate Name"]}</span>
@@ -258,22 +318,28 @@ export default function LiveInterviewPage() {
                               {candidate["Job Title"]}
                             </span>
                           </div>
-                          {candidate["Interview Start"] && (
-                            <span className="text-xs text-gray-400">
-                              {new Date(candidate["Interview Start"]).toLocaleDateString()}
+                          <div className="text-right">
+                            {candidate["Interview Start"] && (
+                              <span className="text-xs text-gray-400">
+                                {new Date(candidate["Interview Start"]).toLocaleDateString()}
+                              </span>
+                            )}
+                            <span className={`ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium ${
+                              candidate.status === 'Hired' ? 'bg-emerald-100 text-emerald-800' :
+                              candidate.status === 'Interview Scheduled' ? 'bg-blue-100 text-blue-800' :
+                              candidate.status === 'Analysis Complete' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {candidate.status}
                             </span>
-                          )}
+                          </div>
                         </div>
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="no-candidates" disabled>
-                      No candidates found
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Header */}
@@ -294,7 +360,10 @@ export default function LiveInterviewPage() {
                    timeStatus === 'manual' ? '👤 Manual' : '⏰ Upcoming'}
                 </span>
                 <span className="ml-2 text-sm text-gray-500">
-                  {displayCandidate?.interviewDate} at {displayCandidate?.interviewTime}
+                  {displayCandidate && (() => {
+                    const { date, time } = getInterviewDateTime(displayCandidate);
+                    return `${date} at ${time}`;
+                  })()}
                 </span>
               </div>
             </div>
@@ -344,10 +413,10 @@ export default function LiveInterviewPage() {
               <div className="text-right">
                 <p className="text-sm font-medium text-gray-900">Interview Time</p>
                 <p className="text-sm text-gray-500" data-testid="text-interview-date">
-                  {displayCandidate.interviewDate}
+                  {displayCandidate && getInterviewDateTime(displayCandidate).date}
                 </p>
                 <p className="text-sm text-gray-500" data-testid="text-interview-time">
-                  {displayCandidate.interviewTime}
+                  {displayCandidate && getInterviewDateTime(displayCandidate).time}
                 </p>
                 {displayCandidate["Google Meet Id"] && (
                   <a 

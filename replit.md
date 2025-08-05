@@ -38,6 +38,12 @@ This is a full-stack hiring pipeline and intelligence platform built with React,
 - **LATEST:** Implemented real-time current candidate API that detects ongoing vs upcoming interviews
 - **LATEST:** Added proper authentication for transcript endpoints and enhanced debugging
 - **LATEST:** Live Interview page now automatically shows current candidate during interview time and updates every 30 seconds
+- **LATEST:** Enhanced Live Interview page with unified searchable candidate dropdown
+- **LATEST:** Fixed transcript fetching to properly match candidates by Google Meet ID
+- **LATEST:** Implemented single combobox interface for candidate selection with search functionality
+- **LATEST:** Added support for selecting any candidate (including past interviews) from dropdown
+- **LATEST:** Fixed interview date/time display formatting using actual database fields
+- **LATEST:** Added proper candidate-specific transcript API endpoint (/api/transcripts/by-meet-id/:meetId)
 
 ## User Preferences
 
