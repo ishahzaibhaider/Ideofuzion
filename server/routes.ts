@@ -33,68 +33,24 @@ const authenticateToken = (req: any, res: any, next: any) => {
   });
 };
 
-// ✨ HELPER FUNCTION to parse date and time strings into a proper Date object in PKT
-const parsePakistanTime = (dateStr?: string, timeStr?: string): Date | null => {
-  if (!dateStr || !timeStr) {
-    console.log('Missing date or time:', { dateStr, timeStr });
+// ✨ HELPER FUNCTION to parse ISO date strings from Interview Start field
+const parseInterviewDateTime = (interviewStart?: string): Date | null => {
+  if (!interviewStart) {
+    console.log('Missing Interview Start:', interviewStart);
     return null;
   }
 
-  // Try multiple time formats
-  let timeParts = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
-  if (!timeParts) {
-    // Try 24-hour format without AM/PM
-    timeParts = timeStr.match(/(\d+):(\d+)/);
-    if (!timeParts) {
-      console.log('Invalid time format:', timeStr);
-      return null;
-    }
-  }
-
-  let [_, hours, minutes, modifier] = timeParts;
-  let hour = parseInt(hours, 10);
-
-  // Convert to 24-hour format if AM/PM is present
-  if (modifier) {
-    if (modifier.toUpperCase() === 'PM' && hour < 12) {
-      hour += 12;
-    }
-    if (modifier.toUpperCase() === 'AM' && hour === 12) { // Handle midnight case (12 AM is 00 hours)
-      hour = 0;
-    }
-  }
-
-  // Try different date formats
-  let isoString;
-  
-  // Check if date is already in YYYY-MM-DD format
-  if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-    isoString = `${dateStr}T${String(hour).padStart(2, '0')}:${minutes}:00.000+05:00`;
-  } else {
-    // Try converting other formats (DD/MM/YYYY, MM/DD/YYYY, etc.)
-    const dateObj = new Date(dateStr);
-    if (!isNaN(dateObj.getTime())) {
-      const year = dateObj.getFullYear();
-      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-      const day = String(dateObj.getDate()).padStart(2, '0');
-      isoString = `${year}-${month}-${day}T${String(hour).padStart(2, '0')}:${minutes}:00.000+05:00`;
-    } else {
-      console.log('Invalid date format:', dateStr);
-      return null;
-    }
-  }
-
   try {
-      const d = new Date(isoString);
-      if (isNaN(d.getTime())) {
-        console.log('Failed to create valid date:', isoString);
-        return null;
-      }
-      console.log('Successfully parsed date:', { input: `${dateStr} ${timeStr}`, output: d.toISOString() });
-      return d;
-  } catch (e) {
-      console.error("Error parsing date:", isoString, e);
+    const date = new Date(interviewStart);
+    if (isNaN(date.getTime())) {
+      console.log('Invalid Interview Start format:', interviewStart);
       return null;
+    }
+    console.log('Successfully parsed Interview Start:', { input: interviewStart, output: date.toISOString() });
+    return date;
+  } catch (e) {
+    console.error("Error parsing Interview Start:", interviewStart, e);
+    return null;
   }
 };
 
@@ -221,7 +177,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Map all candidates to include a parsed interview Date object
       const candidatesWithParsedDate = candidates.map(c => ({
         ...c,
-        interviewDateTime: parsePakistanTime(c["Interview Date"], c["Interview Time"]),
+        interviewDateTime: parseInterviewDateTime(c["Interview Start"]),
       }));
 
       // Auto-move candidates with past interviews to Analysis Phase
@@ -283,8 +239,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             candidateId: candidate.id,
             candidateName: candidate["Candidate Name"],
             calendarEventId: calendarEventId,
-            interviewDate: candidate["Interview Date"],
-            interviewTime: candidate["Interview Time"],
+            interviewDate: candidate["Interview Start"],
+            interviewTime: candidate["Interview Start"],
             status: candidate.status,
             updates: updates,
             timestamp: new Date().toISOString(),
@@ -293,8 +249,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               name: candidate["Candidate Name"],
               email: candidate.Email,
               jobTitle: candidate["Job Title"],
-              interviewDate: candidate["Interview Date"],
-              interviewTime: candidate["Interview Time"],
+              interviewDate: candidate["Interview Start"],
+              interviewTime: candidate["Interview Start"],
               status: candidate.status
             }
           };
@@ -362,8 +318,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             candidateId: existingCandidate.id,
             candidateName: existingCandidate["Candidate Name"],
             calendarEventId: calendarEventId,
-            interviewDate: existingCandidate["Interview Date"],
-            interviewTime: existingCandidate["Interview Time"],
+            interviewDate: existingCandidate["Interview Start"],
+            interviewTime: existingCandidate["Interview Start"],
             timestamp: new Date().toISOString()
           };
 
@@ -406,7 +362,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Map all candidates to include a parsed interview Date object
       const candidatesWithParsedDate = candidates.map(c => ({
         ...c,
-        interviewDateTime: parsePakistanTime(c["Interview Date"], c["Interview Time"]),
+        interviewDateTime: parseInterviewDateTime(c["Interview Start"]),
       }));
 
       // Filter for interviews that are actually in the future
@@ -419,8 +375,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id: c.id,
         candidateName: c["Candidate Name"],
         position: c["Job Title"] || 'N/A',
-        time: c["Interview Time"] || '',
-        date: c["Interview Date"] || '',
+        time: c["Interview Start"] || '',
+        date: c["Interview Start"] || '',
         calendarLink: c["Calender Event Link"] || `https://calendar.google.com/calendar/event?eid=${c["Calendar Event ID"]}`
       }));
 
@@ -715,9 +671,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Dashboard - Sample candidate statuses:', candidates.slice(0, 3).map(c => ({ id: c.id, status: c.status })));
       console.log('Dashboard - Sample candidate interview data:', candidates.slice(0, 3).map(c => ({ 
         id: c.id, 
-        date: c["Interview Date"], 
-        time: c["Interview Time"],
-        parsedDateTime: parsePakistanTime(c["Interview Date"], c["Interview Time"])
+        date: c["Interview Start"], 
+        time: c["Interview Start"],
+        parsedDateTime: parseInterviewDateTime(c["Interview Start"])
       })));
 
       // --- DATE & TIME LOGIC ---
@@ -726,7 +682,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Map all candidates to include a parsed interview Date object
       const candidatesWithParsedDate = candidates.map(c => ({
         ...c,
-        interviewDateTime: parsePakistanTime(c["Interview Date"], c["Interview Time"]),
+        interviewDateTime: parseInterviewDateTime(c["Interview Start"]),
       }));
 
       // Auto-move candidates with past interviews to Analysis Phase
@@ -747,7 +703,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedCandidates = await storage.getCandidates();
       const updatedCandidatesWithParsedDate = updatedCandidates.map(c => ({
         ...c,
-        interviewDateTime: parsePakistanTime(c["Interview Date"], c["Interview Time"]),
+        interviewDateTime: parseInterviewDateTime(c["Interview Start"]),
       }));
 
       // --- METRIC CALCULATIONS ---
@@ -787,8 +743,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             id: c.id,
             candidateName: c["Candidate Name"],
             position: c["Job Title"] || 'N/A',
-            time: c["Interview Time"] || '',
-            date: c["Interview Date"] || '',
+            time: c["Interview Start"] || '',
+            date: c["Interview Start"] || '',
             calendarLink: c["Calender Event Link"] || `https://calendar.google.com/calendar/event?eid=${c["Calendar Event ID"]}`
           }))
           .slice(0, 4);
@@ -801,8 +757,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             id: c.id,
             candidateName: c["Candidate Name"],
             position: c["Job Title"] || 'N/A',
-            time: c["Interview Time"] || 'Time TBD',
-            date: c["Interview Date"] || 'Date TBD',
+            time: c["Interview Start"] || 'Time TBD',
+            date: c["Interview Start"] || 'Date TBD',
             calendarLink: c["Calender Event Link"] || `https://calendar.google.com/calendar/event?eid=${c["Calendar Event ID"]}`
           }))
           .slice(0, 4);

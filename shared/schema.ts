@@ -43,8 +43,8 @@ export interface ICandidate extends Document {
   "Candidate Name": string;
   Email: string;
   "Job Title": string;
-  "Interview Date": string;
-  "Interview Time": string;
+  "Interview Start": string;
+  "Interview End": string;
   "Calendar Event ID": string;
   "Calender Event Link"?: string;
   "Google Meet Id"?: string;
@@ -69,8 +69,8 @@ const candidateSchema = new Schema<ICandidate>({
   "Candidate Name": { type: String, required: true },
   Email: { type: String, required: true },
   "Job Title": { type: String, required: true },
-  "Interview Date": { type: String, required: true },
-  "Interview Time": { type: String, required: true },
+  "Interview Start": { type: String, required: true },
+  "Interview End": { type: String, required: true },
   "Calendar Event ID": { type: String, required: true },
   "Calender Event Link": { type: String },
   "Google Meet Id": { type: String },
@@ -135,8 +135,8 @@ export const insertCandidateSchema = z.object({
   "Candidate Name": z.string(),
   Email: z.string().email(),
   "Job Title": z.string(),
-  "Interview Date": z.string(),
-  "Interview Time": z.string(),
+  "Interview Start": z.string(),
+  "Interview End": z.string(),
   "Calendar Event ID": z.string(),
   status: z.string().optional(),
   cvUrl: z.string().optional(),
@@ -187,8 +187,8 @@ export type Candidate = {
   "Candidate Name": string;
   Email: string;
   "Job Title": string;
-  "Interview Date": string;
-  "Interview Time": string;
+  "Interview Start": string;
+  "Interview End": string;
   "Calendar Event ID": string;
   "Calender Event Link"?: string;
   "Google Meet Id"?: string;
