@@ -386,7 +386,9 @@ export class MongoStorage implements IStorage {
 
   async getLatestTranscript(): Promise<Transcript | undefined> {
     try {
+      console.log('Getting latest transcript from MongoDB...');
       const transcript = await TranscriptModel.findOne().sort({ createdAt: -1 });
+      console.log('Latest transcript found:', transcript ? { id: transcript._id, hasData: !!transcript.Speaker1 } : 'None');
       return transcript ? this.mongoDocToTranscript(transcript) : undefined;
     } catch (error) {
       console.error('Error getting latest transcript:', error);

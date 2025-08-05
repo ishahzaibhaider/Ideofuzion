@@ -404,12 +404,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
 
+      console.log('Current time (UTC):', now.toISOString());
+      console.log('Current time (Pakistan):', new Date(now.getTime() + (5 * 60 * 60 * 1000)).toISOString());
+      console.log('Total candidates with interview dates:', candidatesWithParsedDate.length);
+
       // Find candidate whose interview is currently happening
-      const currentCandidate = candidatesWithParsedDate.find(c => 
-        c.interviewStart && c.interviewEnd &&
-        c.interviewStart <= now && c.interviewEnd >= now &&
-        c.status === 'Interview Scheduled'
-      );
+      const currentCandidate = candidatesWithParsedDate.find(c => {
+        const isOngoing = c.interviewStart && c.interviewEnd &&
+          c.interviewStart <= now && c.interviewEnd >= now &&
+          c.status === 'Interview Scheduled';
+        
+        if (c.interviewStart && c.interviewEnd) {
+          console.log(`Candidate ${c["Candidate Name"]}: ${c.interviewStart.toISOString()} - ${c.interviewEnd.toISOString()}, Status: ${c.status}, Is Ongoing: ${isOngoing}`);
+        }
+        
+        return isOngoing;
+      });
+
+      console.log('Current candidate found:', currentCandidate ? currentCandidate["Candidate Name"] : 'None');
 
       // If no current interview, find the next upcoming one
       const nextCandidate = currentCandidate || candidatesWithParsedDate
@@ -417,6 +429,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .sort((a, b) => a.interviewStart!.getTime() - b.interviewStart!.getTime())[0];
 
       if (nextCandidate) {
+        console.log('Returning candidate:', nextCandidate["Candidate Name"], 'Status:', currentCandidate ? 'ongoing' : 'upcoming');
         res.json({
           candidate: nextCandidate,
           isCurrentlyInterviewing: !!currentCandidate,

@@ -29,10 +29,31 @@ export default function LiveInterviewHub({ candidate }: LiveInterviewHubProps) {
   const { data: latestTranscript, refetch: refetchLatestTranscript, isLoading: isTranscriptLoading } = useQuery({
     queryKey: ["/api/transcripts/latest"],
     queryFn: async () => {
-      const response = await apiRequest("GET", "/api/transcripts/latest");
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+      
+      const response = await fetch("/api/transcripts/latest", {
+        method: "GET",
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          console.log('No transcripts found in database');
+          return null;
+        }
+        throw new Error(`Failed to fetch transcript: ${response.status}`);
+      }
+      
       return response.json() as Promise<Transcript>;
     },
     refetchOnWindowFocus: false,
+    retry: 3,
   });
 
   // Parse suggestions from database
