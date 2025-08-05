@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { authenticatedApiRequest } from "@/lib/auth";
 import Navbar from "@/components/Navbar";
@@ -7,59 +7,35 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
 export default function LiveInterviewPage() {
-  const [isSessionActive, setIsSessionActive] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const { toast } = useToast();
 
-  const { data: candidates } = useQuery({
-    queryKey: ["/api/candidates"],
+  // Get current candidate based on interview time
+  const { data: currentInterviewData, isLoading, refetch } = useQuery({
+    queryKey: ["/api/interviews/current", refreshKey],
     queryFn: async () => {
-      const response = await authenticatedApiRequest("GET", "/api/candidates");
+      const response = await authenticatedApiRequest("GET", "/api/interviews/current");
+      if (response.status === 404) {
+        return null;
+      }
       return response.json();
     },
+    refetchInterval: 30000, // Refresh every 30 seconds to check for time changes
   });
 
-  const startInterviewMutation = useMutation({
-    mutationFn: async () => {
-      const response = await authenticatedApiRequest("POST", "/api/start-interview-bot", {
-        meetingId: `interview-${Date.now()}`,
-        candidateId: currentCandidate?.id
-      });
-      return response.json();
-    },
-    onSuccess: () => {
-      setIsSessionActive(true);
-      toast({
-        title: "Success",
-        description: "Interview session started successfully",
-      });
-    },
-    onError: (error: any) => {
-      console.error('Interview start error:', error);
-      toast({
-        title: "Error",
-        description: error?.error || error?.message || "Failed to start interview session",
-        variant: "destructive",
-      });
-    },
-  });
+  // Auto-refresh every minute to update current candidate
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRefreshKey(prev => prev + 1);
+    }, 60000); // Refresh every minute
 
-  // Get the first candidate with interview scheduled for demo
-  // Assuming your Candidate type has a 'resumeUrl' property
-  const currentCandidate = candidates?.find((c: any) => c.status === 'Interview Scheduled') || candidates?.[0];
+    return () => clearInterval(interval);
+  }, []);
 
-  const handleStartSession = () => {
-    startInterviewMutation.mutate();
-  };
+  const currentCandidate = currentInterviewData?.candidate;
+  const timeStatus = currentInterviewData?.timeStatus;
 
-  const handleEndSession = () => {
-    setIsSessionActive(false);
-    toast({
-      title: "Session Ended",
-      description: "Interview session has been ended",
-    });
-  };
-
-  // ✨ New handler function to open the resume link
+  // ✨ Handler function to open the resume link
   const handleViewResume = () => {
     if (currentCandidate?.["Resume Link"]) {
       // Opens the link in a new tab with security best practices
@@ -73,6 +49,30 @@ export default function LiveInterviewPage() {
     }
   };
 
+  const handleRefresh = () => {
+    refetch();
+    toast({
+      title: "Refreshed",
+      description: "Interview data has been refreshed",
+    });
+  };
+
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="pt-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="text-center py-12">
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">Loading Interview Data...</h2>
+              <p className="text-gray-600">Checking for current and upcoming interviews.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!currentCandidate) {
     return (
@@ -83,6 +83,9 @@ export default function LiveInterviewPage() {
             <div className="text-center py-12">
               <h2 className="text-xl font-semibold text-gray-900 mb-2">No Interview Scheduled</h2>
               <p className="text-gray-600">There are no candidates scheduled for interviews at this time.</p>
+              <Button onClick={handleRefresh} className="mt-4">
+                Refresh
+              </Button>
             </div>
           </div>
         </div>
@@ -99,10 +102,19 @@ export default function LiveInterviewPage() {
           <div className="mb-6 flex justify-between items-center">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Live Interview Hub</h1>
-              <p className="text-gray-600">Real-time interview monitoring and AI assistance</p>
+              <p className="text-gray-600">
+                {timeStatus === 'ongoing' ? 'Interview currently in progress' : 'Next scheduled interview'}
+              </p>
+              <div className="mt-2">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  {timeStatus === 'ongoing' ? '🔴 Live' : '⏰ Upcoming'}
+                </span>
+                <span className="ml-2 text-sm text-gray-500">
+                  {currentCandidate.interviewDate} at {currentCandidate.interviewTime}
+                </span>
+              </div>
             </div>
             <div className="flex space-x-3">
-              {/* ✨ New "View Resume" Button */}
               <Button
                 variant="outline"
                 onClick={handleViewResume}
@@ -111,29 +123,42 @@ export default function LiveInterviewPage() {
                 View Full Resume
               </Button>
               <Button
-                variant="destructive"
-                onClick={handleEndSession}
-                disabled={!isSessionActive}
+                variant="outline"
+                onClick={handleRefresh}
               >
-                End Session
-              </Button>
-              <Button
-                className="bg-success hover:bg-success/90 text-success-foreground"
-                onClick={handleStartSession}
-                disabled={isSessionActive || startInterviewMutation.isPending}
-              >
-                {startInterviewMutation.isPending ? "Starting..." : "Start Session"}
+                Refresh
               </Button>
             </div>
           </div>
 
-          {/* 3-Panel Layout */}
-          <LiveInterviewHub
-            candidate={currentCandidate}
-            onStartSession={handleStartSession}
-            onEndSession={handleEndSession}
-            isSessionActive={isSessionActive}
-          />
+          {/* Current Candidate Info */}
+          <div className="mb-6 bg-white rounded-lg shadow p-6">
+            <div className="flex justify-between items-start">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">{currentCandidate["Candidate Name"]}</h2>
+                <p className="text-gray-600">{currentCandidate["Job Title"]}</p>
+                <p className="text-sm text-gray-500">{currentCandidate.Email}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-medium text-gray-900">Interview Time</p>
+                <p className="text-sm text-gray-500">{currentCandidate.interviewDate}</p>
+                <p className="text-sm text-gray-500">{currentCandidate.interviewTime}</p>
+                {currentCandidate["Google Meet Id"] && (
+                  <a 
+                    href={`https://${currentCandidate["Google Meet Id"]}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-600 hover:text-blue-800 underline mt-1 inline-block"
+                  >
+                    Join Meeting
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* LiveInterviewHub Component */}
+          <LiveInterviewHub candidate={currentCandidate} />
         </div>
       </div>
     </div>

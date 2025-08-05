@@ -96,20 +96,20 @@ export const CandidateModel = mongoose.model<ICandidate>('Candidate', candidateS
 // MongoDB Transcript Schema (matching your data structure)
 export interface ITranscript extends Document {
   _id: string;
-  fid: number;
   Speaker1?: string;
   Speaker2?: string;
   Speaker3?: string;
+  Meet_id: string;
   Suggested_Questions?: string[];
   Summary?: string;
   createdAt?: Date;
 }
 
 const transcriptSchema = new Schema<ITranscript>({
-  fid: { type: Number, required: true },
   Speaker1: { type: String },
   Speaker2: { type: String },
   Speaker3: { type: String },
+  Meet_id: { type: String, required: true },
   Suggested_Questions: [{ type: String }],
   Summary: { type: String },
   createdAt: { type: Date, default: Date.now }
@@ -154,10 +154,10 @@ export const insertCandidateSchema = z.object({
 });
 
 export const insertTranscriptSchema = z.object({
-  fid: z.number(),
   Speaker1: z.string().optional(),
   Speaker2: z.string().optional(),
   Speaker3: z.string().optional(),
+  Meet_id: z.string(),
   Suggested_Questions: z.array(z.string()).optional(),
   Summary: z.string().optional()
 });
@@ -221,10 +221,10 @@ export type Candidate = {
 export type InsertTranscript = z.infer<typeof insertTranscriptSchema>;
 export type Transcript = {
   id: string;
-  fid: number;
   Speaker1?: string;
   Speaker2?: string;
   Speaker3?: string;
+  Meet_id: string;
   Suggested_Questions?: string[];
   Summary?: string;
   createdAt?: Date;

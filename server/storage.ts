@@ -340,10 +340,10 @@ export class MongoStorage implements IStorage {
   private mongoDocToTranscript(doc: any): Transcript {
     return {
       id: doc._id.toString(),
-      fid: doc.fid,
       Speaker1: doc.Speaker1,
       Speaker2: doc.Speaker2,
       Speaker3: doc.Speaker3,
+      Meet_id: doc.Meet_id,
       Suggested_Questions: doc.Suggested_Questions || [],
       Summary: doc.Summary,
       createdAt: doc.createdAt

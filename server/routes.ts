@@ -387,6 +387,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get current candidate based on interview time
+  app.get('/api/interviews/current', authenticateToken, async (req, res) => {
+    try {
+      const candidates = await storage.getCandidates();
+      const now = new Date();
+
+      // Map candidates with parsed interview times
+      const candidatesWithParsedDate = candidates.map(c => {
+        const interviewStart = parseInterviewDateTime(c["Interview Start"]);
+        const interviewEnd = parseInterviewDateTime(c["Interview End"]);
+        return {
+          ...c,
+          interviewStart,
+          interviewEnd,
+        };
+      });
+
+      // Find candidate whose interview is currently happening
+      const currentCandidate = candidatesWithParsedDate.find(c => 
+        c.interviewStart && c.interviewEnd &&
+        c.interviewStart <= now && c.interviewEnd >= now &&
+        c.status === 'Interview Scheduled'
+      );
+
+      // If no current interview, find the next upcoming one
+      const nextCandidate = currentCandidate || candidatesWithParsedDate
+        .filter(c => c.interviewStart && c.interviewStart > now && c.status === 'Interview Scheduled')
+        .sort((a, b) => a.interviewStart!.getTime() - b.interviewStart!.getTime())[0];
+
+      if (nextCandidate) {
+        res.json({
+          candidate: nextCandidate,
+          isCurrentlyInterviewing: !!currentCandidate,
+          timeStatus: currentCandidate ? 'ongoing' : 'upcoming'
+        });
+      } else {
+        res.status(404).json({ message: 'No current or upcoming interviews found' });
+      }
+    } catch (error) {
+      console.error("Error fetching current candidate:", error);
+      res.status(500).json({ message: 'Server error', error });
+    }
+  });
+
   // Job routes
   app.get('/api/job-criteria', authenticateToken, async (req, res) => {
     try {
