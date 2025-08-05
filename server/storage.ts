@@ -362,21 +362,19 @@ export class MongoStorage implements IStorage {
 
   async getTranscriptsByMeetId(meetId: string): Promise<Transcript[]> {
     try {
-      // Handle different meetId formats - could be a number or Google Meet URL
-      let query: any = {};
+      console.log(`Searching for transcript with Meet_id: ${meetId}`);
       
-      // If meetId is a number, search by fid
-      const parsedFid = parseInt(meetId);
-      if (!isNaN(parsedFid)) {
-        query.fid = parsedFid;
-      } else {
-        // If it's a string (like Google Meet URL), search in all text fields
-        // For now, return the latest transcript since we can't match by Meet URL in current schema
-        const latestTranscript = await TranscriptModel.findOne().sort({ createdAt: -1 });
-        return latestTranscript ? [this.mongoDocToTranscript(latestTranscript)] : [];
-      }
+      // Search by the Meet_id field directly (this matches the transcript schema)
+      const query = { Meet_id: meetId };
       
       const transcripts = await TranscriptModel.find(query).sort({ createdAt: -1 });
+      console.log(`Found ${transcripts.length} transcripts for Meet_id: ${meetId}`);
+      
+      if (transcripts.length === 0) {
+        console.log(`No transcripts found for Meet_id: ${meetId}`);
+        return [];
+      }
+      
       return transcripts.map(transcript => this.mongoDocToTranscript(transcript));
     } catch (error) {
       console.error('Error getting transcripts by meet ID:', error);

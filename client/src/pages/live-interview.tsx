@@ -75,10 +75,14 @@ export default function LiveInterviewPage() {
 
   // Handle candidate selection from dropdown
   const handleCandidateSelect = (candidateId: string) => {
+    // Prevent duplicate selections
+    if (selectedCandidateId === candidateId) return;
+    
     setSelectedCandidateId(candidateId);
     setManualSelection(true);
     const candidate = allCandidates?.find(c => c.id === candidateId);
     if (candidate) {
+      console.log('Selected candidate:', candidate["Candidate Name"], 'Meet ID:', candidate["Google Meet Id"]);
       toast({
         title: "Candidate Selected",
         description: `Now viewing ${candidate["Candidate Name"]}'s interview details`,

@@ -26,11 +26,12 @@ export default function LiveInterviewHub({ candidate }: LiveInterviewHubProps) {
   const [transcriptSummary, setTranscriptSummary] = useState('');
 
   // Extract Google Meet ID from candidate data for transcript matching
-  const candidateMeetId = candidate["Google Meet Id"]?.replace('meet.google.com/', '') || null;
+  // Remove the full URL prefix to get just the meet ID (e.g., "sgy-dgeg-yiz")
+  const candidateMeetId = candidate["Google Meet Id"]?.replace('meet.google.com/', '').replace('https://', '') || null;
 
   // Query for candidate-specific transcript data for AI Assistant
   const { data: latestTranscript, refetch: refetchLatestTranscript, isLoading: isTranscriptLoading } = useQuery({
-    queryKey: ["/api/transcripts/candidate", candidate.id, candidateMeetId],
+    queryKey: ["/api/transcripts/by-meet-id", candidateMeetId, candidate.id],
     queryFn: async () => {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -67,6 +68,13 @@ export default function LiveInterviewHub({ candidate }: LiveInterviewHubProps) {
     enabled: !!candidateMeetId, // Only run query if we have a Meet ID
   });
 
+  // Reset AI assistant state when candidate changes
+  useEffect(() => {
+    setSuggestions([]);
+    setTranscriptSummary('');
+    setAiAnalysis('');
+  }, [candidate.id]);
+
   // Parse suggestions from database
   useEffect(() => {
     if (latestTranscript && latestTranscript.Suggested_Questions) {
@@ -78,6 +86,10 @@ export default function LiveInterviewHub({ candidate }: LiveInterviewHubProps) {
         .map((line: string) => line.trim());
       setSuggestions(suggestedQuestions);
       setTranscriptSummary(latestTranscript.Summary || "");
+    } else {
+      // Clear suggestions if no transcript data
+      setSuggestions([]);
+      setTranscriptSummary('');
     }
   }, [latestTranscript]);
 
