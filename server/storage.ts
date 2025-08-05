@@ -88,18 +88,51 @@ export class MongoStorage implements IStorage {
   // In storage.ts
 
   private mongoDocToCandidate(doc: any): Candidate {
+    // Helper function to format dates for frontend
+    const formatInterviewDateTime = (isoString?: string) => {
+      if (!isoString) return { date: 'N/A', time: 'N/A' };
+      
+      try {
+        const date = new Date(isoString);
+        if (isNaN(date.getTime())) return { date: 'N/A', time: 'N/A' };
+        
+        // Format date as YYYY-MM-DD for Pakistan timezone
+        const dateStr = date.toLocaleDateString('en-CA', {
+          timeZone: 'Asia/Karachi',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        });
+        
+        // Format time as HH:MM AM/PM for Pakistan timezone
+        const timeStr = date.toLocaleTimeString('en-US', {
+          timeZone: 'Asia/Karachi',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+        
+        return { date: dateStr, time: timeStr };
+      } catch (e) {
+        console.error('Error formatting interview date:', e);
+        return { date: 'N/A', time: 'N/A' };
+      }
+    };
+
+    const interviewDateTime = formatInterviewDateTime(doc["Interview Start"]);
+    
     return {
       id: doc._id.toString(),
       // Database field names (required)
       "Candidate Name": doc["Candidate Name"],
       Email: doc.Email,
       "Job Title": doc["Job Title"],
-      "Interview Date": doc["Interview Date"],
-      "Interview Time": doc["Interview Time"],
+      "Interview Start": doc["Interview Start"],
+      "Interview End": doc["Interview End"],
       "Calendar Event ID": doc["Calendar Event ID"],
       "Calender Event Link": doc["Calender Event Link"],
       "Google Meet Id": doc["Google Meet Id"],
-      "Resume Link": doc["Resume Link"], // <--- This is the line I added
+      "Resume Link": doc["Resume Link"],
       status: doc.status || "New",
       cvUrl: doc.cvUrl,
       analysis: doc.analysis,
@@ -112,8 +145,8 @@ export class MongoStorage implements IStorage {
       name: doc["Candidate Name"],
       email: doc.Email,
       previousRole: doc["Job Title"],
-      interviewDate: doc["Interview Date"],
-      interviewTime: doc["Interview Time"],
+      interviewDate: interviewDateTime.date,
+      interviewTime: interviewDateTime.time,
       calendarEventId: doc["Calendar Event ID"],
       calenderEventLink: doc["Calender Event Link"],
       googleMeetId: doc["Google Meet Id"]
