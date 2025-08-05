@@ -856,6 +856,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get transcript by Meet ID (for specific candidate interview data)
+  app.get("/api/transcripts/by-meet-id/:meetId", authenticateToken, async (req, res) => {
+    try {
+      const { meetId } = req.params;
+      console.log(`Fetching transcript for Meet ID: ${meetId}`);
+      
+      const transcripts = await storage.getTranscriptsByMeetId(meetId);
+      
+      if (!transcripts || transcripts.length === 0) {
+        console.log(`No transcripts found for Meet ID: ${meetId}`);
+        return res.status(404).json({ message: "No transcript found for this Meet ID" });
+      }
+      
+      // Return the most recent transcript for this Meet ID
+      const latestTranscript = transcripts[transcripts.length - 1];
+      console.log(`Found transcript for Meet ID ${meetId}:`, { 
+        id: latestTranscript.id, 
+        hasSummary: !!latestTranscript.Summary,
+        hasSuggestions: !!latestTranscript.Suggested_Questions 
+      });
+      
+      res.json(latestTranscript);
+    } catch (error) {
+      console.error("Error getting transcript by Meet ID:", error);
+      res.status(500).json({ error: "Failed to get transcript" });
+    }
+  });
+
   app.get("/api/transcripts/latest", authenticateToken, async (req, res) => {
     try {
       const transcript = await storage.getLatestTranscript();

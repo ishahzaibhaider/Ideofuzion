@@ -25,16 +25,24 @@ export default function LiveInterviewHub({ candidate }: LiveInterviewHubProps) {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [transcriptSummary, setTranscriptSummary] = useState('');
 
-  // Query for latest transcript data for AI Assistant
+  // Extract Google Meet ID from candidate data for transcript matching
+  const candidateMeetId = candidate["Google Meet Id"]?.replace('meet.google.com/', '') || null;
+
+  // Query for candidate-specific transcript data for AI Assistant
   const { data: latestTranscript, refetch: refetchLatestTranscript, isLoading: isTranscriptLoading } = useQuery({
-    queryKey: ["/api/transcripts/latest"],
+    queryKey: ["/api/transcripts/candidate", candidate.id, candidateMeetId],
     queryFn: async () => {
       const token = localStorage.getItem('token');
       if (!token) {
         throw new Error('No authentication token found');
       }
       
-      const response = await fetch("/api/transcripts/latest", {
+      if (!candidateMeetId) {
+        console.log('No Google Meet ID found for candidate:', candidate["Candidate Name"]);
+        return null;
+      }
+      
+      const response = await fetch(`/api/transcripts/by-meet-id/${candidateMeetId}`, {
         method: "GET",
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -44,16 +52,19 @@ export default function LiveInterviewHub({ candidate }: LiveInterviewHubProps) {
       
       if (!response.ok) {
         if (response.status === 404) {
-          console.log('No transcripts found in database');
+          console.log('No transcripts found for Meet ID:', candidateMeetId);
           return null;
         }
         throw new Error(`Failed to fetch transcript: ${response.status}`);
       }
       
-      return response.json() as Promise<Transcript>;
+      const transcriptData = await response.json();
+      console.log('Fetched transcript for candidate:', candidate["Candidate Name"], transcriptData);
+      return transcriptData as Transcript;
     },
     refetchOnWindowFocus: false,
     retry: 3,
+    enabled: !!candidateMeetId, // Only run query if we have a Meet ID
   });
 
   // Parse suggestions from database
