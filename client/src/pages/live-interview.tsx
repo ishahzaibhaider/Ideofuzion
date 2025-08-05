@@ -40,8 +40,7 @@ export default function LiveInterviewPage() {
       }
       return response.json();
     },
-    refetchInterval: 30000,
-    enabled: !manualSelection, // Only fetch current interview when no manual selection
+    enabled: false, // Disabled automatic fetching - only manual checks
   });
 
   // Get specific candidate data when manually selected
@@ -54,10 +53,10 @@ export default function LiveInterviewPage() {
     enabled: !!selectedCandidateId && !!allCandidates,
   });
 
-  // Determine which candidate to display
+  // Only show manually selected candidates or currently ongoing interviews (not upcoming)
   const displayCandidate = manualSelection && selectedCandidateData 
     ? selectedCandidateData 
-    : currentInterviewData?.candidate;
+    : (currentInterviewData?.timeStatus === 'ongoing' ? currentInterviewData?.candidate : null);
   const timeStatus = manualSelection ? 'manual' : currentInterviewData?.timeStatus;
 
   // Get the selected candidate object for display in combobox
@@ -87,15 +86,15 @@ export default function LiveInterviewPage() {
     }
   };
 
-  // Reset to current interview
-  const handleResetToCurrent = () => {
+  // Check for current ongoing interview
+  const handleCheckCurrentInterview = () => {
     setManualSelection(false);
     setSelectedCandidateId(null);
     setOpen(false);
     refetch();
     toast({
-      title: "Reset to Current",
-      description: "Now showing current/upcoming interview",
+      title: "Checking Current Interview",
+      description: "Looking for ongoing interview based on current time",
     });
   };
 
@@ -257,12 +256,12 @@ export default function LiveInterviewPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleResetToCurrent}
+                  onClick={handleCheckCurrentInterview}
                   className="flex items-center"
                   data-testid="button-reset-current"
                 >
                   <Clock className="mr-1 h-4 w-4" />
-                  Current Interview
+                  Check Current Interview
                 </Button>
               )}
             </div>

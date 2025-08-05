@@ -146,7 +146,7 @@ export default function LiveInterviewHub({ candidate }: LiveInterviewHubProps) {
   }, [candidate.id]);
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 min-h-[calc(100vh-12rem)]">
+    <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 min-h-[calc(100vh-12rem)]">
       {/* Left Panel: Candidate Info */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="p-6 border-b border-gray-200">
@@ -237,8 +237,8 @@ export default function LiveInterviewHub({ candidate }: LiveInterviewHubProps) {
         </div>
       </div>
 
-      {/* Right Panel: AI Interview Assistant - Enhanced Layout */}
-      <div className="bg-white rounded-lg shadow overflow-hidden flex flex-col">
+      {/* Right Panel: AI Interview Assistant - Enhanced Layout (spans 2 columns) */}
+      <div className="xl:col-span-2 bg-white rounded-lg shadow overflow-hidden flex flex-col">
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div>

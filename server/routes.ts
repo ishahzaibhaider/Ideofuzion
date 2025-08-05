@@ -423,20 +423,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log('Current candidate found:', currentCandidate ? currentCandidate["Candidate Name"] : 'None');
 
-      // If no current interview, find the next upcoming one
-      const nextCandidate = currentCandidate || candidatesWithParsedDate
-        .filter(c => c.interviewStart && c.interviewStart > now && c.status === 'Interview Scheduled')
-        .sort((a, b) => a.interviewStart!.getTime() - b.interviewStart!.getTime())[0];
-
-      if (nextCandidate) {
-        console.log('Returning candidate:', nextCandidate["Candidate Name"], 'Status:', currentCandidate ? 'ongoing' : 'upcoming');
+      // Only return ongoing interviews, no upcoming ones
+      if (currentCandidate) {
+        console.log('Returning current ongoing candidate:', currentCandidate["Candidate Name"]);
         res.json({
-          candidate: nextCandidate,
-          isCurrentlyInterviewing: !!currentCandidate,
-          timeStatus: currentCandidate ? 'ongoing' : 'upcoming'
+          candidate: currentCandidate,
+          isCurrentlyInterviewing: true,
+          timeStatus: 'ongoing'
         });
       } else {
-        res.status(404).json({ message: 'No current or upcoming interviews found' });
+        console.log('No ongoing interview found, returning 404');
+        res.status(404).json({ message: 'No ongoing interview found' });
       }
     } catch (error) {
       console.error("Error fetching current candidate:", error);
