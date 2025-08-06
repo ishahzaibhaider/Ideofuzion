@@ -183,24 +183,50 @@ export default function LiveInterviewHub({ candidate }: LiveInterviewHubProps) {
     try {
       console.log('Triggering analysis webhook for Meet ID:', candidateMeetId);
       
-      const response = await fetch('http://54.226.92.93:5678/webhook/8a9f52c1-7a9d-44d9-8501-3787fbf302ff', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          meetingId: candidateMeetId,
-          candidateName: candidate.name,
-          candidateId: candidate.id
-        })
-      });
+      const webhookData = {
+        meetingId: candidateMeetId,
+        candidateName: candidate.name,
+        candidateId: candidate.id
+      };
 
-      if (response.ok) {
-        console.log('Analysis webhook triggered successfully');
-        alert('Analysis request sent successfully! Please wait a few moments and then reload the AI Assistant to see the updated analysis.');
+      // Try both webhook endpoints
+      const webhookUrls = [
+        'http://localhost:5678/webhook/8a9f52c1-7a9d-44d9-8501-3787fbf302ff',
+        'http://54.226.92.93:5678/webhook/8a9f52c1-7a9d-44d9-8501-3787fbf302ff'
+      ];
+
+      let successCount = 0;
+      let errors: string[] = [];
+
+      for (const url of webhookUrls) {
+        try {
+          console.log('Attempting webhook:', url);
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(webhookData)
+          });
+
+          if (response.ok) {
+            console.log('Webhook triggered successfully:', url);
+            successCount++;
+          } else {
+            console.error('Webhook failed:', url, response.status);
+            errors.push(`${url}: ${response.status}`);
+          }
+        } catch (error) {
+          console.error('Error with webhook:', url, error);
+          errors.push(`${url}: ${error}`);
+        }
+      }
+
+      if (successCount > 0) {
+        alert(`Analysis request sent successfully to ${successCount} endpoint(s)! Please wait a few moments and then reload the AI Assistant to see the updated analysis.`);
       } else {
-        console.error('Failed to trigger analysis webhook:', response.status);
-        alert('Failed to trigger analysis. Please try again.');
+        console.error('All webhooks failed:', errors);
+        alert('Failed to trigger analysis on any endpoint. Please try again or check if the webhook service is running.');
       }
     } catch (error) {
       console.error('Error triggering analysis webhook:', error);
