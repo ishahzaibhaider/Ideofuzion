@@ -200,6 +200,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Extended Meeting routes - MUST come before /api/candidates/:id
+  app.get("/api/candidates/with-meetings", authenticateToken, async (req, res) => {
+    try {
+      const candidates = await storage.getCandidates();
+      const now = new Date();
+      
+      // Filter candidates with upcoming or ongoing meetings
+      const candidatesWithMeetings = candidates
+        .map(c => {
+          const interviewStart = parseInterviewDateTime(c["Interview Start"]);
+          const interviewEnd = parseInterviewDateTime(c["Interview End"]);
+          return {
+            id: c.id,
+            name: c["Candidate Name"],
+            jobTitle: c["Job Title"],
+            interviewStart: c["Interview Start"],
+            interviewEnd: c["Interview End"],
+            calendarEventId: c["Calendar Event ID"],
+            status: c.status || "Interview Scheduled",
+            parsedStart: interviewStart,
+            parsedEnd: interviewEnd
+          };
+        })
+        .filter(c => {
+          // Include candidates with valid parsed dates that are either ongoing or in the future
+          return c.parsedStart && c.parsedEnd && 
+                 (c.parsedEnd > now || (c.parsedStart <= now && c.parsedEnd >= now));
+        })
+        .sort((a, b) => {
+          // Sort by interview start time
+          return a.parsedStart!.getTime() - b.parsedStart!.getTime();
+        });
+
+      // Remove the parsed dates from response (frontend doesn't need them)
+      const response = candidatesWithMeetings.map(({ parsedStart, parsedEnd, ...rest }) => rest);
+      
+      console.log(`Found ${response.length} candidates with upcoming or ongoing meetings`);
+      res.json(response);
+    } catch (error) {
+      console.error("Error getting candidates with meetings:", error);
+      res.status(500).json({ error: "Failed to get candidates with meetings" });
+    }
+  });
+
   app.get('/api/candidates/:id', authenticateToken, async (req, res) => {
     try {
       const id = req.params.id;
@@ -991,49 +1035,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Extended Meeting routes
-  app.get("/api/candidates/with-meetings", authenticateToken, async (req, res) => {
-    try {
-      const candidates = await storage.getCandidates();
-      const now = new Date();
-      
-      // Filter candidates with upcoming or ongoing meetings
-      const candidatesWithMeetings = candidates
-        .map(c => {
-          const interviewStart = parseInterviewDateTime(c["Interview Start"]);
-          const interviewEnd = parseInterviewDateTime(c["Interview End"]);
-          return {
-            id: c.id,
-            name: c["Candidate Name"],
-            jobTitle: c["Job Title"],
-            interviewStart: c["Interview Start"],
-            interviewEnd: c["Interview End"],
-            calendarEventId: c["Calendar Event ID"],
-            status: c.status || "Interview Scheduled",
-            parsedStart: interviewStart,
-            parsedEnd: interviewEnd
-          };
-        })
-        .filter(c => {
-          // Include candidates with valid parsed dates that are either ongoing or in the future
-          return c.parsedStart && c.parsedEnd && 
-                 (c.parsedEnd > now || (c.parsedStart <= now && c.parsedEnd >= now));
-        })
-        .sort((a, b) => {
-          // Sort by interview start time
-          return a.parsedStart!.getTime() - b.parsedStart!.getTime();
-        });
 
-      // Remove the parsed dates from response (frontend doesn't need them)
-      const response = candidatesWithMeetings.map(({ parsedStart, parsedEnd, ...rest }) => rest);
-      
-      console.log(`Found ${response.length} candidates with upcoming or ongoing meetings`);
-      res.json(response);
-    } catch (error) {
-      console.error("Error getting candidates with meetings:", error);
-      res.status(500).json({ error: "Failed to get candidates with meetings" });
-    }
-  });
 
   app.post("/api/extend-meeting", authenticateToken, async (req, res) => {
     try {

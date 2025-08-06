@@ -41,10 +41,13 @@ export default function ExtendMeetingDialog() {
   const queryClient = useQueryClient();
 
   // Fetch all candidates with upcoming or ongoing meetings
-  const { data: candidates, isLoading } = useQuery({
+  const { data: candidates, isLoading, error } = useQuery({
     queryKey: ['/api/candidates/with-meetings'],
     queryFn: async () => {
       const response = await authenticatedApiRequest('GET', '/api/candidates/with-meetings');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch candidates: ${response.status}`);
+      }
       return response.json() as Promise<CandidateWithMeeting[]>;
     },
     enabled: isOpen,
@@ -143,6 +146,8 @@ export default function ExtendMeetingDialog() {
               <SelectContent>
                 {isLoading ? (
                   <SelectItem value="loading" disabled>Loading candidates...</SelectItem>
+                ) : error ? (
+                  <SelectItem value="error" disabled>Error loading candidates: {error.message}</SelectItem>
                 ) : candidates?.length ? (
                   candidates.map((candidate) => (
                     <SelectItem key={candidate.id} value={candidate.id}>
@@ -160,7 +165,7 @@ export default function ExtendMeetingDialog() {
                     </SelectItem>
                   ))
                 ) : (
-                  <SelectItem value="none" disabled>No candidates with scheduled meetings</SelectItem>
+                  <SelectItem value="none" disabled>No candidates with scheduled meetings found</SelectItem>
                 )}
               </SelectContent>
             </Select>
