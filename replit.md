@@ -44,6 +44,9 @@ This is a full-stack hiring pipeline and intelligence platform built with React,
 - **LATEST:** Added support for selecting any candidate (including past interviews) from dropdown
 - **LATEST:** Fixed interview date/time display formatting using actual database fields
 - **LATEST:** Added proper candidate-specific transcript API endpoint (/api/transcripts/by-meet-id/:meetId)
+- **LATEST (August 6, 2025):** Successfully completed migration from Replit Agent to standard Replit environment with secure environment variables
+- **LATEST:** Added "Fetch Analysis" button in Live Interview page that triggers analysis webhook with candidate meeting ID
+- **LATEST:** Implemented webhook integration (http://54.226.92.93:5678/webhook/8a9f52c1-7a9d-44d9-8501-3787fbf302ff) for manual analysis triggering
 
 ## User Preferences
 

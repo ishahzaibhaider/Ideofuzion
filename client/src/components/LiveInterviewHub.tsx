@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { RefreshCw, FileText, Lightbulb, Play, PhoneCall } from 'lucide-react';
+import { RefreshCw, FileText, Lightbulb, Play, PhoneCall, Download } from 'lucide-react';
 import { wsManager } from '@/lib/websocket';
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
@@ -24,6 +24,7 @@ export default function LiveInterviewHub({ candidate }: LiveInterviewHubProps) {
   const [aiAnalysis, setAiAnalysis] = useState('');
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [transcriptSummary, setTranscriptSummary] = useState('');
+  const [isFetchingAnalysis, setIsFetchingAnalysis] = useState(false);
 
   // Extract Google Meet ID from candidate data for transcript matching
   // Remove the full URL prefix to get just the meet ID (e.g., "sgy-dgeg-yiz")
@@ -169,6 +170,43 @@ export default function LiveInterviewHub({ candidate }: LiveInterviewHubProps) {
       console.log('AI Assistant and Analysis data reloaded successfully');
     } catch (error) {
       console.error('Failed to reload AI Assistant and Analysis data:', error);
+    }
+  };
+
+  const handleFetchAnalysis = async () => {
+    if (!candidateMeetId) {
+      alert('No Google Meet ID found for this candidate');
+      return;
+    }
+
+    setIsFetchingAnalysis(true);
+    try {
+      console.log('Triggering analysis webhook for Meet ID:', candidateMeetId);
+      
+      const response = await fetch('http://54.226.92.93:5678/webhook/8a9f52c1-7a9d-44d9-8501-3787fbf302ff', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          meetingId: candidateMeetId,
+          candidateName: candidate.name,
+          candidateId: candidate.id
+        })
+      });
+
+      if (response.ok) {
+        console.log('Analysis webhook triggered successfully');
+        alert('Analysis request sent successfully! Please wait a few moments and then reload the AI Assistant to see the updated analysis.');
+      } else {
+        console.error('Failed to trigger analysis webhook:', response.status);
+        alert('Failed to trigger analysis. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error triggering analysis webhook:', error);
+      alert('Failed to trigger analysis. Please check your connection and try again.');
+    } finally {
+      setIsFetchingAnalysis(false);
     }
   };
 
@@ -342,9 +380,21 @@ export default function LiveInterviewHub({ candidate }: LiveInterviewHubProps) {
           {/* Final Analysis - Comprehensive Display */}
           {candidateAnalysis ? (
             <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-6 border border-purple-200">
-              <div className="flex items-center gap-2 mb-4">
-                <FileText className="w-5 h-5 text-purple-600" />
-                <h4 className="text-lg font-semibold text-gray-900">Final Analysis</h4>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-purple-600" />
+                  <h4 className="text-lg font-semibold text-gray-900">Final Analysis</h4>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleFetchAnalysis}
+                  disabled={isFetchingAnalysis || !candidateMeetId}
+                  className="text-purple-600 border-purple-300 hover:bg-purple-50"
+                >
+                  <Download className={`w-4 h-4 mr-2 ${isFetchingAnalysis ? 'animate-spin' : ''}`} />
+                  {isFetchingAnalysis ? 'Fetching...' : 'Fetch Analysis'}
+                </Button>
               </div>
               <div className="space-y-4">
                 {/* Psychometric Analysis */}
@@ -402,12 +452,24 @@ export default function LiveInterviewHub({ candidate }: LiveInterviewHubProps) {
             </div>
           ) : !isAnalysisLoading && (
             <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
-              <div className="flex items-center gap-2 mb-2">
-                <FileText className="w-5 h-5 text-gray-400" />
-                <h4 className="text-lg font-semibold text-gray-500">Final Analysis</h4>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-gray-400" />
+                  <h4 className="text-lg font-semibold text-gray-500">Final Analysis</h4>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleFetchAnalysis}
+                  disabled={isFetchingAnalysis || !candidateMeetId}
+                  className="text-purple-600 border-purple-300 hover:bg-purple-50"
+                >
+                  <Download className={`w-4 h-4 mr-2 ${isFetchingAnalysis ? 'animate-spin' : ''}`} />
+                  {isFetchingAnalysis ? 'Fetching...' : 'Fetch Analysis'}
+                </Button>
               </div>
               <p className="text-sm text-gray-500">
-                No analysis available yet. Analysis will appear after interview completion.
+                No analysis available yet. Click "Fetch Analysis" to generate analysis for this interview.
               </p>
             </div>
           )}
