@@ -1,4 +1,4 @@
-import { UserModel, JobCriteriaModel, CandidateModel, TranscriptModel, UnavailableSlotModel, AnalysisModel, type User, type InsertUser, type JobCriteria, type InsertJobCriteria, type Candidate, type InsertCandidate, type Transcript, type InsertTranscript, type UnavailableSlot, type InsertUnavailableSlot, type Analysis, type InsertAnalysis } from "../shared/schema.js";
+import { UserModel, JobCriteriaModel, CandidateModel, TranscriptModel, UnavailableSlotModel, AnalysisModel, ExtendedMeetingModel, type User, type InsertUser, type JobCriteria, type InsertJobCriteria, type Candidate, type InsertCandidate, type Transcript, type InsertTranscript, type UnavailableSlot, type InsertUnavailableSlot, type Analysis, type InsertAnalysis, type ExtendedMeeting, type InsertExtendedMeeting } from "../shared/schema.js";
 import { connectToDatabase } from "./db.js";
 
 // Define the structure for the data coming from the frontend form
@@ -48,6 +48,11 @@ export interface IStorage {
   // Analysis
   getAnalysisByMeetId(meetId: string): Promise<Analysis | undefined>;
   createAnalysis(analysis: InsertAnalysis): Promise<Analysis>;
+
+  // Extended Meetings
+  getExtendedMeetings(): Promise<ExtendedMeeting[]>;
+  getExtendedMeetingByCalendarEventId(calendarEventId: string): Promise<ExtendedMeeting | undefined>;
+  createExtendedMeeting(extendedMeeting: InsertExtendedMeeting): Promise<ExtendedMeeting>;
 }
 
 export class MongoStorage implements IStorage {
@@ -494,6 +499,48 @@ export class MongoStorage implements IStorage {
       return this.mongoDocToAnalysis(analysis);
     } catch (error) {
       console.error('Error creating analysis:', error);
+      throw error;
+    }
+  }
+
+  // Helper function to convert MongoDB document to our ExtendedMeeting type format
+  private mongoDocToExtendedMeeting(doc: any): ExtendedMeeting {
+    return {
+      id: doc._id.toString(),
+      calendarEventId: doc.calendarEventId,
+      newEndTime: doc.newEndTime,
+      status: doc.status,
+      reason: doc.reason,
+      createdAt: doc.createdAt
+    };
+  }
+
+  async getExtendedMeetings(): Promise<ExtendedMeeting[]> {
+    try {
+      const docs = await ExtendedMeetingModel.find({}).sort({ createdAt: -1 });
+      return docs.map(doc => this.mongoDocToExtendedMeeting(doc));
+    } catch (error) {
+      console.error('Error getting extended meetings:', error);
+      return [];
+    }
+  }
+
+  async getExtendedMeetingByCalendarEventId(calendarEventId: string): Promise<ExtendedMeeting | undefined> {
+    try {
+      const doc = await ExtendedMeetingModel.findOne({ calendarEventId });
+      return doc ? this.mongoDocToExtendedMeeting(doc) : undefined;
+    } catch (error) {
+      console.error('Error getting extended meeting by calendar event ID:', error);
+      return undefined;
+    }
+  }
+
+  async createExtendedMeeting(extendedMeeting: InsertExtendedMeeting): Promise<ExtendedMeeting> {
+    try {
+      const doc = await ExtendedMeetingModel.create(extendedMeeting);
+      return this.mongoDocToExtendedMeeting(doc);
+    } catch (error) {
+      console.error('Error creating extended meeting:', error);
       throw error;
     }
   }

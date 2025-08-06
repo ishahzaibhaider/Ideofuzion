@@ -7,6 +7,7 @@ import HiringFunnel from "@/components/DashboardWidgets/HiringFunnel";
 import UpcomingInterviews from "@/components/DashboardWidgets/UpcomingInterviews";
 import AddUnavailableSlotsDialog from "@/components/AddUnavailableSlotsDialog";
 import UnavailableSlotsManager from "@/components/UnavailableSlotsManager";
+import ExtendMeetingDialog from "@/components/ExtendMeetingDialog";
 import { Users, Video, BarChart3, Clock, Plus } from "lucide-react";
 
 export default function DashboardPage() {
@@ -64,6 +65,7 @@ export default function DashboardPage() {
             </div>
             {/* Action Buttons */}
             <div className="flex space-x-3">
+              <ExtendMeetingDialog />
               <AddUnavailableSlotsDialog />
               <Link href="/create-jobs" className="bg-primary text-white font-bold py-2 px-4 rounded-lg flex items-center space-x-2 hover:bg-primary/90 transition-colors">
                 <Plus className="w-5 h-5" />

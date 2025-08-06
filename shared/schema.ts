@@ -117,6 +117,26 @@ const transcriptSchema = new Schema<ITranscript>({
 
 export const TranscriptModel = mongoose.model<ITranscript>('Transcript', transcriptSchema);
 
+// MongoDB Extended Meetings Schema
+export interface IExtendedMeeting extends Document {
+  _id: string;
+  calendarEventId: string;
+  newEndTime: string;
+  status: string;
+  reason: string;
+  createdAt: Date;
+}
+
+const extendedMeetingSchema = new Schema<IExtendedMeeting>({
+  calendarEventId: { type: String, required: true },
+  newEndTime: { type: String, required: true },
+  status: { type: String, required: true, default: 'pending' },
+  reason: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now }
+}, { collection: 'extended_meetings' });
+
+export const ExtendedMeetingModel = mongoose.model<IExtendedMeeting>('ExtendedMeeting', extendedMeetingSchema);
+
 // MongoDB Analysis Schema
 export interface IAnalysis extends Document {
   _id: string;
@@ -188,6 +208,13 @@ export const insertAnalysisSchema = z.object({
   "Behavioural Analysis": z.string(),
   "Recommended for Hire": z.string(),
   Meet_id: z.string()
+});
+
+export const insertExtendedMeetingSchema = z.object({
+  calendarEventId: z.string(),
+  newEndTime: z.string(),
+  status: z.string().default("pending"),
+  reason: z.string()
 });
 
 // Types
@@ -266,6 +293,16 @@ export type Analysis = {
   "Behavioural Analysis": string;
   "Recommended for Hire": string;
   Meet_id: string;
+};
+
+export type InsertExtendedMeeting = z.infer<typeof insertExtendedMeetingSchema>;
+export type ExtendedMeeting = {
+  id: string;
+  calendarEventId: string;
+  newEndTime: string;
+  status: string;
+  reason: string;
+  createdAt: Date;
 };
 
 // MongoDB Unavailable Slot Schema

@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { z } from "zod"; // Import Zod for validation
 import { storage } from "./storage.js";
-import { insertUserSchema, insertCandidateSchema, insertTranscriptSchema, insertUnavailableSlotSchema, type Candidate } from "../shared/schema.js";
+import { insertUserSchema, insertCandidateSchema, insertTranscriptSchema, insertUnavailableSlotSchema, insertExtendedMeetingSchema, type Candidate } from "../shared/schema.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
@@ -988,6 +988,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting unavailable slot:", error);
       res.status(500).json({ error: "Failed to delete unavailable slot" });
+    }
+  });
+
+  // Extended Meeting routes
+  app.get("/api/candidates/with-meetings", authenticateToken, async (req, res) => {
+    try {
+      const candidates = await storage.getCandidates();
+      const now = new Date();
+      
+      // Filter candidates with upcoming or ongoing meetings
+      const candidatesWithMeetings = candidates
+        .map(c => {
+          const interviewStart = parseInterviewDateTime(c["Interview Start"]);
+          const interviewEnd = parseInterviewDateTime(c["Interview End"]);
+          return {
+            id: c.id,
+            name: c["Candidate Name"],
+            jobTitle: c["Job Title"],
+            interviewStart: c["Interview Start"],
+            interviewEnd: c["Interview End"],
+            calendarEventId: c["Calendar Event ID"],
+            status: c.status || "Interview Scheduled",
+            parsedStart: interviewStart,
+            parsedEnd: interviewEnd
+          };
+        })
+        .filter(c => {
+          // Include candidates with valid parsed dates that are either ongoing or in the future
+          return c.parsedStart && c.parsedEnd && 
+                 (c.parsedEnd > now || (c.parsedStart <= now && c.parsedEnd >= now));
+        })
+        .sort((a, b) => {
+          // Sort by interview start time
+          return a.parsedStart!.getTime() - b.parsedStart!.getTime();
+        });
+
+      // Remove the parsed dates from response (frontend doesn't need them)
+      const response = candidatesWithMeetings.map(({ parsedStart, parsedEnd, ...rest }) => rest);
+      
+      console.log(`Found ${response.length} candidates with upcoming or ongoing meetings`);
+      res.json(response);
+    } catch (error) {
+      console.error("Error getting candidates with meetings:", error);
+      res.status(500).json({ error: "Failed to get candidates with meetings" });
+    }
+  });
+
+  app.post("/api/extend-meeting", authenticateToken, async (req, res) => {
+    try {
+      const { error, data } = insertExtendedMeetingSchema.safeParse(req.body);
+      if (error) {
+        return res.status(400).json({ error: "Invalid input", details: error.issues });
+      }
+
+      // Validate that the calendar event ID exists in candidates
+      const candidates = await storage.getCandidates();
+      const candidate = candidates.find(c => c["Calendar Event ID"] === data.calendarEventId);
+      
+      if (!candidate) {
+        return res.status(404).json({ error: "Calendar event not found" });
+      }
+
+      // Validate that new end time is after current end time
+      const currentEndTime = parseInterviewDateTime(candidate["Interview End"]);
+      const newEndTime = parseInterviewDateTime(data.newEndTime);
+      
+      if (!currentEndTime || !newEndTime) {
+        return res.status(400).json({ error: "Invalid date format" });
+      }
+
+      if (newEndTime <= currentEndTime) {
+        return res.status(400).json({ error: "New end time must be after current end time" });
+      }
+
+      // Create extended meeting record
+      const extendedMeeting = await storage.createExtendedMeeting(data);
+      
+      console.log(`Extended meeting created for calendar event ${data.calendarEventId}:`, {
+        candidateName: candidate["Candidate Name"],
+        originalEndTime: candidate["Interview End"],
+        newEndTime: data.newEndTime,
+        reason: data.reason
+      });
+
+      res.status(201).json({
+        success: true,
+        extendedMeeting,
+        candidate: {
+          name: candidate["Candidate Name"],
+          originalEndTime: candidate["Interview End"],
+          newEndTime: data.newEndTime
+        }
+      });
+    } catch (error) {
+      console.error("Error extending meeting:", error);
+      res.status(500).json({ error: "Failed to extend meeting" });
     }
   });
 
