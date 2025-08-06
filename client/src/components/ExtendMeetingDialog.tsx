@@ -119,6 +119,12 @@ export default function ExtendMeetingDialog() {
     return now >= start && now <= end;
   };
 
+  const isUpcoming = (candidate: CandidateWithMeeting) => {
+    const now = new Date();
+    const start = parseISO(candidate.interviewStart);
+    return start > now;
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
@@ -157,6 +163,16 @@ export default function ExtendMeetingDialog() {
                           {isCurrentlyOngoing(candidate) && (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800 mr-2">
                               • Ongoing
+                            </span>
+                          )}
+                          {isUpcoming(candidate) && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800 mr-2">
+                              • Upcoming
+                            </span>
+                          )}
+                          {!isCurrentlyOngoing(candidate) && !isUpcoming(candidate) && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800 mr-2">
+                              • Past
                             </span>
                           )}
                           {formatDisplayTime(candidate.interviewStart)}

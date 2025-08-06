@@ -225,8 +225,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
         .filter(c => {
           // Include candidates with valid parsed dates that are either ongoing or in the future
-          return c.parsedStart && c.parsedEnd && 
-                 (c.parsedEnd > now || (c.parsedStart <= now && c.parsedEnd >= now));
+          // Also include candidates with Interview Scheduled status regardless of time
+          const hasValidDates = c.parsedStart && c.parsedEnd;
+          const isFutureOrOngoing = hasValidDates && c.parsedStart && c.parsedEnd && 
+            (c.parsedEnd > now || (c.parsedStart <= now && c.parsedEnd >= now));
+          const isScheduled = c.status === 'Interview Scheduled';
+          
+          console.log(`Candidate ${c.name}: hasValidDates=${hasValidDates}, isFutureOrOngoing=${isFutureOrOngoing}, isScheduled=${isScheduled}, status=${c.status}`);
+          
+          // Include if it's scheduled OR if it's in the future/ongoing
+          return hasValidDates && (isScheduled || isFutureOrOngoing);
         })
         .sort((a, b) => {
           // Sort by interview start time
