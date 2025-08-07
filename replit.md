@@ -48,6 +48,10 @@ This is a full-stack hiring pipeline and intelligence platform built with React,
 - **LATEST:** Added "Fetch Analysis" button in Live Interview page that triggers analysis webhook with candidate meeting ID
 - **LATEST:** Implemented dual webhook integration (localhost:5678 and EC2:54.226.92.93:5678) for maximum reliability
 - **LATEST:** Enhanced webhook functionality to try both endpoints automatically for analysis triggering
+- **LATEST (August 7, 2025):** Improved Add Unavailable Slots dialog with user-friendly design
+- **LATEST:** Simplified time slot entry to single slot creation with immediate save functionality
+- **LATEST:** Added dropdown time selectors with 15-minute intervals instead of manual time input
+- **LATEST:** Enhanced UI with preview section and improved visual design for better user experience
 
 ## User Preferences
 

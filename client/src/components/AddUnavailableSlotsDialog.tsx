@@ -2,27 +2,38 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Plus, Trash2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CalendarIcon, Plus, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { authenticatedApiRequest } from "@/lib/auth";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
-interface TimeSlot {
-  startTime: string;
-  endTime: string;
-}
-
 export default function AddUnavailableSlotsDialog() {
   const [open, setOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>();
-  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([{ startTime: "", endTime: "" }]);
+  const [startTime, setStartTime] = useState<string>("");
+  const [endTime, setEndTime] = useState<string>("");
   const { toast } = useToast();
+
+  // Generate time options in 15-minute intervals
+  const generateTimeOptions = () => {
+    const options = [];
+    for (let hour = 1; hour <= 12; hour++) {
+      for (let minute = 0; minute < 60; minute += 15) {
+        const timeStr = `${hour}:${minute.toString().padStart(2, '0')}`;
+        options.push(`${timeStr} AM`);
+        options.push(`${timeStr} PM`);
+      }
+    }
+    return options;
+  };
+
+  const timeOptions = generateTimeOptions();
 
   const createSlotMutation = useMutation({
     mutationFn: async (slotData: { date: string; startTime: string; endTime: string; reason: string }) => {
@@ -33,32 +44,22 @@ export default function AddUnavailableSlotsDialog() {
       queryClient.invalidateQueries({ queryKey: ["/api/unavailable-slots"] });
       toast({
         title: "Success",
-        description: "Unavailable slots added successfully",
+        description: "Time slot marked as unavailable",
       });
+      // Reset form after successful save
+      setSelectedDate(undefined);
+      setStartTime("");
+      setEndTime("");
+      setOpen(false);
     },
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to add unavailable slots",
+        description: "Failed to add unavailable slot",
         variant: "destructive",
       });
     },
   });
-
-  const addTimeSlot = () => {
-    setTimeSlots([...timeSlots, { startTime: "", endTime: "" }]);
-  };
-
-  const removeTimeSlot = (index: number) => {
-    setTimeSlots(timeSlots.filter((_, i) => i !== index));
-  };
-
-  const updateTimeSlot = (index: number, field: keyof TimeSlot, value: string) => {
-    const updated = timeSlots.map((slot, i) => 
-      i === index ? { ...slot, [field]: value } : slot
-    );
-    setTimeSlots(updated);
-  };
 
   // Helper function to convert 12-hour format to 24-hour format
   const convertTo24Hour = (time12h: string): string => {
@@ -89,11 +90,10 @@ export default function AddUnavailableSlotsDialog() {
       return;
     }
 
-    const validSlots = timeSlots.filter(slot => slot.startTime && slot.endTime);
-    if (validSlots.length === 0) {
+    if (!startTime || !endTime) {
       toast({
         title: "Error",
-        description: "Please add at least one time slot",
+        description: "Please select both start and end time",
         variant: "destructive",
       });
       return;
@@ -106,33 +106,26 @@ export default function AddUnavailableSlotsDialog() {
       const day = String(selectedDate.getDate()).padStart(2, '0');
       const dateStr = `${year}-${month}-${day}`;
       
-      for (const slot of validSlots) {
-        // Convert 12-hour format to 24-hour format
-        const startTime24 = convertTo24Hour(slot.startTime);
-        const endTime24 = convertTo24Hour(slot.endTime);
-        
-        // Create local Date objects for start and end times
-        const startDate = new Date(`${dateStr}T${startTime24}:00`);
-        const endDate = new Date(`${dateStr}T${endTime24}:00`);
-        
-        // Convert to UTC ISO strings using .toISOString()
-        const startTimeUTC = startDate.toISOString();
-        const endTimeUTC = endDate.toISOString();
+      // Convert 12-hour format to 24-hour format
+      const startTime24 = convertTo24Hour(startTime);
+      const endTime24 = convertTo24Hour(endTime);
+      
+      // Create local Date objects for start and end times
+      const startDate = new Date(`${dateStr}T${startTime24}:00`);
+      const endDate = new Date(`${dateStr}T${endTime24}:00`);
+      
+      // Convert to UTC ISO strings using .toISOString()
+      const startTimeUTC = startDate.toISOString();
+      const endTimeUTC = endDate.toISOString();
 
-        await createSlotMutation.mutateAsync({
-          date: dateStr,
-          startTime: startTimeUTC,
-          endTime: endTimeUTC,
-          reason: "Unavailable",
-        });
-      }
-
-      // Reset form
-      setSelectedDate(undefined);
-      setTimeSlots([{ startTime: "", endTime: "" }]);
-      setOpen(false);
+      await createSlotMutation.mutateAsync({
+        date: dateStr,
+        startTime: startTimeUTC,
+        endTime: endTimeUTC,
+        reason: "Unavailable",
+      });
     } catch (error) {
-      console.error("Error saving slots:", error);
+      console.error("Error saving slot:", error);
     }
   };
 
@@ -144,25 +137,28 @@ export default function AddUnavailableSlotsDialog() {
           <span>Add Unavailable Slots</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[450px]">
         <DialogHeader>
-          <DialogTitle>Add Unavailable Time Slots</DialogTitle>
+          <DialogTitle className="flex items-center space-x-2">
+            <Clock className="w-5 h-5" />
+            <span>Mark Time as Unavailable</span>
+          </DialogTitle>
         </DialogHeader>
         <div className="space-y-6">
           {/* Date Picker */}
-          <div className="space-y-2">
-            <Label>Select Date</Label>
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Select Date</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   className={cn(
-                    "w-full justify-start text-left font-normal",
+                    "w-full justify-start text-left font-normal h-11",
                     !selectedDate && "text-muted-foreground"
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
+                  {selectedDate ? format(selectedDate, "EEEE, MMMM d, yyyy") : "Choose a date"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -181,53 +177,51 @@ export default function AddUnavailableSlotsDialog() {
             </Popover>
           </div>
 
-          {/* Time Slots */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label>Time Slots</Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={addTimeSlot}
-              >
-                <Plus className="w-4 h-4 mr-1" />
-                Add Slot
-              </Button>
+          {/* Time Selection */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Start Time</Label>
+              <Select value={startTime} onValueChange={setStartTime}>
+                <SelectTrigger className="h-11">
+                  <SelectValue placeholder="Select start time" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[200px]">
+                  {timeOptions.map((time) => (
+                    <SelectItem key={time} value={time}>
+                      {time}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             
-            {timeSlots.map((slot, index) => (
-              <div key={index} className="flex items-center space-x-2">
-                <div className="flex-1">
-                  <Input
-                    type="time"
-                    value={slot.startTime}
-                    onChange={(e) => updateTimeSlot(index, "startTime", e.target.value)}
-                    placeholder="Start time"
-                  />
-                </div>
-                <span className="text-sm text-gray-500">to</span>
-                <div className="flex-1">
-                  <Input
-                    type="time"
-                    value={slot.endTime}
-                    onChange={(e) => updateTimeSlot(index, "endTime", e.target.value)}
-                    placeholder="End time"
-                  />
-                </div>
-                {timeSlots.length > 1 && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => removeTimeSlot(index)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                )}
-              </div>
-            ))}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">End Time</Label>
+              <Select value={endTime} onValueChange={setEndTime}>
+                <SelectTrigger className="h-11">
+                  <SelectValue placeholder="Select end time" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[200px]">
+                  {timeOptions.map((time) => (
+                    <SelectItem key={time} value={time}>
+                      {time}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+
+          {/* Preview */}
+          {selectedDate && startTime && endTime && (
+            <div className="p-4 bg-gray-50 rounded-lg border">
+              <h4 className="text-sm font-medium text-gray-900 mb-2">Preview</h4>
+              <p className="text-sm text-gray-600">
+                <strong>{format(selectedDate, "EEEE, MMMM d, yyyy")}</strong> from{" "}
+                <strong>{startTime}</strong> to <strong>{endTime}</strong> will be marked as unavailable.
+              </p>
+            </div>
+          )}
 
           {/* Save Button */}
           <div className="flex justify-end space-x-2">
@@ -236,9 +230,10 @@ export default function AddUnavailableSlotsDialog() {
             </Button>
             <Button 
               onClick={handleSave}
-              disabled={createSlotMutation.isPending}
+              disabled={createSlotMutation.isPending || !selectedDate || !startTime || !endTime}
+              className="bg-primary text-white hover:bg-primary/90"
             >
-              {createSlotMutation.isPending ? "Saving..." : "Save Slots"}
+              {createSlotMutation.isPending ? "Saving..." : "Mark as Unavailable"}
             </Button>
           </div>
         </div>
