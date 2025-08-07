@@ -308,59 +308,79 @@ export default function UnavailableSlotsManager() {
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="w-5 h-5" />
-            Unavailable Slots
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+      <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20">
+        <div className="p-6 border-b border-gray-200/50">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-red-500 to-pink-600 rounded-lg flex items-center justify-center">
+              <Clock className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">Unavailable Time Slots</h3>
+            </div>
+          </div>
+        </div>
+        <div className="p-6">
           <div className="animate-pulse space-y-3">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-16 bg-gray-200 rounded"></div>
+              <div key={i} className="h-16 bg-red-100 rounded-xl"></div>
             ))}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="w-5 h-5" />
-            Unavailable Slots
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+      <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 hover:shadow-2xl transition-all duration-300">
+        <div className="p-6 border-b border-gray-200/50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-gradient-to-br from-red-500 to-pink-600 rounded-lg flex items-center justify-center">
+                <Clock className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Unavailable Time Slots</h3>
+                <p className="text-sm text-gray-600">
+                  {slots.length > 0 ? `${slots.length} slots configured` : "No slots configured"}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+              <span className="text-xs text-red-600 font-medium">Active</span>
+            </div>
+          </div>
+        </div>
+        <div className="p-6">
           {slots.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <Clock className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-              <p>No unavailable slots configured</p>
-              <p className="text-sm">Use the "Add Unavailable Slots" button to get started</p>
+            <div className="text-center py-8">
+              <div className="w-16 h-16 bg-gradient-to-br from-red-100 to-pink-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Clock className="w-8 h-8 text-red-500" />
+              </div>
+              <p className="text-gray-700 font-medium mb-2">No unavailable slots configured</p>
+              <p className="text-sm text-gray-500">Use the "Add Unavailable Slots" button to get started</p>
             </div>
           ) : (
             <div className="space-y-3">
               {slots.map((slot: UnavailableSlot) => (
                 <div
                   key={slot.id}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border"
+                  className="flex items-center justify-between p-4 bg-red-50/60 rounded-xl border border-red-200/50 hover:bg-red-50/80 transition-all duration-200 backdrop-blur-sm"
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-4">
+                      <div className="w-3 h-3 bg-red-500 rounded-full"></div>
                       <div>
-                        <p className="font-medium text-gray-900">
+                        <p className="font-medium text-red-900">
                           {formatDisplayDate(slot.date)}
                         </p>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-red-700">
                           {formatDisplayTime(slot.startTime)} - {formatDisplayTime(slot.endTime)}
                         </p>
                       </div>
-                      <div className="text-sm text-gray-600">
-                        {slot.reason}
+                      <div className="px-3 py-1 bg-red-100 rounded-full">
+                        <span className="text-xs font-medium text-red-700">{slot.reason}</span>
                       </div>
                     </div>
                   </div>
@@ -369,6 +389,7 @@ export default function UnavailableSlotsManager() {
                       variant="outline"
                       size="sm"
                       onClick={() => setEditingSlot(slot)}
+                      className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
                     >
                       <Edit className="w-4 h-4" />
                     </Button>
@@ -377,7 +398,7 @@ export default function UnavailableSlotsManager() {
                       size="sm"
                       onClick={() => handleDelete(slot.id)}
                       disabled={deleteSlotMutation.isPending}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      className="border-red-200 text-red-600 hover:bg-red-100 hover:text-red-700"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -386,8 +407,8 @@ export default function UnavailableSlotsManager() {
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {editingSlot && (
         <EditSlotDialog
