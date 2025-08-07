@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { z } from "zod"; // Import Zod for validation
 import { storage } from "./storage.js";
-import { insertUserSchema, insertCandidateSchema, insertTranscriptSchema, insertUnavailableSlotSchema, insertExtendedMeetingSchema, type Candidate } from "../shared/schema.js";
+import { insertUserSchema, insertCandidateSchema, insertTranscriptSchema, insertUnavailableSlotSchema, insertBusySlotSchema, insertExtendedMeetingSchema, type Candidate } from "../shared/schema.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
@@ -1043,7 +1043,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Busy Slots routes
+  app.get("/api/busy-slots", authenticateToken, async (req, res) => {
+    try {
+      const slots = await storage.getBusySlots();
+      res.json(slots);
+    } catch (error) {
+      console.error("Error getting busy slots:", error);
+      res.status(500).json({ error: "Failed to get busy slots" });
+    }
+  });
 
+  app.post("/api/busy-slots", authenticateToken, async (req, res) => {
+    try {
+      const { error, data } = insertBusySlotSchema.safeParse(req.body);
+      if (error) {
+        return res.status(400).json({ error: "Invalid input", details: error.issues });
+      }
+      const slot = await storage.createBusySlot(data);
+      res.status(201).json(slot);
+    } catch (error) {
+      console.error("Error creating busy slot:", error);
+      res.status(500).json({ error: "Failed to create busy slot" });
+    }
+  });
+
+  app.put("/api/busy-slots/:id", authenticateToken, async (req, res) => {
+    try {
+      const { error, data } = insertBusySlotSchema.safeParse(req.body);
+      if (error) {
+        return res.status(400).json({ error: "Invalid input", details: error.issues });
+      }
+      const slot = await storage.updateBusySlot(req.params.id, data);
+      if (slot) {
+        res.json(slot);
+      } else {
+        res.status(404).json({ error: "Busy slot not found" });
+      }
+    } catch (error) {
+      console.error("Error updating busy slot:", error);
+      res.status(500).json({ error: "Failed to update busy slot" });
+    }
+  });
+
+  app.delete("/api/busy-slots/:id", authenticateToken, async (req, res) => {
+    try {
+      const success = await storage.deleteBusySlot(req.params.id);
+      if (success) {
+        res.json({ success: true });
+      } else {
+        res.status(404).json({ error: "Busy slot not found" });
+      }
+    } catch (error) {
+      console.error("Error deleting busy slot:", error);
+      res.status(500).json({ error: "Failed to delete busy slot" });
+    }
+  });
 
   app.post("/api/extend-meeting", authenticateToken, async (req, res) => {
     try {

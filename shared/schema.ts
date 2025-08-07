@@ -341,3 +341,40 @@ export type UnavailableSlot = {
   reason: string;
   createdAt: Date;
 };
+
+// MongoDB Busy Slot Schema
+export interface IBusySlot extends Document {
+  _id: string;
+  date: string; // ISO date string
+  startTime: string; // ISO datetime string
+  endTime: string; // ISO datetime string
+  reason: string; // Reason for being busy
+  createdAt: Date;
+}
+
+const busySlotSchema = new Schema<IBusySlot>({
+  date: { type: String, required: true }, // ISO date format
+  startTime: { type: String, required: true }, // ISO datetime format
+  endTime: { type: String, required: true }, // ISO datetime format
+  reason: { type: String, default: "Busy" }, // Reason for being busy
+  createdAt: { type: Date, default: Date.now }
+}, { collection: 'busy_slots' });
+
+export const BusySlotModel = mongoose.model<IBusySlot>('BusySlot', busySlotSchema);
+
+export const insertBusySlotSchema = z.object({
+  date: z.string(),
+  startTime: z.string(),
+  endTime: z.string(),
+  reason: z.string().optional()
+});
+
+export type InsertBusySlot = z.infer<typeof insertBusySlotSchema>;
+export type BusySlot = {
+  id: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  reason: string;
+  createdAt: Date;
+};

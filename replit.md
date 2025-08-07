@@ -52,6 +52,10 @@ This is a full-stack hiring pipeline and intelligence platform built with React,
 - **LATEST:** Simplified time slot entry to single slot creation with immediate save functionality
 - **LATEST:** Added dropdown time selectors with 15-minute intervals instead of manual time input
 - **LATEST:** Enhanced UI with preview section and improved visual design for better user experience
+- **LATEST:** Added "Add Busy Slots" feature with identical functionality to unavailable slots but separate collection
+- **LATEST:** Created MongoDB schema and API endpoints for busy_slots collection with full CRUD operations
+- **LATEST:** Implemented user-friendly busy slots dialog with orange color scheme and proper time selection
+- **LATEST:** Added busy slots button to dashboard with seamless integration and proper styling
 
 ## User Preferences
 

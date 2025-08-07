@@ -1,4 +1,4 @@
-import { UserModel, JobCriteriaModel, CandidateModel, TranscriptModel, UnavailableSlotModel, AnalysisModel, ExtendedMeetingModel, type User, type InsertUser, type JobCriteria, type InsertJobCriteria, type Candidate, type InsertCandidate, type Transcript, type InsertTranscript, type UnavailableSlot, type InsertUnavailableSlot, type Analysis, type InsertAnalysis, type ExtendedMeeting, type InsertExtendedMeeting } from "../shared/schema.js";
+import { UserModel, JobCriteriaModel, CandidateModel, TranscriptModel, UnavailableSlotModel, BusySlotModel, AnalysisModel, ExtendedMeetingModel, type User, type InsertUser, type JobCriteria, type InsertJobCriteria, type Candidate, type InsertCandidate, type Transcript, type InsertTranscript, type UnavailableSlot, type InsertUnavailableSlot, type BusySlot, type InsertBusySlot, type Analysis, type InsertAnalysis, type ExtendedMeeting, type InsertExtendedMeeting } from "../shared/schema.js";
 import { connectToDatabase } from "./db.js";
 
 // Define the structure for the data coming from the frontend form
@@ -44,6 +44,12 @@ export interface IStorage {
   createUnavailableSlot(slot: InsertUnavailableSlot): Promise<UnavailableSlot>;
   updateUnavailableSlot(id: string, updates: Partial<InsertUnavailableSlot>): Promise<UnavailableSlot | undefined>;
   deleteUnavailableSlot(id: string): Promise<boolean>;
+
+  // Busy Slots
+  getBusySlots(): Promise<BusySlot[]>;
+  createBusySlot(slot: InsertBusySlot): Promise<BusySlot>;
+  updateBusySlot(id: string, updates: Partial<InsertBusySlot>): Promise<BusySlot | undefined>;
+  deleteBusySlot(id: string): Promise<boolean>;
 
   // Analysis
   getAnalysisByMeetId(meetId: string): Promise<Analysis | undefined>;
@@ -461,6 +467,58 @@ export class MongoStorage implements IStorage {
       return result !== null;
     } catch (error) {
       console.error('Error deleting unavailable slot:', error);
+      return false;
+    }
+  }
+
+  // Helper method to convert MongoDB document to BusySlot
+  private mongoDocToBusySlot(doc: any): BusySlot {
+    return {
+      id: doc._id.toString(),
+      date: doc.date,
+      startTime: doc.startTime,
+      endTime: doc.endTime,
+      reason: doc.reason || "Busy",
+      createdAt: doc.createdAt
+    };
+  }
+
+  async getBusySlots(): Promise<BusySlot[]> {
+    try {
+      const slots = await BusySlotModel.find().sort({ date: 1, startTime: 1 });
+      return slots.map(slot => this.mongoDocToBusySlot(slot));
+    } catch (error) {
+      console.error('Error getting busy slots:', error);
+      return [];
+    }
+  }
+
+  async createBusySlot(insertSlot: InsertBusySlot): Promise<BusySlot> {
+    try {
+      const slot = await BusySlotModel.create(insertSlot);
+      return this.mongoDocToBusySlot(slot);
+    } catch (error) {
+      console.error('Error creating busy slot:', error);
+      throw error;
+    }
+  }
+
+  async updateBusySlot(id: string, updates: Partial<InsertBusySlot>): Promise<BusySlot | undefined> {
+    try {
+      const slot = await BusySlotModel.findByIdAndUpdate(id, updates, { new: true });
+      return slot ? this.mongoDocToBusySlot(slot) : undefined;
+    } catch (error) {
+      console.error('Error updating busy slot:', error);
+      return undefined;
+    }
+  }
+
+  async deleteBusySlot(id: string): Promise<boolean> {
+    try {
+      const result = await BusySlotModel.findByIdAndDelete(id);
+      return result !== null;
+    } catch (error) {
+      console.error('Error deleting busy slot:', error);
       return false;
     }
   }
