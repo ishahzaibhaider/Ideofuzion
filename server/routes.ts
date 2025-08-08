@@ -1061,6 +1061,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid input", details: error.issues });
       }
       const slot = await storage.createBusySlot(data);
+      
+      // Trigger webhook after successful busy slot creation
+      try {
+        console.log("Triggering busy slot webhook...");
+        const webhookResponse = await fetch("http://54.226.92.93:5678/webhook/9f5e6fba-ac86-45fa-a435-d686a388ea56", {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            "User-Agent": "HiringPlatform/1.0"
+          },
+          body: JSON.stringify({ 
+            status: "Busy slot marked",
+            slotId: slot.id,
+            date: data.date,
+            startTime: data.startTime,
+            endTime: data.endTime,
+            timestamp: new Date().toISOString()
+          })
+        });
+        
+        if (webhookResponse.ok) {
+          console.log("Busy slot webhook triggered successfully");
+        } else {
+          console.error("Busy slot webhook failed:", webhookResponse.status);
+        }
+      } catch (webhookError) {
+        console.error("Error triggering busy slot webhook:", webhookError);
+        // Don't fail the busy slot creation if webhook fails
+      }
+      
       res.status(201).json(slot);
     } catch (error) {
       console.error("Error creating busy slot:", error);
@@ -1136,6 +1166,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         newEndTime: data.newEndTime,
         reason: data.reason
       });
+
+      // Trigger webhook after successful meeting extension
+      try {
+        console.log("Triggering meeting extension webhook...");
+        const webhookResponse = await fetch("http://54.226.92.93:5678/webhook/4b63beb1-c7d1-4118-8bbb-3a2252298a1d", {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            "User-Agent": "HiringPlatform/1.0"
+          },
+          body: JSON.stringify({ 
+            message: "Meeting extended",
+            calendarEventId: data.calendarEventId,
+            candidateName: candidate["Candidate Name"],
+            originalEndTime: candidate["Interview End"],
+            newEndTime: data.newEndTime,
+            reason: data.reason,
+            timestamp: new Date().toISOString()
+          })
+        });
+        
+        if (webhookResponse.ok) {
+          console.log("Meeting extension webhook triggered successfully");
+        } else {
+          console.error("Meeting extension webhook failed:", webhookResponse.status);
+        }
+      } catch (webhookError) {
+        console.error("Error triggering meeting extension webhook:", webhookError);
+        // Don't fail the meeting extension if webhook fails
+      }
 
       res.status(201).json({
         success: true,

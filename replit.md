@@ -66,6 +66,9 @@ This is a full-stack hiring pipeline and intelligence platform built with React,
 - **LATEST:** ExtendMeetingDialog now triggers webhook to EC2 instance (4b63beb1-c7d1-4118-8bbb-3a2252298a1d) after successful meeting extensions
 - **LATEST:** AddBusySlotsDialog now triggers webhook to EC2 instance (9f5e6fba-ac86-45fa-a435-d686a388ea56) after successful busy slot creation
 - **LATEST:** Both webhook integrations include proper error handling and only execute after successful operations
+- **LATEST:** Fixed webhook CORS issues by moving webhook calls to server-side implementation
+- **LATEST:** Webhooks now trigger automatically from server after successful database operations
+- **LATEST:** Enhanced webhook payloads with comprehensive data including timestamps and candidate details
 
 ## User Preferences
 

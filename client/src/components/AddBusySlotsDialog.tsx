@@ -52,33 +52,8 @@ export default function AddBusySlotsDialog() {
       setEndTime("");
       setOpen(false);
       
-      // Trigger webhook after successful busy slot creation
-      console.log("Attempting to trigger busy slot webhook...");
-      fetch("http://54.226.92.93:5678/webhook/9f5e6fba-ac86-45fa-a435-d686a388ea56", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Accept": "*/*"
-        },
-        mode: "no-cors",
-        body: JSON.stringify({ status: "Busy slot marked" })
-      })
-      .then(res => {
-        console.log("Busy slot webhook response status:", res.status);
-        return res.text();
-      })
-      .then(data => console.log("Busy slot webhook triggered successfully:", data))
-      .catch(err => {
-        console.error("Error triggering busy slot webhook:", err);
-        // Also try with localhost fallback
-        return fetch("http://localhost:5678/webhook/9f5e6fba-ac86-45fa-a435-d686a388ea56", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: "Busy slot marked" })
-        })
-        .then(res => console.log("Localhost webhook fallback triggered"))
-        .catch(fallbackErr => console.error("Both webhook attempts failed:", fallbackErr));
-      });
+      // Webhook is now handled server-side automatically
+      console.log("Busy slot created successfully, webhook triggered on server");
     },
     onError: () => {
       toast({
