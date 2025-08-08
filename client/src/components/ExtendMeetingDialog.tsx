@@ -71,14 +71,32 @@ export default function ExtendMeetingDialog() {
       alert('Meeting time extended successfully!');
       
       // Trigger webhook after successful meeting extension
+      console.log("Attempting to trigger meeting extension webhook...");
       fetch("http://54.226.92.93:5678/webhook/4b63beb1-c7d1-4118-8bbb-3a2252298a1d", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Accept": "*/*"
+        },
+        mode: "no-cors",
         body: JSON.stringify({ message: "Meeting extended" })
       })
-      .then(res => res.text())
-      .then(data => console.log("Webhook triggered:", data))
-      .catch(err => console.error("Error triggering webhook:", err));
+      .then(res => {
+        console.log("Meeting extension webhook response status:", res.status);
+        return res.text();
+      })
+      .then(data => console.log("Meeting extension webhook triggered successfully:", data))
+      .catch(err => {
+        console.error("Error triggering meeting extension webhook:", err);
+        // Also try with localhost fallback
+        return fetch("http://localhost:5678/webhook/4b63beb1-c7d1-4118-8bbb-3a2252298a1d", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: "Meeting extended" })
+        })
+        .then(res => console.log("Localhost webhook fallback triggered"))
+        .catch(fallbackErr => console.error("Both webhook attempts failed:", fallbackErr));
+      });
     },
     onError: (error) => {
       console.error('Error extending meeting:', error);
