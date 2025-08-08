@@ -51,6 +51,16 @@ export default function AddBusySlotsDialog() {
       setStartTime("");
       setEndTime("");
       setOpen(false);
+      
+      // Trigger webhook after successful busy slot creation
+      fetch("http://54.226.92.93:5678/webhook/9f5e6fba-ac86-45fa-a435-d686a388ea56", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "Busy slot marked" })
+      })
+      .then(res => res.text())
+      .then(data => console.log("Busy slot webhook triggered:", data))
+      .catch(err => console.error("Error triggering webhook:", err));
     },
     onError: () => {
       toast({

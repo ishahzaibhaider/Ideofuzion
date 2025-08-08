@@ -62,6 +62,10 @@ This is a full-stack hiring pipeline and intelligence platform built with React,
 - **LATEST:** Updated metrics cards with gradient backgrounds and improved visual hierarchy
 - **LATEST:** Enhanced dashboard with professional glass-effect header and modern typography
 - **LATEST:** Modernized HiringFunnel, UpcomingInterviews, and UnavailableSlotsManager components with consistent design language
+- **LATEST (August 8, 2025):** Added webhook integration to ExtendMeetingDialog and AddBusySlotsDialog
+- **LATEST:** ExtendMeetingDialog now triggers webhook to EC2 instance (4b63beb1-c7d1-4118-8bbb-3a2252298a1d) after successful meeting extensions
+- **LATEST:** AddBusySlotsDialog now triggers webhook to EC2 instance (9f5e6fba-ac86-45fa-a435-d686a388ea56) after successful busy slot creation
+- **LATEST:** Both webhook integrations include proper error handling and only execute after successful operations
 
 ## User Preferences
 
