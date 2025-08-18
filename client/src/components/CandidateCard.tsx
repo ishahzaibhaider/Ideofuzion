@@ -56,21 +56,21 @@ export default function CandidateCard({ candidate, onDragStart, onDragEnd }: Can
 
   return (
     <div 
-      className="bg-white border border-gray-200 rounded-lg p-4 cursor-grab hover:shadow-md transition-shadow"
+      className="bg-white/95 backdrop-blur-sm border border-white/30 rounded-xl p-4 cursor-grab hover:shadow-xl transition-all duration-300 hover:scale-[1.02] hover:bg-white"
       draggable
       onDragStart={(e) => onDragStart?.(e, candidate)}
       onDragEnd={onDragEnd}
     >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-            <span className="text-xs font-medium text-gray-600">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center shadow-sm">
+            <span className="text-xs font-bold text-indigo-700">
               {getInitials(candidate["Candidate Name"] || '')}
             </span>
           </div>
           <div>
-            <p className="font-medium text-gray-900">{candidate["Candidate Name"]}</p>
-            <p className="text-sm text-gray-500">{candidate["Job Title"] || 'N/A'}</p>
+            <p className="font-semibold text-gray-900">{candidate["Candidate Name"]}</p>
+            <p className="text-sm text-gray-600">{candidate["Job Title"] || 'N/A'}</p>
           </div>
         </div>
         <DropdownMenu>
@@ -114,11 +114,11 @@ export default function CandidateCard({ candidate, onDragStart, onDragEnd }: Can
                     </div>
                     <div>
                       <Label className="text-sm font-medium text-gray-500">Interview Date</Label>
-                      <p className="text-sm text-gray-900">{selectedCandidate["Interview Date"] || 'N/A'}</p>
+                      <p className="text-sm text-gray-900">{selectedCandidate["Interview Start"] ? new Date(selectedCandidate["Interview Start"]).toLocaleDateString() : 'N/A'}</p>
                     </div>
                     <div>
                       <Label className="text-sm font-medium text-gray-500">Interview Time</Label>
-                      <p className="text-sm text-gray-900">{selectedCandidate["Interview Time"] || 'N/A'}</p>
+                      <p className="text-sm text-gray-900">{selectedCandidate["Interview Start"] ? new Date(selectedCandidate["Interview Start"]).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</p>
                     </div>
                     {selectedCandidate["Calender Event Link"] && (
                       <div className="col-span-2">
