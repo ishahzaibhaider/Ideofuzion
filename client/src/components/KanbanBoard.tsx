@@ -17,6 +17,7 @@ const COLUMNS = [
 
 export default function KanbanBoard({ candidates }: KanbanBoardProps) {
   const [draggedCandidate, setDraggedCandidate] = useState<Candidate | null>(null);
+  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -42,12 +43,16 @@ export default function KanbanBoard({ candidates }: KanbanBoardProps) {
   });
 
   const handleDragStart = (e: React.DragEvent, candidate: Candidate) => {
+    console.log('Drag started for candidate:', candidate["Candidate Name"]);
     setDraggedCandidate(candidate);
     e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', candidate.id);
   };
 
   const handleDragEnd = () => {
+    console.log('Drag ended');
     setDraggedCandidate(null);
+    setDragOverColumn(null);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -55,8 +60,21 @@ export default function KanbanBoard({ candidates }: KanbanBoardProps) {
     e.dataTransfer.dropEffect = 'move';
   };
 
+  const handleDragEnter = (e: React.DragEvent, columnId: string) => {
+    e.preventDefault();
+    setDragOverColumn(columnId);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setDragOverColumn(null);
+    }
+  };
+
   const handleDrop = (e: React.DragEvent, status: string) => {
     e.preventDefault();
+    console.log('Drop in column:', status, 'for candidate:', draggedCandidate?.["Candidate Name"]);
     
     if (draggedCandidate && draggedCandidate.status !== status) {
       updateCandidateMutation.mutate({
@@ -64,6 +82,8 @@ export default function KanbanBoard({ candidates }: KanbanBoardProps) {
         status
       });
     }
+    
+    setDragOverColumn(null);
   };
 
   const getBadgeColor = (color: string) => {
@@ -90,7 +110,11 @@ export default function KanbanBoard({ candidates }: KanbanBoardProps) {
         
         return (
           <div key={column.id} className="flex-shrink-0 w-80">
-            <div className="bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/20 hover:shadow-3xl transition-all duration-500">
+            <div className={`bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl border transition-all duration-500 ${
+              dragOverColumn === column.id 
+                ? 'border-blue-400 shadow-blue-200/50 shadow-3xl scale-105' 
+                : 'border-white/20 hover:shadow-3xl'
+            }`}>
               <div className="p-6 border-b border-gray-100">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-800 bg-clip-text text-transparent">
@@ -102,8 +126,12 @@ export default function KanbanBoard({ candidates }: KanbanBoardProps) {
                 </div>
               </div>
               <div 
-                className="p-6 space-y-4 max-h-[500px] overflow-y-auto min-h-[400px] bg-gradient-to-b from-white/50 to-gray-50/50"
+                className={`p-6 space-y-4 max-h-[500px] overflow-y-auto min-h-[400px] bg-gradient-to-b from-white/50 to-gray-50/50 transition-colors duration-300 ${
+                  dragOverColumn === column.id ? 'bg-blue-50/70' : ''
+                }`}
                 onDragOver={handleDragOver}
+                onDragEnter={(e) => handleDragEnter(e, column.id)}
+                onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDrop(e, column.id)}
               >
                 {columnCandidates.length === 0 ? (
@@ -118,16 +146,12 @@ export default function KanbanBoard({ candidates }: KanbanBoardProps) {
                   </div>
                 ) : (
                   columnCandidates.map((candidate) => (
-                    <div
+                    <CandidateCard
                       key={candidate.id}
-                      className="transform hover:scale-105 transition-transform duration-200"
-                    >
-                      <CandidateCard
-                        candidate={candidate}
-                        onDragStart={handleDragStart}
-                        onDragEnd={handleDragEnd}
-                      />
-                    </div>
+                      candidate={candidate}
+                      onDragStart={handleDragStart}
+                      onDragEnd={handleDragEnd}
+                    />
                   ))
                 )}
               </div>

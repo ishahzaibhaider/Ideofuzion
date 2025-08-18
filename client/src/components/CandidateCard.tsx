@@ -56,8 +56,8 @@ export default function CandidateCard({ candidate, onDragStart, onDragEnd }: Can
 
   return (
     <div 
-      className="bg-white/95 backdrop-blur-sm border border-white/30 rounded-xl p-4 cursor-grab hover:shadow-xl transition-all duration-300 hover:scale-[1.02] hover:bg-white"
-      draggable
+      className="bg-white/95 backdrop-blur-sm border border-white/30 rounded-xl p-4 cursor-grab hover:shadow-xl transition-all duration-300 hover:scale-[1.02] hover:bg-white active:cursor-grabbing active:rotate-2 active:scale-105"
+      draggable={true}
       onDragStart={(e) => onDragStart?.(e, candidate)}
       onDragEnd={onDragEnd}
     >
@@ -183,10 +183,10 @@ export default function CandidateCard({ candidate, onDragStart, onDragEnd }: Can
         <p className="text-sm text-gray-600">{candidate.Email}</p>
         <p className="text-xs text-gray-500">{formatDate(candidate.appliedDate || null)}</p>
         
-        {candidate.status === 'Interview Scheduled' && candidate["Interview Date"] && candidate["Interview Time"] && (
+        {candidate.status === 'Interview Scheduled' && candidate["Interview Start"] && (
           <div className="mt-2">
             <Badge className={getStatusColor(candidate.status)}>
-              {candidate["Interview Date"]} | {candidate["Interview Time"]}
+              {new Date(candidate["Interview Start"]).toLocaleDateString()} | {new Date(candidate["Interview Start"]).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </Badge>
           </div>
         )}
