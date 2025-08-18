@@ -18,6 +18,7 @@ export default function LiveInterviewPage() {
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
   const [manualSelection, setManualSelection] = useState(false);
   const [open, setOpen] = useState(false);
+  const [isStartingSession, setIsStartingSession] = useState(false);
   const { toast } = useToast();
 
   // Get all candidates for dropdown
@@ -124,6 +125,56 @@ export default function LiveInterviewPage() {
       title: "Refreshed",
       description: "Interview data has been refreshed",
     });
+  };
+
+  const handleStartSession = async () => {
+    if (!displayCandidate) {
+      toast({
+        title: "No Candidate Selected",
+        description: "Please select a candidate first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsStartingSession(true);
+    try {
+      const webhookData = {
+        candidateId: displayCandidate.id,
+        candidateName: displayCandidate["Candidate Name"],
+        candidateEmail: displayCandidate.Email,
+        jobTitle: displayCandidate["Job Title"],
+        googleMeetId: displayCandidate["Google Meet Id"],
+        interviewStart: displayCandidate["Interview Start"],
+        timestamp: new Date().toISOString()
+      };
+
+      const response = await fetch('http://54.226.92.93:5678/webhook/f04e8b6a-39c9-4654-ac7b-0aee4b6bd4fb', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(webhookData)
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Session Started",
+          description: `Interview session started for ${displayCandidate["Candidate Name"]}`,
+        });
+      } else {
+        throw new Error(`Webhook failed with status: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error starting session:', error);
+      toast({
+        title: "Session Start Failed",
+        description: "Failed to start interview session. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsStartingSession(false);
+    }
   };
 
 
@@ -386,6 +437,15 @@ export default function LiveInterviewPage() {
                 data-testid="button-refresh-interview"
               >
                 Refresh
+              </Button>
+              <Button
+                variant="default"
+                onClick={handleStartSession}
+                disabled={isStartingSession || !displayCandidate}
+                className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
+                data-testid="button-start-session"
+              >
+                {isStartingSession ? 'Starting...' : 'Start Session'}
               </Button>
             </div>
           </div>

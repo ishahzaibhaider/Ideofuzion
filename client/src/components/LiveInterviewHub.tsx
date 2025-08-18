@@ -414,12 +414,12 @@ export default function LiveInterviewHub({ candidate }: LiveInterviewHubProps) {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleFetchAnalysis}
-                  disabled={isFetchingAnalysis || !candidateMeetId}
+                  onClick={() => refetchAnalysis()}
+                  disabled={isAnalysisLoading}
                   className="text-purple-600 border-purple-300 hover:bg-purple-50"
                 >
-                  <Download className={`w-4 h-4 mr-2 ${isFetchingAnalysis ? 'animate-spin' : ''}`} />
-                  {isFetchingAnalysis ? 'Fetching...' : 'Fetch Analysis'}
+                  <RefreshCw className={`w-4 h-4 mr-2 ${isAnalysisLoading ? 'animate-spin' : ''}`} />
+                  {isAnalysisLoading ? 'Refreshing...' : 'Reload'}
                 </Button>
               </div>
               <div className="space-y-4">
@@ -486,16 +486,16 @@ export default function LiveInterviewHub({ candidate }: LiveInterviewHubProps) {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleFetchAnalysis}
-                  disabled={isFetchingAnalysis || !candidateMeetId}
+                  onClick={() => refetchAnalysis()}
+                  disabled={isAnalysisLoading}
                   className="text-purple-600 border-purple-300 hover:bg-purple-50"
                 >
-                  <Download className={`w-4 h-4 mr-2 ${isFetchingAnalysis ? 'animate-spin' : ''}`} />
-                  {isFetchingAnalysis ? 'Fetching...' : 'Fetch Analysis'}
+                  <RefreshCw className={`w-4 h-4 mr-2 ${isAnalysisLoading ? 'animate-spin' : ''}`} />
+                  {isAnalysisLoading ? 'Refreshing...' : 'Reload'}
                 </Button>
               </div>
               <p className="text-sm text-gray-500">
-                No analysis available yet. Click "Fetch Analysis" to generate analysis for this interview.
+                No analysis available yet. Click "Reload" to fetch latest data.
               </p>
             </div>
           )}

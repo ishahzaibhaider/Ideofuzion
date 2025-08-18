@@ -171,31 +171,33 @@ export default function CandidatesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <Navbar />
       <div className="pt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Header */}
           <div className="mb-8 flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">All Candidates</h1>
-              <p className="text-gray-600">Manage and track all candidates in your pipeline</p>
+            <div className="backdrop-blur-sm bg-white/30 rounded-2xl p-6 shadow-lg border border-white/20">
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-800 bg-clip-text text-transparent">
+                All Candidates
+              </h1>
+              <p className="text-gray-700 mt-1">Manage and track all candidates in your pipeline</p>
             </div>
             <div className="flex space-x-3">
               <div className="relative">
                 <Search className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
                 <Input
                   placeholder="Search candidates..."
-                  className="pl-10 w-64"
+                  className="pl-10 w-64 bg-white/80 backdrop-blur-sm border-white/20 shadow-lg hover:shadow-xl transition-all duration-300"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-48 bg-white/80 backdrop-blur-sm border-white/20 shadow-lg hover:shadow-xl transition-all duration-300">
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white/95 backdrop-blur-lg border border-white/20 shadow-2xl">
                   <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="Interview Scheduled">Interview Scheduled</SelectItem>
                   <SelectItem value="Analysis Complete">Analysis Ongoing</SelectItem>
@@ -203,12 +205,11 @@ export default function CandidatesPage() {
                   <SelectItem value="Rejected">Rejected</SelectItem>
                 </SelectContent>
               </Select>
-
             </div>
           </div>
 
           {/* Candidates Table */}
-          <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/20 overflow-hidden hover:shadow-3xl transition-all duration-500">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -373,11 +374,11 @@ export default function CandidatesPage() {
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-500">Interview Date</Label>
-                <p className="text-sm text-gray-900">{selectedCandidate["Interview Date"] || 'N/A'}</p>
+                <p className="text-sm text-gray-900">{selectedCandidate["Interview Start"] ? new Date(selectedCandidate["Interview Start"]).toLocaleDateString() : 'N/A'}</p>
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-500">Interview Time</Label>
-                <p className="text-sm text-gray-900">{selectedCandidate["Interview Time"] || 'N/A'}</p>
+                <p className="text-sm text-gray-900">{selectedCandidate["Interview Start"] ? new Date(selectedCandidate["Interview Start"]).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</p>
               </div>
               <div className="col-span-2">
                 <Label className="text-sm font-medium text-gray-500">Calendar Event ID</Label>

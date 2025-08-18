@@ -131,15 +131,18 @@ export default function ExtendMeetingDialog() {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="flex items-center space-x-2">
+        <Button 
+          variant="outline" 
+          className="flex items-center space-x-2 bg-white/80 backdrop-blur-sm border-white/20 shadow-lg hover:shadow-xl transition-all duration-300 hover:bg-white/90 hover:scale-105"
+        >
           <Clock className="w-4 h-4" />
           <span>Extend Meeting Time</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] bg-white/95 backdrop-blur-lg border border-white/20 shadow-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
-            <Calendar className="w-5 h-5" />
+          <DialogTitle className="flex items-center space-x-2 text-gray-900">
+            <Calendar className="w-5 h-5 text-blue-600" />
             <span>Extend Meeting Time</span>
           </DialogTitle>
         </DialogHeader>
