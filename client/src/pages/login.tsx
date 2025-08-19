@@ -103,7 +103,7 @@ export default function LoginPage() {
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                   <p className="text-sm font-medium text-blue-900">
-                    New to our platform? Get started instantly
+                    New to our platform? Get started instantly!
                   </p>
                 </div>
                 <Button
