@@ -55,3 +55,7 @@ jobs:
               --name $CONTAINER_NAME \
               -e MONGODB_URI="${{ secrets.MONGODB_URI }}" \
               $IMAGE_NAME
+
+            # Cleanup old Ideofuzion images
+            docker images --filter=reference='syedalishoaibhassan/ideofuzion-app*' --format "{{.ID}}" | tail -n +2 | xargs -r docker rmi -f
+
