@@ -215,6 +215,13 @@ export default function LoginPage() {
             </form>
           </CardContent>
         </Card>
+        
+        {/* Privacy Policy Link */}
+        <div className="text-center mt-4">
+          <Link href="/privacy-policy" className="text-sm text-gray-500 hover:text-gray-700">
+            Privacy Policy
+          </Link>
+        </div>
       </div>
     </div>
   );

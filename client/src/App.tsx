@@ -11,7 +11,8 @@ import DashboardPage from "@/pages/dashboard";
 import PipelinePage from "@/pages/pipeline";
 import LiveInterviewPage from "@/pages/live-interview";
 import CandidatesPage from "@/pages/candidates";
-import CreateJobsPage from "@/pages/create-jobs"; // ✨ Import the new page
+import CreateJobsPage from "@/pages/create-jobs";
+import PrivacyPolicyPage from "@/pages/privacy-policy";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (!auth.isAuthenticated()) {
@@ -55,6 +56,7 @@ function Router() {
           <CandidatesPage />
         </ProtectedRoute>
       </Route>
+      <Route path="/privacy-policy" component={PrivacyPolicyPage} />
       <Route component={NotFound} />
     </Switch>
   );

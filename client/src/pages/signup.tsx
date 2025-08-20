@@ -186,9 +186,12 @@ export default function SignupPage() {
               </Button>
             </form>
             
-            <div className="mt-4 text-center">
-              <Link href="/login" className="text-primary hover:text-primary/80 text-sm">
+            <div className="mt-4 text-center space-y-2">
+              <Link href="/login" className="text-primary hover:text-primary/80 text-sm block">
                 Already have a account? Sign in
+              </Link>
+              <Link href="/privacy-policy" className="text-sm text-gray-500 hover:text-gray-700 block">
+                Privacy Policy
               </Link>
             </div>
           </CardContent>
