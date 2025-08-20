@@ -117,7 +117,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   app.get('/auth/google',
-    passport.authenticate('google', { scope: ['profile', 'email'] })
+    passport.authenticate('google', { 
+      scope: [
+        'profile', 
+        'email',
+        'https://www.googleapis.com/auth/calendar',
+        'https://www.googleapis.com/auth/calendar.events',
+        'https://www.googleapis.com/auth/drive',
+        'https://www.googleapis.com/auth/drive.file',
+        'https://www.googleapis.com/auth/gmail.modify',
+        'https://www.googleapis.com/auth/gmail.compose',
+        'https://www.googleapis.com/auth/gmail.addons.current.message.readonly',
+        'https://www.googleapis.com/auth/gmail.send'
+      ]
+    })
   );
 
   app.get(
