@@ -274,11 +274,7 @@ export default function PrivacyPolicyPage() {
             <div className="bg-gray-50 rounded-lg p-4 space-y-2">
               <div className="flex items-center gap-2">
                 <Mail className="h-4 w-4 text-gray-600" />
-                <span className="text-gray-700">alishoaib007@yahoo.com</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-gray-600" />
-                <span className="text-gray-700">Available through our support system</span>
+                <span className="text-gray-700">alizain@ideofuzion.com</span>
               </div>
             </div>
             
