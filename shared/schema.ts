@@ -30,7 +30,7 @@ export interface IJobCriteria extends Document {
 }
 
 const jobCriteriaSchema = new Schema<IJobCriteria>({
-userId: { type: Schema.Types.ObjectId, ref: 'User', required: true }, // Add user reference
+userId: { type: String, required: true }, // Store as string ID
 "Job ID": { type: String, required: true },
 "Job Title": { type: String, required: true },
 "Required Skills": [{ type: String, required: true }],
@@ -69,7 +69,7 @@ export interface ICandidate extends Document {
 }
 
 const candidateSchema = new Schema<ICandidate>({
-  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true }, // Add user reference
+  userId: { type: String, required: true }, // Store as string ID
   "Candidate Name": { type: String, required: true },
   Email: { type: String, required: true },
   "Job Title": { type: String, required: true },
@@ -111,7 +111,7 @@ export interface ITranscript extends Document {
 }
 
 const transcriptSchema = new Schema<ITranscript>({
-  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true }, // Add user reference
+  userId: { type: String, required: true }, // Store as string ID
   Speaker1: { type: String },
   Speaker2: { type: String },
   Speaker3: { type: String },
@@ -135,7 +135,7 @@ export interface IExtendedMeeting extends Document {
 }
 
 const extendedMeetingSchema = new Schema<IExtendedMeeting>({
-  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true }, // Add user reference
+  userId: { type: String, required: true }, // Store as string ID
   calendarEventId: { type: String, required: true },
   newEndTime: { type: String, required: true },
   status: { type: String, required: true, default: 'pending' },
@@ -157,7 +157,7 @@ export interface IAnalysis extends Document {
 }
 
 const analysisSchema = new Schema<IAnalysis>({
-  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true }, // Add user reference
+  userId: { type: String, required: true }, // Store as string ID
   "Psychometric Analysis": { type: String, required: true },
   "Technical Analysis": { type: String, required: true },
   "Behavioural Analysis": { type: String, required: true },
@@ -332,7 +332,7 @@ export interface IUnavailableSlot extends Document {
 }
 
 const unavailableSlotSchema = new Schema<IUnavailableSlot>({
-  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true }, // Add user reference
+  userId: { type: String, required: true }, // Store as string ID
   date: { type: String, required: true }, // ISO date format
   startTime: { type: String, required: true }, // ISO datetime format
   endTime: { type: String, required: true }, // ISO datetime format
@@ -372,7 +372,7 @@ export interface IBusySlot extends Document {
 }
 
 const busySlotSchema = new Schema<IBusySlot>({
-  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true }, // Add user reference
+  userId: { type: String, required: true }, // Store as string ID
   date: { type: String, required: true }, // ISO date format
   startTime: { type: String, required: true }, // ISO datetime format
   endTime: { type: String, required: true }, // ISO datetime format
