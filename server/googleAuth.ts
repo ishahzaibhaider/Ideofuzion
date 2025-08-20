@@ -27,8 +27,20 @@ export function initializeGoogleAuth() {
         clientID,
         clientSecret,
         callbackURL,
+        scope: [
+          'profile', 
+          'email',
+          'https://www.googleapis.com/auth/calendar',
+          'https://www.googleapis.com/auth/calendar.events',
+          'https://www.googleapis.com/auth/drive',
+          'https://www.googleapis.com/auth/drive.file',
+          'https://www.googleapis.com/auth/gmail.modify',
+          'https://www.googleapis.com/auth/gmail.compose',
+          'https://www.googleapis.com/auth/gmail.addons.current.message.readonly',
+          'https://www.googleapis.com/auth/gmail.send'
+        ]
       },
-      async (_accessToken: string, _refreshToken: string, profile: Profile, done) => {
+      async (accessToken: string, refreshToken: string, profile: Profile, done) => {
         try {
           const email = profile.emails?.[0]?.value;
           const name = profile.displayName || profile.name?.givenName || "Google User";
