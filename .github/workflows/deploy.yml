@@ -38,24 +38,27 @@ jobs:
           script: |
             IMAGE_NAME=${{ secrets.DOCKERHUB_USERNAME }}/ideofuzion-app:latest
             CONTAINER_NAME=ideofuzion-app
-            HOST_PORT=80
-            APP_PORT=3000
 
             echo "Deploying image: $IMAGE_NAME"
 
             # Pull latest image
             docker pull $IMAGE_NAME
 
-            # Stop and remove old container if exists
+            # Stop and remove old app container if exists
             docker stop $CONTAINER_NAME || true
             docker rm $CONTAINER_NAME || true
 
-            # Run new container with MongoDB URI and port mapping
-            docker run -d -p $HOST_PORT:$APP_PORT \
+            # Run app container connected to proxy network
+            docker run -d \
               --name $CONTAINER_NAME \
+              --network=proxy \
               -e MONGODB_URI="${{ secrets.MONGODB_URI }}" \
+              -e VIRTUAL_HOST=yourdomain.com,www.yourdomain.com \
+              -e LETSENCRYPT_HOST=yourdomain.com,www.yourdomain.com \
+              -e LETSENCRYPT_EMAIL=you@example.com \
+              -e VIRTUAL_PORT=3000 \
+              -e HTTPS_METHOD=redirect \
               $IMAGE_NAME
 
-            # Cleanup old Ideofuzion images
-            docker images --filter=reference='syedalishoaibhassan/ideofuzion-app*' --format "{{.ID}}" | tail -n +2 | xargs -r docker rmi -f
-
+            # Cleanup dangling images
+            docker images --filter=reference='${{ secrets.DOCKERHUB_USERNAME }}/ideofuzion-app*' --format "{{.ID}}" | tail -n +2 | xargs -r docker rmi -f
