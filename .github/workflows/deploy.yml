@@ -53,9 +53,9 @@ jobs:
               --name $CONTAINER_NAME \
               --network=proxy \
               -e MONGODB_URI="${{ secrets.MONGODB_URI }}" \
-              -e VIRTUAL_HOST=yourdomain.com,www.yourdomain.com \
-              -e LETSENCRYPT_HOST=yourdomain.com,www.yourdomain.com \
-              -e LETSENCRYPT_EMAIL=you@example.com \
+              -e VIRTUAL_HOST=hireninja.site,www.hireninja.site \
+              -e LETSENCRYPT_HOST=hireninja.site,www.hireninja.site \
+              -e LETSENCRYPT_EMAIL=alishoaib007@yahoo.com \
               -e VIRTUAL_PORT=3000 \
               -e HTTPS_METHOD=redirect \
               $IMAGE_NAME
