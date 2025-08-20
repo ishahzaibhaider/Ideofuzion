@@ -4,11 +4,25 @@ import { registerRoutes } from "./routes.js";
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import session from 'express-session';
+import passport from 'passport';
+import { initializeGoogleAuth } from './googleAuth.js';
 dotenv.config();
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Session and Passport for OAuth
+const sessionSecret = process.env.SESSION_SECRET || 'dev-session-secret';
+app.use(session({
+  secret: sessionSecret,
+  resave: false,
+  saveUninitialized: false,
+}));
+app.use(passport.initialize());
+app.use(passport.session());
+initializeGoogleAuth();
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -45,11 +59,13 @@ app.use((req, res, next) => {
   }
 
   const port = parseInt(process.env.PORT || '3000', 10);
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
+  const host = process.env.HOST || "0.0.0.0";
+  const listenOptions: any = { port, host };
+  // reusePort is not supported on Windows; enable only on non-Windows platforms
+  if (process.platform !== 'win32') {
+    listenOptions.reusePort = true;
+  }
+  server.listen(listenOptions, () => {
     console.log(`serving on port ${port}`);
   });
 })();

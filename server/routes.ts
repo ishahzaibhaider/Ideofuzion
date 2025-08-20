@@ -1,4 +1,6 @@
 import type { Express } from "express";
+import passport from 'passport';
+import jwt from 'jsonwebtoken';
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import jwt from "jsonwebtoken";
@@ -92,6 +94,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ws.send(JSON.stringify(data));
     }
   };
+
+  // Google OAuth routes
+  const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
+  const clientRedirectPath = process.env.OAUTH_SUCCESS_REDIRECT || "/login";
+  
+  // Handle production OAuth callback route
+  app.get('/oauth/google/callback',
+    passport.authenticate('google', { failureRedirect: '/login?error=google' }),
+    async (req: any, res) => {
+      try {
+        const user = req.user as { id: string; name: string; email: string };
+        const token = jwt.sign({ userId: user.id, email: user.email }, process.env.JWT_SECRET || 'dev-secret', { expiresIn: '24h' });
+
+        const redirectUrl = new URL(clientRedirectPath, baseUrl);
+        redirectUrl.searchParams.set('token', token);
+        res.redirect(redirectUrl.toString());
+      } catch (err) {
+        console.error('OAuth callback error:', err);
+        res.redirect('/login?error=oauth');
+      }
+    }
+  );
+
+  app.get('/auth/google',
+    passport.authenticate('google', { scope: ['profile', 'email'] })
+  );
+
+  app.get(
+    '/auth/google/callback',
+    passport.authenticate('google', { failureRedirect: '/login?error=google' }),
+    async (req: any, res) => {
+      try {
+        const user = req.user as { id: string; name: string; email: string };
+        const token = jwt.sign({ userId: user.id, email: user.email }, process.env.JWT_SECRET || 'dev-secret', { expiresIn: '24h' });
+
+        const redirectUrl = new URL(clientRedirectPath, baseUrl);
+        redirectUrl.searchParams.set('token', token);
+        res.redirect(redirectUrl.toString());
+      } catch (err) {
+        console.error('OAuth callback error:', err);
+        res.redirect('/login?error=oauth');
+      }
+    }
+  );
 
   // Authentication routes
   app.post('/api/auth/register', async (req, res) => {

@@ -52,7 +52,15 @@ jobs:
             docker run -d \
               --name $CONTAINER_NAME \
               --network=proxy \
+              -e NODE_ENV=production \
               -e MONGODB_URI="mongodb://mongodb:27017/ideofuzion" \
+              -e BASE_URL="https://hireninja.site" \
+              -e GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}" \
+              -e GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
+              -e GOOGLE_CALLBACK_URL="https://hireninja.site/oauth/google/callback" \
+              -e OAUTH_SUCCESS_REDIRECT="/login" \
+              -e SESSION_SECRET="${{ secrets.SESSION_SECRET }}" \
+              -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
               -e VIRTUAL_HOST=hireninja.site,www.hireninja.site \
               -e LETSENCRYPT_HOST=hireninja.site,www.hireninja.site \
               -e LETSENCRYPT_EMAIL=alishoaib007@yahoo.com \

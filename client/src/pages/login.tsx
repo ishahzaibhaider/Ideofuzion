@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,63 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { toast } = useToast();
+
+  // Handle OAuth callback
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    const error = urlParams.get('error');
+
+    if (error) {
+      toast({
+        title: "Authentication Error",
+        description: error === 'google' ? "Google authentication failed" : "OAuth error occurred",
+        variant: "destructive",
+      });
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
+    }
+
+    if (token) {
+      // Store token and redirect
+      localStorage.setItem("token", token);
+      
+      // Fetch user info with the token
+      fetch('/api/auth/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      .then(response => {
+        if (response.ok) {
+          return response.json();
+        }
+        throw new Error('Failed to fetch user info');
+      })
+      .then(user => {
+        localStorage.setItem("user", JSON.stringify(user));
+        toast({
+          title: "Success",
+          description: "Successfully signed in with Google",
+        });
+        // Clean up URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+        setLocation("/dashboard");
+      })
+      .catch(error => {
+        console.error('Error fetching user info:', error);
+        localStorage.removeItem("token");
+        toast({
+          title: "Error",
+          description: "Failed to complete authentication",
+          variant: "destructive",
+        });
+        // Clean up URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+      });
+    }
+  }, [toast, setLocation]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,46 +94,16 @@ export default function LoginPage() {
     }
   };
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = () => {
     setIsGoogleLoading(true);
-    try {
-      // Replace with your actual Google auth implementation
-      await auth.loginWithGoogle();
-      toast({
-        title: "Success",
-        description: "Logged in with Google successfully",
-      });
-      setLocation("/dashboard");
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Google authentication failed",
-        variant: "destructive",
-      });
-    } finally {
-      setIsGoogleLoading(false);
-    }
+    const backendBase = window.location.origin; // same origin in dev
+    window.location.href = `${backendBase}/auth/google`;
   };
 
-  const handleGoogleSignup = async () => {
+  const handleGoogleSignup = () => {
     setIsGoogleLoading(true);
-    try {
-      // Replace with your actual Google signup implementation
-      await auth.signupWithGoogle();
-      toast({
-        title: "Success",
-        description: "Account created with Google successfully",
-      });
-      setLocation("/dashboard");
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Google signup failed",
-        variant: "destructive",
-      });
-    } finally {
-      setIsGoogleLoading(false);
-    }
+    const backendBase = window.location.origin;
+    window.location.href = `${backendBase}/auth/google`;
   };
 
   return (
@@ -107,18 +134,10 @@ export default function LoginPage() {
                     New to our platform? Get started instantly
                   </p>
                 </div>
-     <a
-  // 1. Add the link to your backend's auth route
-  href="https://hireninja.site/auth/google"
-  
-  // 2. All the styling classes are now on the <a> tag
+     <button
+  onClick={handleGoogleSignup}
   className="w-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-2"
-  
-  // 3. To simulate "disabled", we use style to prevent clicks and change appearance
-  style={{ 
-    pointerEvents: (isLoading || isGoogleLoading) ? 'none' : 'auto', 
-    opacity: (isLoading || isGoogleLoading) ? 0.5 : 1 
-  }}
+  disabled={isLoading || isGoogleLoading}
 >
   <svg className="w-4 h-4" viewBox="0 0 24 24">
     <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -127,7 +146,7 @@ export default function LoginPage() {
     <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
   </svg>
   {isGoogleLoading ? "Creating account..." : "Sign up with Google"}
-</a>
+</button>
               </div>
 
               {/* Google Login - Secondary */}
