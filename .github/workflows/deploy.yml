@@ -48,11 +48,11 @@ jobs:
             docker stop $CONTAINER_NAME || true
             docker rm $CONTAINER_NAME || true
 
-            # Run app container connected to proxy network
+            # Run app container connected to proxy network and local MongoDB
             docker run -d \
               --name $CONTAINER_NAME \
               --network=proxy \
-              -e MONGODB_URI="${{ secrets.MONGODB_URI }}" \
+              -e MONGODB_URI="mongodb://mongodb:27017/ideofuzion" \
               -e VIRTUAL_HOST=hireninja.site,www.hireninja.site \
               -e LETSENCRYPT_HOST=hireninja.site,www.hireninja.site \
               -e LETSENCRYPT_EMAIL=alishoaib007@yahoo.com \
