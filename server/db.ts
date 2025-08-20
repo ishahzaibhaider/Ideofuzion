@@ -12,10 +12,14 @@ export const connectToDatabase = async () => {
 
     // In development, fall back to an in-memory MongoDB if no URI is provided
     if (!connectionUri && process.env.NODE_ENV === 'development') {
-      const { MongoMemoryServer } = await import('mongodb-memory-server');
-      mongoMemoryServer = await MongoMemoryServer.create();
-      connectionUri = mongoMemoryServer.getUri();
-      console.log('Started in-memory MongoDB for development');
+      try {
+        const { MongoMemoryServer } = await import('mongodb-memory-server');
+        mongoMemoryServer = await MongoMemoryServer.create();
+        connectionUri = mongoMemoryServer.getUri();
+        console.log('Started in-memory MongoDB for development');
+      } catch (error) {
+        console.warn('mongodb-memory-server not available, skipping in-memory database');
+      }
     }
 
     if (!connectionUri) {

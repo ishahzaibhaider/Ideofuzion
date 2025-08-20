@@ -3,7 +3,6 @@ import passport from 'passport';
 import jwt from 'jsonwebtoken';
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
-import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { z } from "zod"; // Import Zod for validation
 import { storage } from "./storage.js";
