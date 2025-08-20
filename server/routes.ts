@@ -127,11 +127,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'https://www.googleapis.com/auth/drive.file',
         'https://www.googleapis.com/auth/gmail.modify',
         'https://www.googleapis.com/auth/gmail.compose',
-        'https://www.googleapis.com/auth/gmail.addons.current.message.readonly',
         'https://www.googleapis.com/auth/gmail.send'
       ],
       accessType: 'offline',
-      prompt: 'consent'
+      prompt: 'consent',
+      includeGrantedScopes: true
     })
   );
 
