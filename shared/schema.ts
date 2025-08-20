@@ -22,6 +22,7 @@ export const UserModel = mongoose.model<IUser>('User', userSchema, 'users');
 // MongoDB Job Criteria Schema (matching your existing data structure)
 export interface IJobCriteria extends Document {
   _id: string;
+  userId: string; // Add user isolation
   "Job ID": string;
   "Job Title": string;
   "Required Skills": string[];
@@ -29,6 +30,7 @@ export interface IJobCriteria extends Document {
 }
 
 const jobCriteriaSchema = new Schema<IJobCriteria>({
+userId: { type: Schema.Types.ObjectId, ref: 'User', required: true }, // Add user reference
 "Job ID": { type: String, required: true },
 "Job Title": { type: String, required: true },
 "Required Skills": [{ type: String, required: true }],
@@ -40,6 +42,7 @@ export const JobCriteriaModel = mongoose.model<IJobCriteria>('JobCriteria', jobC
 // MongoDB Candidate Schema (matching your existing data structure)
 export interface ICandidate extends Document {
   _id: string;
+  userId: string; // Add user isolation
   "Candidate Name": string;
   Email: string;
   "Job Title": string;
@@ -66,6 +69,7 @@ export interface ICandidate extends Document {
 }
 
 const candidateSchema = new Schema<ICandidate>({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true }, // Add user reference
   "Candidate Name": { type: String, required: true },
   Email: { type: String, required: true },
   "Job Title": { type: String, required: true },
@@ -96,6 +100,7 @@ export const CandidateModel = mongoose.model<ICandidate>('Candidate', candidateS
 // MongoDB Transcript Schema (matching your data structure)
 export interface ITranscript extends Document {
   _id: string;
+  userId: string; // Add user isolation
   Speaker1?: string;
   Speaker2?: string;
   Speaker3?: string;
@@ -106,6 +111,7 @@ export interface ITranscript extends Document {
 }
 
 const transcriptSchema = new Schema<ITranscript>({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true }, // Add user reference
   Speaker1: { type: String },
   Speaker2: { type: String },
   Speaker3: { type: String },
@@ -120,6 +126,7 @@ export const TranscriptModel = mongoose.model<ITranscript>('Transcript', transcr
 // MongoDB Extended Meetings Schema
 export interface IExtendedMeeting extends Document {
   _id: string;
+  userId: string; // Add user isolation
   calendarEventId: string;
   newEndTime: string;
   status: string;
@@ -128,6 +135,7 @@ export interface IExtendedMeeting extends Document {
 }
 
 const extendedMeetingSchema = new Schema<IExtendedMeeting>({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true }, // Add user reference
   calendarEventId: { type: String, required: true },
   newEndTime: { type: String, required: true },
   status: { type: String, required: true, default: 'pending' },
@@ -140,6 +148,7 @@ export const ExtendedMeetingModel = mongoose.model<IExtendedMeeting>('ExtendedMe
 // MongoDB Analysis Schema
 export interface IAnalysis extends Document {
   _id: string;
+  userId: string; // Add user isolation
   "Psychometric Analysis": string;
   "Technical Analysis": string;
   "Behavioural Analysis": string;
@@ -148,6 +157,7 @@ export interface IAnalysis extends Document {
 }
 
 const analysisSchema = new Schema<IAnalysis>({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true }, // Add user reference
   "Psychometric Analysis": { type: String, required: true },
   "Technical Analysis": { type: String, required: true },
   "Behavioural Analysis": { type: String, required: true },
@@ -230,6 +240,7 @@ export type User = {
 export type InsertJobCriteria = z.infer<typeof insertJobCriteriaSchema>;
 export type JobCriteria = {
   id: string;
+  userId: string; // Add user isolation
   "Job ID": string;
   "Job Title": string;
   "Required Skills": string[];
@@ -239,6 +250,7 @@ export type JobCriteria = {
 export type InsertCandidate = z.infer<typeof insertCandidateSchema>;
 export type Candidate = {
   id: string;
+  userId: string; // Add user isolation
   "Candidate Name": string;
   Email: string;
   "Job Title": string;
@@ -276,6 +288,7 @@ export type Candidate = {
 export type InsertTranscript = z.infer<typeof insertTranscriptSchema>;
 export type Transcript = {
   id: string;
+  userId: string; // Add user isolation
   Speaker1?: string;
   Speaker2?: string;
   Speaker3?: string;
@@ -288,6 +301,7 @@ export type Transcript = {
 export type InsertAnalysis = z.infer<typeof insertAnalysisSchema>;
 export type Analysis = {
   id: string;
+  userId: string; // Add user isolation
   "Psychometric Analysis": string;
   "Technical Analysis": string;
   "Behavioural Analysis": string;
@@ -298,6 +312,7 @@ export type Analysis = {
 export type InsertExtendedMeeting = z.infer<typeof insertExtendedMeetingSchema>;
 export type ExtendedMeeting = {
   id: string;
+  userId: string; // Add user isolation
   calendarEventId: string;
   newEndTime: string;
   status: string;
@@ -308,6 +323,7 @@ export type ExtendedMeeting = {
 // MongoDB Unavailable Slot Schema
 export interface IUnavailableSlot extends Document {
   _id: string;
+  userId: string; // Add user isolation
   date: string; // ISO date string
   startTime: string; // ISO datetime string
   endTime: string; // ISO datetime string
@@ -316,6 +332,7 @@ export interface IUnavailableSlot extends Document {
 }
 
 const unavailableSlotSchema = new Schema<IUnavailableSlot>({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true }, // Add user reference
   date: { type: String, required: true }, // ISO date format
   startTime: { type: String, required: true }, // ISO datetime format
   endTime: { type: String, required: true }, // ISO datetime format
@@ -335,6 +352,7 @@ export const insertUnavailableSlotSchema = z.object({
 export type InsertUnavailableSlot = z.infer<typeof insertUnavailableSlotSchema>;
 export type UnavailableSlot = {
   id: string;
+  userId: string; // Add user isolation
   date: string;
   startTime: string;
   endTime: string;
@@ -345,6 +363,7 @@ export type UnavailableSlot = {
 // MongoDB Busy Slot Schema
 export interface IBusySlot extends Document {
   _id: string;
+  userId: string; // Add user isolation
   date: string; // ISO date string
   startTime: string; // ISO datetime string
   endTime: string; // ISO datetime string
@@ -353,6 +372,7 @@ export interface IBusySlot extends Document {
 }
 
 const busySlotSchema = new Schema<IBusySlot>({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true }, // Add user reference
   date: { type: String, required: true }, // ISO date format
   startTime: { type: String, required: true }, // ISO datetime format
   endTime: { type: String, required: true }, // ISO datetime format
@@ -372,6 +392,7 @@ export const insertBusySlotSchema = z.object({
 export type InsertBusySlot = z.infer<typeof insertBusySlotSchema>;
 export type BusySlot = {
   id: string;
+  userId: string; // Add user isolation
   date: string;
   startTime: string;
   endTime: string;

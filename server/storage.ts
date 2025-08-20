@@ -16,49 +16,47 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
 
-  // Job Criteria
-  getJobCriteria(): Promise<JobCriteria[]>;
-  getJobCriteriaById(id: string): Promise<JobCriteria | undefined>;
-  createJobCriteria(jobCriteria: JobFormData): Promise<JobCriteria>;
-  // ✨ Method to update a job
-  updateJobCriteria(id: string, updates: Partial<InsertJobCriteria>): Promise<JobCriteria | undefined>;
-  // ✨ Method to delete a job
-  deleteJobCriteria(id: string): Promise<boolean>;
+  // Job Criteria - USER ISOLATED
+  getJobCriteria(userId: string): Promise<JobCriteria[]>;
+  getJobCriteriaById(id: string, userId: string): Promise<JobCriteria | undefined>;
+  createJobCriteria(jobCriteria: JobFormData, userId: string): Promise<JobCriteria>;
+  updateJobCriteria(id: string, updates: Partial<InsertJobCriteria>, userId: string): Promise<JobCriteria | undefined>;
+  deleteJobCriteria(id: string, userId: string): Promise<boolean>;
 
-  // Candidates
-  getCandidates(): Promise<Candidate[]>;
-  getCandidate(id: string): Promise<Candidate | undefined>;
-  createCandidate(candidate: InsertCandidate): Promise<Candidate>;
-  updateCandidate(id: string, updates: Partial<Candidate>): Promise<Candidate | undefined>;
-  deleteCandidate(id: string): Promise<boolean>;
-  deleteCandidatesByStatus(status: string): Promise<void>;
+  // Candidates - USER ISOLATED
+  getCandidates(userId: string): Promise<Candidate[]>;
+  getCandidate(id: string, userId: string): Promise<Candidate | undefined>;
+  createCandidate(candidate: InsertCandidate, userId: string): Promise<Candidate>;
+  updateCandidate(id: string, updates: Partial<Candidate>, userId: string): Promise<Candidate | undefined>;
+  deleteCandidate(id: string, userId: string): Promise<boolean>;
+  deleteCandidatesByStatus(status: string, userId: string): Promise<void>;
 
-  // Transcripts
-  getTranscripts(): Promise<Transcript[]>;
-  getTranscriptsByMeetId(meetId: string): Promise<Transcript[]>;
-  getLatestTranscript(): Promise<Transcript | undefined>;
-  createTranscript(transcript: InsertTranscript): Promise<Transcript>;
+  // Transcripts - USER ISOLATED
+  getTranscripts(userId: string): Promise<Transcript[]>;
+  getTranscriptsByMeetId(meetId: string, userId: string): Promise<Transcript[]>;
+  getLatestTranscript(userId: string): Promise<Transcript | undefined>;
+  createTranscript(transcript: InsertTranscript, userId: string): Promise<Transcript>;
 
-  // Unavailable Slots
-  getUnavailableSlots(): Promise<UnavailableSlot[]>;
-  createUnavailableSlot(slot: InsertUnavailableSlot): Promise<UnavailableSlot>;
-  updateUnavailableSlot(id: string, updates: Partial<InsertUnavailableSlot>): Promise<UnavailableSlot | undefined>;
-  deleteUnavailableSlot(id: string): Promise<boolean>;
+  // Unavailable Slots - USER ISOLATED
+  getUnavailableSlots(userId: string): Promise<UnavailableSlot[]>;
+  createUnavailableSlot(slot: InsertUnavailableSlot, userId: string): Promise<UnavailableSlot>;
+  updateUnavailableSlot(id: string, updates: Partial<InsertUnavailableSlot>, userId: string): Promise<UnavailableSlot | undefined>;
+  deleteUnavailableSlot(id: string, userId: string): Promise<boolean>;
 
-  // Busy Slots
-  getBusySlots(): Promise<BusySlot[]>;
-  createBusySlot(slot: InsertBusySlot): Promise<BusySlot>;
-  updateBusySlot(id: string, updates: Partial<InsertBusySlot>): Promise<BusySlot | undefined>;
-  deleteBusySlot(id: string): Promise<boolean>;
+  // Busy Slots - USER ISOLATED
+  getBusySlots(userId: string): Promise<BusySlot[]>;
+  createBusySlot(slot: InsertBusySlot, userId: string): Promise<BusySlot>;
+  updateBusySlot(id: string, updates: Partial<InsertBusySlot>, userId: string): Promise<BusySlot | undefined>;
+  deleteBusySlot(id: string, userId: string): Promise<boolean>;
 
-  // Analysis
-  getAnalysisByMeetId(meetId: string): Promise<Analysis | undefined>;
-  createAnalysis(analysis: InsertAnalysis): Promise<Analysis>;
+  // Analysis - USER ISOLATED
+  getAnalysisByMeetId(meetId: string, userId: string): Promise<Analysis | undefined>;
+  createAnalysis(analysis: InsertAnalysis, userId: string): Promise<Analysis>;
 
-  // Extended Meetings
-  getExtendedMeetings(): Promise<ExtendedMeeting[]>;
-  getExtendedMeetingByCalendarEventId(calendarEventId: string): Promise<ExtendedMeeting | undefined>;
-  createExtendedMeeting(extendedMeeting: InsertExtendedMeeting): Promise<ExtendedMeeting>;
+  // Extended Meetings - USER ISOLATED
+  getExtendedMeetings(userId: string): Promise<ExtendedMeeting[]>;
+  getExtendedMeetingByCalendarEventId(calendarEventId: string, userId: string): Promise<ExtendedMeeting | undefined>;
+  createExtendedMeeting(extendedMeeting: InsertExtendedMeeting, userId: string): Promise<ExtendedMeeting>;
 }
 
 export class MongoStorage implements IStorage {
@@ -93,6 +91,7 @@ export class MongoStorage implements IStorage {
   private mongoDocToJobCriteria(doc: any): JobCriteria {
     return {
       id: doc._id.toString(),
+      userId: doc.userId.toString(),
       "Job ID": doc["Job ID"],
       "Job Title": doc["Job Title"],
       "Required Skills": doc["Required Skills"],
@@ -138,6 +137,7 @@ export class MongoStorage implements IStorage {
     
     return {
       id: doc._id.toString(),
+      userId: doc.userId.toString(),
       // Database field names (required)
       "Candidate Name": doc["Candidate Name"],
       Email: doc.Email,
@@ -198,9 +198,9 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async getJobCriteria(): Promise<JobCriteria[]> {
+  async getJobCriteria(userId: string): Promise<JobCriteria[]> {
     try {
-      const jobCriteria = await JobCriteriaModel.find();
+      const jobCriteria = await JobCriteriaModel.find({ userId });
       return jobCriteria.map(criteria => this.mongoDocToJobCriteria(criteria));
     } catch (error) {
       console.error('Error getting job criteria:', error);
@@ -208,9 +208,9 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async getJobCriteriaById(id: string): Promise<JobCriteria | undefined> {
+  async getJobCriteriaById(id: string, userId: string): Promise<JobCriteria | undefined> {
     try {
-      const jobCriteria = await JobCriteriaModel.findById(id);
+      const jobCriteria = await JobCriteriaModel.findOne({ _id: id, userId });
       return jobCriteria ? this.mongoDocToJobCriteria(jobCriteria) : undefined;
     } catch (error) {
       console.error('Error getting job criteria:', error);
@@ -218,10 +218,11 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async createJobCriteria(jobData: JobFormData): Promise<JobCriteria> {
+  async createJobCriteria(jobData: JobFormData, userId: string): Promise<JobCriteria> {
     try {
       // Map the frontend field names to the database field names
-      const jobToCreate: InsertJobCriteria = {
+      const jobToCreate: any = {
+        userId,
         "Job ID": jobData.jobId,
         "Job Title": jobData.jobTitle,
         "Required Skills": jobData.requiredSkills,
@@ -236,10 +237,10 @@ export class MongoStorage implements IStorage {
   }
 
   // ✨ Implementation for updating a job
-  async updateJobCriteria(id: string, updates: Partial<InsertJobCriteria>): Promise<JobCriteria | undefined> {
+  async updateJobCriteria(id: string, updates: Partial<InsertJobCriteria>, userId: string): Promise<JobCriteria | undefined> {
     try {
-      const updatedJob = await JobCriteriaModel.findByIdAndUpdate(
-        id,
+      const updatedJob = await JobCriteriaModel.findOneAndUpdate(
+        { _id: id, userId },
         updates,
         { new: true } // Return the updated document
       );
@@ -251,9 +252,9 @@ export class MongoStorage implements IStorage {
   }
 
   // ✨ Implementation for deleting a job
-  async deleteJobCriteria(id: string): Promise<boolean> {
+  async deleteJobCriteria(id: string, userId: string): Promise<boolean> {
     try {
-      const result = await JobCriteriaModel.findByIdAndDelete(id);
+      const result = await JobCriteriaModel.findOneAndDelete({ _id: id, userId });
       return result !== null; // Return true if deletion was successful
     } catch (error) {
       console.error('Error deleting job criteria:', error);
@@ -261,9 +262,9 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async getCandidates(): Promise<Candidate[]> {
+  async getCandidates(userId: string): Promise<Candidate[]> {
     try {
-      const candidates = await CandidateModel.find();
+      const candidates = await CandidateModel.find({ userId });
       return candidates.map(candidate => this.mongoDocToCandidate(candidate));
     } catch (error) {
       console.error('Error getting candidates:', error);
@@ -271,9 +272,9 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async getCandidate(id: string): Promise<Candidate | undefined> {
+  async getCandidate(id: string, userId: string): Promise<Candidate | undefined> {
     try {
-      const candidate = await CandidateModel.findById(id);
+      const candidate = await CandidateModel.findOne({ _id: id, userId });
       return candidate ? this.mongoDocToCandidate(candidate) : undefined;
     } catch (error) {
       console.error('Error getting candidate:', error);
@@ -281,9 +282,10 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async createCandidate(insertCandidate: InsertCandidate): Promise<Candidate> {
+  async createCandidate(insertCandidate: InsertCandidate, userId: string): Promise<Candidate> {
     try {
-      const candidate = await CandidateModel.create(insertCandidate);
+      const candidateWithUser = { ...insertCandidate, userId };
+      const candidate = await CandidateModel.create(candidateWithUser);
       return this.mongoDocToCandidate(candidate);
     } catch (error) {
       console.error('Error creating candidate:', error);
@@ -291,7 +293,7 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async updateCandidate(id: string, updates: Partial<Candidate>): Promise<Candidate | undefined> {
+  async updateCandidate(id: string, updates: Partial<Candidate>, userId: string): Promise<Candidate | undefined> {
     try {
       // Map frontend field names to database field names
       const mongoUpdates: any = {};
@@ -309,12 +311,12 @@ export class MongoStorage implements IStorage {
       if (updates.education) mongoUpdates.education = updates.education;
       if (updates.score) mongoUpdates.score = updates.score;
 
-      console.log('Updating candidate with ID:', id);
+      console.log('Updating candidate with ID:', id, 'for user:', userId);
       console.log('Frontend updates:', updates);
       console.log('Mapped MongoDB updates:', mongoUpdates);
 
-      const candidate = await CandidateModel.findByIdAndUpdate(
-        id,
+      const candidate = await CandidateModel.findOneAndUpdate(
+        { _id: id, userId },
         mongoUpdates,
         { new: true }
       );
@@ -323,7 +325,7 @@ export class MongoStorage implements IStorage {
         console.log('Successfully updated candidate in MongoDB');
         return this.mongoDocToCandidate(candidate);
       } else {
-        console.log('Candidate not found in MongoDB');
+        console.log('Candidate not found in MongoDB or access denied');
         return undefined;
       }
     } catch (error) {
@@ -332,9 +334,9 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async deleteCandidate(id: string): Promise<boolean> {
+  async deleteCandidate(id: string, userId: string): Promise<boolean> {
     try {
-      const result = await CandidateModel.findByIdAndDelete(id);
+      const result = await CandidateModel.findOneAndDelete({ _id: id, userId });
       return result !== null; // Return true if deletion was successful
     } catch (error) {
       console.error('Error deleting candidate:', error);
@@ -342,9 +344,9 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async deleteCandidatesByStatus(status: string): Promise<void> {
+  async deleteCandidatesByStatus(status: string, userId: string): Promise<void> {
     try {
-      await CandidateModel.deleteMany({ status });
+      await CandidateModel.deleteMany({ status, userId });
     } catch (error) {
       console.error('Error deleting candidates by status:', error);
       throw error;
@@ -355,6 +357,7 @@ export class MongoStorage implements IStorage {
   private mongoDocToTranscript(doc: any): Transcript {
     return {
       id: doc._id.toString(),
+      userId: doc.userId.toString(),
       Speaker1: doc.Speaker1,
       Speaker2: doc.Speaker2,
       Speaker3: doc.Speaker3,
@@ -365,9 +368,9 @@ export class MongoStorage implements IStorage {
     };
   }
 
-  async getTranscripts(): Promise<Transcript[]> {
+  async getTranscripts(userId: string): Promise<Transcript[]> {
     try {
-      const transcripts = await TranscriptModel.find();
+      const transcripts = await TranscriptModel.find({ userId });
       return transcripts.map(transcript => this.mongoDocToTranscript(transcript));
     } catch (error) {
       console.error('Error getting transcripts:', error);
@@ -375,12 +378,12 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async getTranscriptsByMeetId(meetId: string): Promise<Transcript[]> {
+  async getTranscriptsByMeetId(meetId: string, userId: string): Promise<Transcript[]> {
     try {
-      console.log(`Searching for transcript with Meet_id: ${meetId}`);
+      console.log(`Searching for transcript with Meet_id: ${meetId} for user: ${userId}`);
       
-      // Search by the Meet_id field directly (this matches the transcript schema)
-      const query = { Meet_id: meetId };
+      // Search by the Meet_id field and userId
+      const query = { Meet_id: meetId, userId };
       
       const transcripts = await TranscriptModel.find(query).sort({ createdAt: -1 });
       console.log(`Found ${transcripts.length} transcripts for Meet_id: ${meetId}`);
@@ -397,10 +400,10 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async getLatestTranscript(): Promise<Transcript | undefined> {
+  async getLatestTranscript(userId: string): Promise<Transcript | undefined> {
     try {
-      console.log('Getting latest transcript from MongoDB...');
-      const transcript = await TranscriptModel.findOne().sort({ createdAt: -1 });
+      console.log('Getting latest transcript from MongoDB for user:', userId);
+      const transcript = await TranscriptModel.findOne({ userId }).sort({ createdAt: -1 });
       console.log('Latest transcript found:', transcript ? { id: transcript._id, hasData: !!transcript.Speaker1 } : 'None');
       return transcript ? this.mongoDocToTranscript(transcript) : undefined;
     } catch (error) {
@@ -409,9 +412,10 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async createTranscript(insertTranscript: InsertTranscript): Promise<Transcript> {
+  async createTranscript(insertTranscript: InsertTranscript, userId: string): Promise<Transcript> {
     try {
-      const transcript = await TranscriptModel.create(insertTranscript);
+      const transcriptWithUser = { ...insertTranscript, userId };
+      const transcript = await TranscriptModel.create(transcriptWithUser);
       return this.mongoDocToTranscript(transcript);
     } catch (error) {
       console.error('Error creating transcript:', error);
@@ -423,6 +427,7 @@ export class MongoStorage implements IStorage {
   private mongoDocToUnavailableSlot(doc: any): UnavailableSlot {
     return {
       id: doc._id.toString(),
+      userId: doc.userId.toString(),
       date: doc.date,
       startTime: doc.startTime,
       endTime: doc.endTime,
@@ -431,9 +436,9 @@ export class MongoStorage implements IStorage {
     };
   }
 
-  async getUnavailableSlots(): Promise<UnavailableSlot[]> {
+  async getUnavailableSlots(userId: string): Promise<UnavailableSlot[]> {
     try {
-      const slots = await UnavailableSlotModel.find().sort({ date: 1, startTime: 1 });
+      const slots = await UnavailableSlotModel.find({ userId }).sort({ date: 1, startTime: 1 });
       return slots.map(slot => this.mongoDocToUnavailableSlot(slot));
     } catch (error) {
       console.error('Error getting unavailable slots:', error);
@@ -441,9 +446,10 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async createUnavailableSlot(insertSlot: InsertUnavailableSlot): Promise<UnavailableSlot> {
+  async createUnavailableSlot(insertSlot: InsertUnavailableSlot, userId: string): Promise<UnavailableSlot> {
     try {
-      const slot = await UnavailableSlotModel.create(insertSlot);
+      const slotWithUser = { ...insertSlot, userId };
+      const slot = await UnavailableSlotModel.create(slotWithUser);
       return this.mongoDocToUnavailableSlot(slot);
     } catch (error) {
       console.error('Error creating unavailable slot:', error);
@@ -451,9 +457,9 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async updateUnavailableSlot(id: string, updates: Partial<InsertUnavailableSlot>): Promise<UnavailableSlot | undefined> {
+  async updateUnavailableSlot(id: string, updates: Partial<InsertUnavailableSlot>, userId: string): Promise<UnavailableSlot | undefined> {
     try {
-      const slot = await UnavailableSlotModel.findByIdAndUpdate(id, updates, { new: true });
+      const slot = await UnavailableSlotModel.findOneAndUpdate({ _id: id, userId }, updates, { new: true });
       return slot ? this.mongoDocToUnavailableSlot(slot) : undefined;
     } catch (error) {
       console.error('Error updating unavailable slot:', error);
@@ -461,9 +467,9 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async deleteUnavailableSlot(id: string): Promise<boolean> {
+  async deleteUnavailableSlot(id: string, userId: string): Promise<boolean> {
     try {
-      const result = await UnavailableSlotModel.findByIdAndDelete(id);
+      const result = await UnavailableSlotModel.findOneAndDelete({ _id: id, userId });
       return result !== null;
     } catch (error) {
       console.error('Error deleting unavailable slot:', error);
@@ -475,6 +481,7 @@ export class MongoStorage implements IStorage {
   private mongoDocToBusySlot(doc: any): BusySlot {
     return {
       id: doc._id.toString(),
+      userId: doc.userId.toString(),
       date: doc.date,
       startTime: doc.startTime,
       endTime: doc.endTime,
@@ -483,9 +490,9 @@ export class MongoStorage implements IStorage {
     };
   }
 
-  async getBusySlots(): Promise<BusySlot[]> {
+  async getBusySlots(userId: string): Promise<BusySlot[]> {
     try {
-      const slots = await BusySlotModel.find().sort({ date: 1, startTime: 1 });
+      const slots = await BusySlotModel.find({ userId }).sort({ date: 1, startTime: 1 });
       return slots.map(slot => this.mongoDocToBusySlot(slot));
     } catch (error) {
       console.error('Error getting busy slots:', error);
@@ -493,9 +500,10 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async createBusySlot(insertSlot: InsertBusySlot): Promise<BusySlot> {
+  async createBusySlot(insertSlot: InsertBusySlot, userId: string): Promise<BusySlot> {
     try {
-      const slot = await BusySlotModel.create(insertSlot);
+      const slotWithUser = { ...insertSlot, userId };
+      const slot = await BusySlotModel.create(slotWithUser);
       return this.mongoDocToBusySlot(slot);
     } catch (error) {
       console.error('Error creating busy slot:', error);
@@ -503,9 +511,9 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async updateBusySlot(id: string, updates: Partial<InsertBusySlot>): Promise<BusySlot | undefined> {
+  async updateBusySlot(id: string, updates: Partial<InsertBusySlot>, userId: string): Promise<BusySlot | undefined> {
     try {
-      const slot = await BusySlotModel.findByIdAndUpdate(id, updates, { new: true });
+      const slot = await BusySlotModel.findOneAndUpdate({ _id: id, userId }, updates, { new: true });
       return slot ? this.mongoDocToBusySlot(slot) : undefined;
     } catch (error) {
       console.error('Error updating busy slot:', error);
@@ -513,9 +521,9 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async deleteBusySlot(id: string): Promise<boolean> {
+  async deleteBusySlot(id: string, userId: string): Promise<boolean> {
     try {
-      const result = await BusySlotModel.findByIdAndDelete(id);
+      const result = await BusySlotModel.findOneAndDelete({ _id: id, userId });
       return result !== null;
     } catch (error) {
       console.error('Error deleting busy slot:', error);
@@ -527,6 +535,7 @@ export class MongoStorage implements IStorage {
   private mongoDocToAnalysis(doc: any): Analysis {
     return {
       id: doc._id.toString(),
+      userId: doc.userId.toString(),
       "Psychometric Analysis": doc["Psychometric Analysis"],
       "Technical Analysis": doc["Technical Analysis"],
       "Behavioural Analysis": doc["Behavioural Analysis"],
@@ -535,10 +544,10 @@ export class MongoStorage implements IStorage {
     };
   }
 
-  async getAnalysisByMeetId(meetId: string): Promise<Analysis | undefined> {
+  async getAnalysisByMeetId(meetId: string, userId: string): Promise<Analysis | undefined> {
     try {
-      console.log(`Searching for analysis with Meet_id: ${meetId}`);
-      const analysis = await AnalysisModel.findOne({ Meet_id: meetId });
+      console.log(`Searching for analysis with Meet_id: ${meetId} for user: ${userId}`);
+      const analysis = await AnalysisModel.findOne({ Meet_id: meetId, userId });
       if (!analysis) {
         console.log(`No analysis found for Meet_id: ${meetId}`);
         return undefined;
@@ -551,9 +560,10 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async createAnalysis(insertAnalysis: InsertAnalysis): Promise<Analysis> {
+  async createAnalysis(insertAnalysis: InsertAnalysis, userId: string): Promise<Analysis> {
     try {
-      const analysis = await AnalysisModel.create(insertAnalysis);
+      const analysisWithUser = { ...insertAnalysis, userId };
+      const analysis = await AnalysisModel.create(analysisWithUser);
       return this.mongoDocToAnalysis(analysis);
     } catch (error) {
       console.error('Error creating analysis:', error);
@@ -565,6 +575,7 @@ export class MongoStorage implements IStorage {
   private mongoDocToExtendedMeeting(doc: any): ExtendedMeeting {
     return {
       id: doc._id.toString(),
+      userId: doc.userId.toString(),
       calendarEventId: doc.calendarEventId,
       newEndTime: doc.newEndTime,
       status: doc.status,
@@ -573,9 +584,9 @@ export class MongoStorage implements IStorage {
     };
   }
 
-  async getExtendedMeetings(): Promise<ExtendedMeeting[]> {
+  async getExtendedMeetings(userId: string): Promise<ExtendedMeeting[]> {
     try {
-      const docs = await ExtendedMeetingModel.find({}).sort({ createdAt: -1 });
+      const docs = await ExtendedMeetingModel.find({ userId }).sort({ createdAt: -1 });
       return docs.map(doc => this.mongoDocToExtendedMeeting(doc));
     } catch (error) {
       console.error('Error getting extended meetings:', error);
@@ -583,9 +594,9 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async getExtendedMeetingByCalendarEventId(calendarEventId: string): Promise<ExtendedMeeting | undefined> {
+  async getExtendedMeetingByCalendarEventId(calendarEventId: string, userId: string): Promise<ExtendedMeeting | undefined> {
     try {
-      const doc = await ExtendedMeetingModel.findOne({ calendarEventId });
+      const doc = await ExtendedMeetingModel.findOne({ calendarEventId, userId });
       return doc ? this.mongoDocToExtendedMeeting(doc) : undefined;
     } catch (error) {
       console.error('Error getting extended meeting by calendar event ID:', error);
@@ -593,9 +604,10 @@ export class MongoStorage implements IStorage {
     }
   }
 
-  async createExtendedMeeting(extendedMeeting: InsertExtendedMeeting): Promise<ExtendedMeeting> {
+  async createExtendedMeeting(extendedMeeting: InsertExtendedMeeting, userId: string): Promise<ExtendedMeeting> {
     try {
-      const doc = await ExtendedMeetingModel.create(extendedMeeting);
+      const meetingWithUser = { ...extendedMeeting, userId };
+      const doc = await ExtendedMeetingModel.create(meetingWithUser);
       return this.mongoDocToExtendedMeeting(doc);
     } catch (error) {
       console.error('Error creating extended meeting:', error);

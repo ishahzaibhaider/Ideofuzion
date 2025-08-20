@@ -227,9 +227,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Candidates routes
-  app.get('/api/candidates', authenticateToken, async (req, res) => {
+  app.get('/api/candidates', authenticateToken, async (req: any, res) => {
     try {
-      const candidates = await storage.getCandidates();
+      const userId = req.user.userId;
+      const candidates = await storage.getCandidates(userId);
       
       // --- DATE & TIME LOGIC ---
       const now = new Date(); // Current time on the server
@@ -249,11 +250,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Update candidates with past interviews to Analysis Complete status
       for (const candidate of pastInterviewCandidates) {
-        await storage.updateCandidate(candidate.id, { status: 'Analysis Complete' });
+        await storage.updateCandidate(candidate.id, { status: 'Analysis Complete' }, userId);
       }
 
       // Get updated candidates list after status changes
-      const updatedCandidates = await storage.getCandidates();
+      const updatedCandidates = await storage.getCandidates(userId);
       res.json(updatedCandidates);
     } catch (error) {
       res.status(500).json({ message: 'Server error', error });
@@ -261,9 +262,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Extended Meeting routes - MUST come before /api/candidates/:id
-  app.get("/api/candidates/with-meetings", authenticateToken, async (req, res) => {
+  app.get("/api/candidates/with-meetings", authenticateToken, async (req: any, res) => {
     try {
-      const candidates = await storage.getCandidates();
+      const userId = req.user.userId;
+      const candidates = await storage.getCandidates(userId);
       const now = new Date();
       
       // Filter candidates with upcoming or ongoing meetings
@@ -312,10 +314,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/candidates/:id', authenticateToken, async (req, res) => {
+  app.get('/api/candidates/:id', authenticateToken, async (req: any, res) => {
     try {
       const id = req.params.id;
-      const candidate = await storage.getCandidate(id);
+      const userId = req.user.userId;
+      const candidate = await storage.getCandidate(id, userId);
       if (!candidate) {
         return res.status(404).json({ message: 'Candidate not found' });
       }
@@ -325,18 +328,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/candidates/:id', authenticateToken, async (req, res) => {
+  app.put('/api/candidates/:id', authenticateToken, async (req: any, res) => {
     try {
       const id = req.params.id;
+      const userId = req.user.userId;
       const updates = req.body;
 
       // Get candidate data before update to access Calendar Event ID
-      const existingCandidate = await storage.getCandidate(id);
+      const existingCandidate = await storage.getCandidate(id, userId);
       if (!existingCandidate) {
         return res.status(404).json({ message: 'Candidate not found' });
       }
 
-      const candidate = await storage.updateCandidate(id, updates);
+      const candidate = await storage.updateCandidate(id, updates, userId);
       if (!candidate) {
         return res.status(404).json({ message: 'Candidate not found' });
       }
@@ -395,27 +399,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/candidates', authenticateToken, async (req, res) => {
+  app.post('/api/candidates', authenticateToken, async (req: any, res) => {
     try {
+      const userId = req.user.userId;
       const candidateData = insertCandidateSchema.parse(req.body);
-      const candidate = await storage.createCandidate(candidateData);
+      const candidate = await storage.createCandidate(candidateData, userId);
       res.status(201).json(candidate);
     } catch (error) {
       res.status(400).json({ message: 'Invalid input data', error });
     }
   });
 
-  app.delete('/api/candidates/:id', authenticateToken, async (req, res) => {
+  app.delete('/api/candidates/:id', authenticateToken, async (req: any, res) => {
     try {
       const id = req.params.id;
+      const userId = req.user.userId;
       
       // Get candidate data before deletion to access Calendar Event ID
-      const existingCandidate = await storage.getCandidate(id);
+      const existingCandidate = await storage.getCandidate(id, userId);
       if (!existingCandidate) {
         return res.status(404).json({ message: 'Candidate not found' });
       }
 
-      const success = await storage.deleteCandidate(id);
+      const success = await storage.deleteCandidate(id, userId);
       if (!success) {
         return res.status(404).json({ message: 'Candidate not found' });
       }
@@ -464,9 +470,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all upcoming interviews
-  app.get('/api/interviews/upcoming', authenticateToken, async (req, res) => {
+  app.get('/api/interviews/upcoming', authenticateToken, async (req: any, res) => {
     try {
-      const candidates = await storage.getCandidates();
+      const userId = req.user.userId;
+      const candidates = await storage.getCandidates(userId);
       
       // --- DATE & TIME LOGIC ---
       const now = new Date(); // Current time on the server
@@ -500,9 +507,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get current candidate based on interview time
-  app.get('/api/interviews/current', authenticateToken, async (req, res) => {
+  app.get('/api/interviews/current', authenticateToken, async (req: any, res) => {
     try {
-      const candidates = await storage.getCandidates();
+      const userId = req.user.userId;
+      const candidates = await storage.getCandidates(userId);
       const now = new Date();
 
       // Map candidates with parsed interview times
@@ -554,19 +562,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Job routes
-  app.get('/api/job-criteria', authenticateToken, async (req, res) => {
+  app.get('/api/job-criteria', authenticateToken, async (req: any, res) => {
     try {
-      const jobCriteria = await storage.getJobCriteria();
+      const userId = req.user.userId;
+      const jobCriteria = await storage.getJobCriteria(userId);
       res.json(jobCriteria);
     } catch (error) {
       res.status(500).json({ message: 'Server error', error });
     }
   });
 
-  app.get('/api/job-criteria/:id', authenticateToken, async (req, res) => {
+  app.get('/api/job-criteria/:id', authenticateToken, async (req: any, res) => {
     try {
       const id = req.params.id;
-      const jobCriteria = await storage.getJobCriteriaById(id);
+      const userId = req.user.userId;
+      const jobCriteria = await storage.getJobCriteriaById(id, userId);
       if (!jobCriteria) {
         return res.status(404).json({ message: 'Job criteria not found' });
       }
@@ -577,12 +587,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ✨ Enhanced route to handle job creation with optional skills
-  app.post('/api/jobs', authenticateToken, async (req, res) => {
+  app.post('/api/jobs', authenticateToken, async (req: any, res) => {
     try {
+      const userId = req.user.userId;
       // Validate the incoming data against our enhanced schema
       const jobData = jobFormDataSchema.parse(req.body);
       // Call the storage method which now expects both required and optional skills
-      const jobCriteria = await storage.createJobCriteria(jobData);
+      const jobCriteria = await storage.createJobCriteria(jobData, userId);
       res.status(201).json(jobCriteria);
     } catch (error) {
       // Handle validation errors from Zod or other errors
@@ -600,9 +611,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ✨ Enhanced PUT route with optional skills support
-  app.put('/api/jobs/:id', authenticateToken, async (req, res) => {
+  app.put('/api/jobs/:id', authenticateToken, async (req: any, res) => {
     try {
       const id = req.params.id;
+      const userId = req.user.userId;
       // Validate the incoming data against our enhanced schema
       const jobData = jobFormDataSchema.parse(req.body);
 
@@ -614,7 +626,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "Optional Skills": jobData.optionalSkills || [] // Include optional skills
       };
 
-      const jobCriteria = await storage.updateJobCriteria(id, updates);
+      const jobCriteria = await storage.updateJobCriteria(id, updates, userId);
 
       if (!jobCriteria) {
         return res.status(404).json({ message: 'Job not found' });
@@ -636,22 +648,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ✨ NEW: DELETE route for job deletion
-  app.delete('/api/jobs/:id', authenticateToken, async (req, res) => {
+  app.delete('/api/jobs/:id', authenticateToken, async (req: any, res) => {
     try {
       const id = req.params.id;
+      const userId = req.user.userId;
 
       if (!id) {
         return res.status(400).json({ message: "Job ID is required" });
       }
 
       // Check if job exists before attempting to delete
-      const existingJob = await storage.getJobCriteriaById(id);
+      const existingJob = await storage.getJobCriteriaById(id, userId);
       if (!existingJob) {
         return res.status(404).json({ message: "Job not found" });
       }
 
       // Attempt to delete the job
-      const deleteSuccess = await storage.deleteJobCriteria(id);
+      const deleteSuccess = await storage.deleteJobCriteria(id, userId);
 
       if (!deleteSuccess) {
         return res.status(500).json({ message: "Failed to delete job" });
@@ -676,13 +689,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // N8N Integration routes
   app.post('/api/n8n/update-candidate', async (req, res) => {
     try {
-      const { candidateId, updates } = req.body;
+      const { candidateId, updates, userId } = req.body;
 
       if (!candidateId) {
         return res.status(400).json({ message: 'candidateId is required' });
       }
 
-      const candidate = await storage.updateCandidate(candidateId, updates);
+      if (!userId) {
+        return res.status(400).json({ message: 'userId is required for N8N webhook' });
+      }
+
+      const candidate = await storage.updateCandidate(candidateId, updates, userId);
       if (!candidate) {
         return res.status(404).json({ message: 'Candidate not found' });
       }
@@ -718,12 +735,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/n8n/final-report/:candidateId', async (req, res) => {
     try {
       const candidateId = req.params.candidateId;
-      const { analysis } = req.body;
+      const { analysis, userId } = req.body;
+
+      if (!userId) {
+        return res.status(400).json({ message: 'userId is required for N8N webhook' });
+      }
 
       const candidate = await storage.updateCandidate(candidateId, {
         analysis,
         status: 'Analysis Complete'
-      });
+      }, userId);
 
       if (!candidate) {
         return res.status(404).json({ message: 'Candidate not found' });
@@ -828,10 +849,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ✨ MODIFIED Dashboard metrics route
-  app.get('/api/dashboard/metrics', authenticateToken, async (req, res) => {
+  app.get('/api/dashboard/metrics', authenticateToken, async (req: any, res) => {
     try {
-      const candidates = await storage.getCandidates();
-      const jobCriteria = await storage.getJobCriteria();
+      const userId = req.user.userId;
+      const candidates = await storage.getCandidates(userId);
+      const jobCriteria = await storage.getJobCriteria(userId);
 
       console.log('Dashboard - Raw candidates count:', candidates.length);
       console.log('Dashboard - Sample candidate statuses:', candidates.slice(0, 3).map(c => ({ id: c.id, status: c.status })));
@@ -862,11 +884,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Update candidates with past interviews to Analysis Complete status
       for (const candidate of pastInterviewCandidates) {
-        await storage.updateCandidate(candidate.id, { status: 'Analysis Complete' });
+        await storage.updateCandidate(candidate.id, { status: 'Analysis Complete' }, userId);
       }
 
       // Get updated candidates list after status changes
-      const updatedCandidates = await storage.getCandidates();
+      const updatedCandidates = await storage.getCandidates(userId);
       const updatedCandidatesWithParsedDate = updatedCandidates.map(c => ({
         ...c,
         interviewDateTime: parseInterviewDateTime(c["Interview Start"]),
@@ -948,15 +970,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Transcript routes
-  app.get("/api/transcripts", authenticateToken, async (req, res) => {
+  app.get("/api/transcripts", authenticateToken, async (req: any, res) => {
     try {
+      const userId = req.user.userId;
       const { meetId } = req.query;
       
       if (meetId && typeof meetId === 'string') {
-        const transcripts = await storage.getTranscriptsByMeetId(meetId);
+        const transcripts = await storage.getTranscriptsByMeetId(meetId, userId);
         res.json(transcripts);
       } else {
-        const transcripts = await storage.getTranscripts();
+        const transcripts = await storage.getTranscripts(userId);
         res.json(transcripts);
       }
     } catch (error) {
@@ -966,12 +989,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get transcript by Meet ID (for specific candidate interview data)
-  app.get("/api/transcripts/by-meet-id/:meetId", authenticateToken, async (req, res) => {
+  app.get("/api/transcripts/by-meet-id/:meetId", authenticateToken, async (req: any, res) => {
     try {
       const { meetId } = req.params;
+      const userId = req.user.userId;
       console.log(`Fetching transcript for Meet ID: ${meetId}`);
       
-      const transcripts = await storage.getTranscriptsByMeetId(meetId);
+      const transcripts = await storage.getTranscriptsByMeetId(meetId, userId);
       
       if (!transcripts || transcripts.length === 0) {
         console.log(`No transcripts found for Meet ID: ${meetId}`);
@@ -994,12 +1018,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get analysis by Meet ID (for candidate final analysis)
-  app.get("/api/analysis/by-meet-id/:meetId", authenticateToken, async (req, res) => {
+  app.get("/api/analysis/by-meet-id/:meetId", authenticateToken, async (req: any, res) => {
     try {
       const { meetId } = req.params;
+      const userId = req.user.userId;
       console.log(`Fetching analysis for Meet ID: ${meetId}`);
       
-      const analysis = await storage.getAnalysisByMeetId(meetId);
+      const analysis = await storage.getAnalysisByMeetId(meetId, userId);
       
       if (!analysis) {
         console.log(`No analysis found for Meet ID: ${meetId}`);
@@ -1018,9 +1043,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/transcripts/latest", authenticateToken, async (req, res) => {
+  app.get("/api/transcripts/latest", authenticateToken, async (req: any, res) => {
     try {
-      const transcript = await storage.getLatestTranscript();
+      const userId = req.user.userId;
+      const transcript = await storage.getLatestTranscript(userId);
       if (transcript) {
         res.json(transcript);
       } else {
@@ -1032,13 +1058,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/transcripts", authenticateToken, async (req, res) => {
+  app.post("/api/transcripts", authenticateToken, async (req: any, res) => {
     try {
+      const userId = req.user.userId;
       const { error, data } = insertTranscriptSchema.safeParse(req.body);
       if (error) {
         return res.status(400).json({ error: "Invalid input", details: error.issues });
       }
-      const transcript = await storage.createTranscript(data);
+      const transcript = await storage.createTranscript(data, userId);
       res.status(201).json(transcript);
     } catch (error) {
       console.error("Error creating transcript:", error);
@@ -1047,9 +1074,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Unavailable Slots routes
-  app.get("/api/unavailable-slots", authenticateToken, async (req, res) => {
+  app.get("/api/unavailable-slots", authenticateToken, async (req: any, res) => {
     try {
-      const slots = await storage.getUnavailableSlots();
+      const userId = req.user.userId;
+      const slots = await storage.getUnavailableSlots(userId);
       res.json(slots);
     } catch (error) {
       console.error("Error getting unavailable slots:", error);
@@ -1057,13 +1085,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/unavailable-slots", authenticateToken, async (req, res) => {
+  app.post("/api/unavailable-slots", authenticateToken, async (req: any, res) => {
     try {
+      const userId = req.user.userId;
       const { error, data } = insertUnavailableSlotSchema.safeParse(req.body);
       if (error) {
         return res.status(400).json({ error: "Invalid input", details: error.issues });
       }
-      const slot = await storage.createUnavailableSlot(data);
+      const slot = await storage.createUnavailableSlot(data, userId);
       res.status(201).json(slot);
     } catch (error) {
       console.error("Error creating unavailable slot:", error);
@@ -1071,13 +1100,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/unavailable-slots/:id", authenticateToken, async (req, res) => {
+  app.put("/api/unavailable-slots/:id", authenticateToken, async (req: any, res) => {
     try {
+      const userId = req.user.userId;
       const { error, data } = insertUnavailableSlotSchema.safeParse(req.body);
       if (error) {
         return res.status(400).json({ error: "Invalid input", details: error.issues });
       }
-      const slot = await storage.updateUnavailableSlot(req.params.id, data);
+      const slot = await storage.updateUnavailableSlot(req.params.id, data, userId);
       if (slot) {
         res.json(slot);
       } else {
@@ -1089,9 +1119,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/unavailable-slots/:id", authenticateToken, async (req, res) => {
+  app.delete("/api/unavailable-slots/:id", authenticateToken, async (req: any, res) => {
     try {
-      const success = await storage.deleteUnavailableSlot(req.params.id);
+      const userId = req.user.userId;
+      const success = await storage.deleteUnavailableSlot(req.params.id, userId);
       if (success) {
         res.json({ success: true });
       } else {
@@ -1104,9 +1135,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Busy Slots routes
-  app.get("/api/busy-slots", authenticateToken, async (req, res) => {
+  app.get("/api/busy-slots", authenticateToken, async (req: any, res) => {
     try {
-      const slots = await storage.getBusySlots();
+      const userId = req.user.userId;
+      const slots = await storage.getBusySlots(userId);
       res.json(slots);
     } catch (error) {
       console.error("Error getting busy slots:", error);
@@ -1114,13 +1146,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/busy-slots", authenticateToken, async (req, res) => {
+  app.post("/api/busy-slots", authenticateToken, async (req: any, res) => {
     try {
+      const userId = req.user.userId;
       const { error, data } = insertBusySlotSchema.safeParse(req.body);
       if (error) {
         return res.status(400).json({ error: "Invalid input", details: error.issues });
       }
-      const slot = await storage.createBusySlot(data);
+      const slot = await storage.createBusySlot(data, userId);
       
       // Trigger webhook after successful busy slot creation
       try {
@@ -1158,13 +1191,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/busy-slots/:id", authenticateToken, async (req, res) => {
+  app.put("/api/busy-slots/:id", authenticateToken, async (req: any, res) => {
     try {
+      const userId = req.user.userId;
       const { error, data } = insertBusySlotSchema.safeParse(req.body);
       if (error) {
         return res.status(400).json({ error: "Invalid input", details: error.issues });
       }
-      const slot = await storage.updateBusySlot(req.params.id, data);
+      const slot = await storage.updateBusySlot(req.params.id, data, userId);
       if (slot) {
         res.json(slot);
       } else {
@@ -1176,9 +1210,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/busy-slots/:id", authenticateToken, async (req, res) => {
+  app.delete("/api/busy-slots/:id", authenticateToken, async (req: any, res) => {
     try {
-      const success = await storage.deleteBusySlot(req.params.id);
+      const userId = req.user.userId;
+      const success = await storage.deleteBusySlot(req.params.id, userId);
       if (success) {
         res.json({ success: true });
       } else {
@@ -1190,15 +1225,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/extend-meeting", authenticateToken, async (req, res) => {
+  app.post("/api/extend-meeting", authenticateToken, async (req: any, res) => {
     try {
+      const userId = req.user.userId;
       const { error, data } = insertExtendedMeetingSchema.safeParse(req.body);
       if (error) {
         return res.status(400).json({ error: "Invalid input", details: error.issues });
       }
 
       // Validate that the calendar event ID exists in candidates
-      const candidates = await storage.getCandidates();
+      const candidates = await storage.getCandidates(userId);
       const candidate = candidates.find(c => c["Calendar Event ID"] === data.calendarEventId);
       
       if (!candidate) {
@@ -1218,7 +1254,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Create extended meeting record
-      const extendedMeeting = await storage.createExtendedMeeting(data);
+      const extendedMeeting = await storage.createExtendedMeeting(data, userId);
       
       console.log(`Extended meeting created for calendar event ${data.calendarEventId}:`, {
         candidateName: candidate["Candidate Name"],
