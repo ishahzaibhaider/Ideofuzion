@@ -66,7 +66,8 @@ export function initializeGoogleAuth() {
   passport.serializeUser((user: any, done) => {
     done(null, user);
   });
-//Added deserializeUser
+
+  // Deserialize user from session
   passport.deserializeUser((obj: any, done) => {
     done(null, obj);
   });
