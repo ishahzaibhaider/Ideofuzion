@@ -144,11 +144,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const user = req.user as { id: string; name: string; email: string };
         
         // Create n8n credential for the new Google OAuth user
-        await createN8nCredential({
-          id: user.id,
-          name: user.name,
-          email: user.email
-        });
+        console.log(`📝 [OAUTH] Creating n8n credential for Google OAuth user: ${user.email}`);
+        try {
+          const n8nResult = await createN8nCredential({
+            id: user.id,
+            name: user.name,
+            email: user.email
+          });
+          if (n8nResult) {
+            console.log(`✅ [OAUTH] n8n credential created successfully for ${user.email}`);
+          } else {
+            console.log(`⚠️ [OAUTH] n8n credential creation returned null for ${user.email}`);
+          }
+        } catch (error) {
+          console.error(`❌ [OAUTH] Error during n8n credential creation for ${user.email}:`, error);
+        }
         
         const token = jwt.sign({ userId: user.id, email: user.email }, process.env.JWT_SECRET || 'dev-secret', { expiresIn: '24h' });
 
@@ -183,11 +193,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Create n8n credential for the new user
-      await createN8nCredential({
-        id: user.id,
-        name: user.name,
-        email: user.email
-      });
+      console.log(`📝 [SIGNUP] Creating n8n credential for new user: ${user.email}`);
+      try {
+        const n8nResult = await createN8nCredential({
+          id: user.id,
+          name: user.name,
+          email: user.email
+        });
+        if (n8nResult) {
+          console.log(`✅ [SIGNUP] n8n credential created successfully for ${user.email}`);
+        } else {
+          console.log(`⚠️ [SIGNUP] n8n credential creation returned null for ${user.email}`);
+        }
+      } catch (error) {
+        console.error(`❌ [SIGNUP] Error during n8n credential creation for ${user.email}:`, error);
+      }
 
       // Generate JWT token
       const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: '24h' });

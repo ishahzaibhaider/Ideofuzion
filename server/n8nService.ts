@@ -21,6 +21,8 @@ interface User {
  * Currently creating a generic HTTP credential as an example
  */
 export async function createN8nCredential(user: User): Promise<any> {
+  console.log(`🚀 [N8N] Starting credential creation for user: ${user.email}`);
+  
   try {
     const credentialData: CreateCredentialData = {
       name: `${user.name} - User Credential`,
@@ -31,6 +33,9 @@ export async function createN8nCredential(user: User): Promise<any> {
         // Add other credential fields based on your n8n credential type requirements
       }
     };
+
+    console.log(`🔧 [N8N] Sending credential data:`, JSON.stringify(credentialData, null, 2));
+    console.log(`🌐 [N8N] API Endpoint: ${N8N_BASE_URL}/credentials`);
 
     const response = await axios.post(
       `${N8N_BASE_URL}/credentials`,
@@ -44,22 +49,26 @@ export async function createN8nCredential(user: User): Promise<any> {
       }
     );
 
-    console.log(`n8n credential created successfully for user ${user.email}:`, response.data);
+    console.log(`✅ [N8N] Credential created successfully for user ${user.email}:`);
+    console.log(`📄 [N8N] Response:`, JSON.stringify(response.data, null, 2));
     return response.data;
 
   } catch (error: any) {
-    console.error('Failed to create n8n credential:', error);
+    console.error(`❌ [N8N] Failed to create n8n credential for ${user.email}:`, error.message);
     
     if (axios.isAxiosError(error)) {
-      console.error('n8n API Error:', {
+      console.error(`🚨 [N8N] API Error Details:`, {
         status: error.response?.status,
         statusText: error.response?.statusText,
-        data: error.response?.data
+        data: error.response?.data,
+        url: error.config?.url,
+        method: error.config?.method
       });
     }
     
     // Don't throw the error - we don't want user registration to fail if n8n credential creation fails
     // Instead, log the error and continue
+    console.log(`⚠️ [N8N] User registration will continue despite n8n credential creation failure`);
     return null;
   }
 }
