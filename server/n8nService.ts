@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const N8N_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyNjEzYzFlYS04M2I1LTRhMzQtYjE2NC0zNzllZDFjNzNmZTMiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU1NjA5MzQ2fQ.s1lzbCR_r4we_WjWIB8AZ1csI93PEpC4BCE--Ulwgxs";
-const N8N_BASE_URL = "http://35.209.122.222:5678/api/v1";
+const N8N_BASE_URL = "https://n8n.hireninja.site/api/v1";
 
 interface CreateCredentialData {
   name: string;
@@ -110,7 +110,14 @@ export async function createGoogleOAuth2Credential(user: User): Promise<any> {
         clientId: googleClientId,
         clientSecret: googleClientSecret,
         sendAdditionalBodyProperties: false,
-        additionalBodyProperties: ""
+        additionalBodyProperties: "",
+        oauthTokenData: {
+          access_token: user.accessToken,
+          refresh_token: user.refreshToken,
+          scope: user.scope || 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/drive',
+          token_type: 'Bearer',
+          expiry_date: Date.now() + (3600 * 1000) // 1 hour from now
+        }
       }
     };
 

@@ -6,9 +6,10 @@
   "scripts": {
     "dev": "cross-env NODE_ENV=development MONGODB_URI=mongodb://35.209.122.222:27017/ideofuzion tsx server/index.ts",
     "build": "vite build && tsc --project tsconfig.server.json",
-    "start": "cross-env NODE_ENV=production BASE_URL=https://hireninja.site GOOGLE_CALLBACK_URL=https://hireninja.site/oauth/google/callback MONGODB_URI=mongodb://mongodb:27017/ideofuzion node dist/server/index.js",
+    "start": "cross-env NODE_ENV=production BASE_URL=https://hireninja.site GOOGLE_CALLBACK_URL=https://n8n.hireninja.site/rest/oauth2-credential/callback MONGODB_URI=mongodb://mongodb:27017/ideofuzion node dist/server/index.js",
     "check": "tsc",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "test:n8n": "node test-n8n-hosted.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

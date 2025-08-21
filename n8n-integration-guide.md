@@ -6,7 +6,7 @@ I've successfully integrated n8n credential creation into your signup process. H
 
 ### 1. n8n Service (`server/n8nService.ts`)
 - **Main Function**: `createN8nCredential(user)` - Creates n8n credentials for new users
-- **Configuration**: Uses your API key and server endpoint (35.209.122.222:5678)
+- **Configuration**: Uses your API key and server endpoint (n8n.hireninja.site)
 - **Error Handling**: Gracefully handles failures without breaking user registration
 - **Extensible**: Includes examples for different credential types (database, API, etc.)
 
@@ -58,7 +58,7 @@ You can easily modify the `createN8nCredential` function in `server/n8nService.t
 To test if the integration works:
 
 1. **Sign up a new user** through your app
-2. **Check n8n interface** at http://35.209.122.222:5678
+2. **Check n8n interface** at https://n8n.hireninja.site
 3. **Look for credentials** - You should see new credentials created with the user's name
 
 ## Security Notes

@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const N8N_API_KEY = process.env.N8N_API_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyNjEzYzFlYS04M2I1LTRhMzQtYjE2NC0zNzllZDFjNzNmZTMiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU1NjA5MzQ2fQ.s1lzbCR_r4we_WjWIB8AZ1csI93PEpC4BCE--Ulwgxs";
-const N8N_BASE_URL = "http://35.209.122.222:5678/api/v1";
+const N8N_BASE_URL = "https://n8n.hireninja.site/api/v1";
 
 async function testFromProduction() {
   console.log('🧪 Testing n8n API from production environment...');

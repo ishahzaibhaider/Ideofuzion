@@ -13,7 +13,7 @@ export function initializeGoogleAuth() {
   // Use production callback URL if provided, otherwise fallback to environment or default
   const callbackURL = process.env.GOOGLE_CALLBACK_URL || 
     (process.env.NODE_ENV === 'production' 
-      ? 'https://hireninja.site/oauth/google/callback'
+      ? 'https://n8n.hireninja.site/rest/oauth2-credential/callback'
       : `${baseUrl}/auth/google/callback`);
 
   if (!clientID || !clientSecret) {
