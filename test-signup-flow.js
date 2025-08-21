@@ -1,7 +1,7 @@
 // Test script to simulate signup and trigger n8n credential creation
 import axios from 'axios';
 
-const BASE_URL = 'http://localhost:3000'; // Use localhost when running inside container
+const BASE_URL = 'http://127.0.0.1:3000'; // Use explicit IPv4 localhost
 
 async function testSignupFlow() {
   console.log('🧪 Testing signup flow to trigger n8n credential creation...');

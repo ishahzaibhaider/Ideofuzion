@@ -1,7 +1,7 @@
 // Simple test to check if signup endpoint is accessible
 import axios from 'axios';
 
-const BASE_URL = 'http://localhost:3000'; // Use localhost when running inside container
+const BASE_URL = 'http://127.0.0.1:3000'; // Use explicit IPv4 localhost
 
 async function testSignupEndpoint() {
   console.log('🧪 Testing signup endpoint accessibility...');
