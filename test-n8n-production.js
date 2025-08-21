@@ -10,7 +10,7 @@ async function testFromProduction() {
   console.log('🌐 n8n URL:', N8N_BASE_URL);
   
   try {
-    // Test basic connectivity
+ 
     console.log('\n1️⃣ Testing basic connectivity...');
     const response = await axios.get(`${N8N_BASE_URL}/workflows`, {
       headers: {
