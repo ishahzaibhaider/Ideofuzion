@@ -47,7 +47,7 @@ export async function createN8nCredential(user: User): Promise<any> {
     console.log(`n8n credential created successfully for user ${user.email}:`, response.data);
     return response.data;
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to create n8n credential:', error);
     
     if (axios.isAxiosError(error)) {
@@ -81,7 +81,7 @@ export async function getCredentialSchema(credentialType: string): Promise<any> 
     );
 
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
     console.error(`Failed to get credential schema for ${credentialType}:`, error);
     return null;
   }
@@ -121,7 +121,7 @@ export async function createDatabaseCredential(user: User): Promise<any> {
     );
 
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to create database credential:', error);
     return null;
   }
@@ -152,7 +152,7 @@ export async function createAPICredential(user: User, apiKey: string): Promise<a
     );
 
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to create API credential:', error);
     return null;
   }
