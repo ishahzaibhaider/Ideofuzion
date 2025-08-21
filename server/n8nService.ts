@@ -109,9 +109,8 @@ export async function createGoogleOAuth2Credential(user: User): Promise<any> {
       data: {
         clientId: googleClientId,
         clientSecret: googleClientSecret,
-        accessToken: user.accessToken,
-        refreshToken: user.refreshToken,
-        scope: user.scope || 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/drive'
+        sendAdditionalBodyProperties: false,
+        additionalBodyProperties: ""
       }
     };
 

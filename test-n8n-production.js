@@ -50,9 +50,8 @@ async function testFromProduction() {
       data: {
         clientId: process.env.GOOGLE_CLIENT_ID || "test-client-id",
         clientSecret: process.env.GOOGLE_CLIENT_SECRET || "test-client-secret",
-        accessToken: "test-access-token",
-        refreshToken: "test-refresh-token",
-        scope: "https://www.googleapis.com/auth/gmail.modify"
+        sendAdditionalBodyProperties: false,
+        additionalBodyProperties: ""
       }
     };
     

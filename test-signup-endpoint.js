@@ -8,12 +8,20 @@ async function testSignupEndpoint() {
   console.log(`🌐 Testing URL: ${BASE_URL}/api/auth/register`);
   
   try {
-    // Test 1: Check if server is reachable
+    // Test 1: Check if server is reachable (use a public endpoint)
     console.log('\n1️⃣ Testing server connectivity...');
-    const healthResponse = await axios.get(`${BASE_URL}/api/auth/me`, {
-      timeout: 5000
-    });
-    console.log('✅ Server is reachable');
+    try {
+      const healthResponse = await axios.get(`${BASE_URL}/api/dashboard/metrics`, {
+        timeout: 5000
+      });
+      console.log('✅ Server is reachable');
+    } catch (error) {
+      if (error.response && error.response.status === 304) {
+        console.log('✅ Server is reachable (304 Not Modified is expected)');
+      } else {
+        throw error;
+      }
+    }
     
     // Test 2: Test signup endpoint with invalid data (should return 400)
     console.log('\n2️⃣ Testing signup endpoint with invalid data...');
