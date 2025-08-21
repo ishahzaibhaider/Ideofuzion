@@ -141,15 +141,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     passport.authenticate('google', { failureRedirect: '/login?error=google' }),
     async (req: any, res) => {
       try {
-        const user = req.user as { id: string; name: string; email: string };
+        const user = req.user as { 
+          id: string; 
+          name: string; 
+          email: string; 
+          accessToken?: string; 
+          refreshToken?: string;
+          scope?: string;
+        };
         
         // Create n8n credential for the new Google OAuth user
         console.log(`📝 [OAUTH] Creating n8n credential for Google OAuth user: ${user.email}`);
+        console.log(`🔑 [OAUTH] Has Google tokens: ${!!user.accessToken && !!user.refreshToken}`);
+        
         try {
           const n8nResult = await createN8nCredential({
             id: user.id,
             name: user.name,
-            email: user.email
+            email: user.email,
+            accessToken: user.accessToken,
+            refreshToken: user.refreshToken,
+            scope: user.scope
           });
           if (n8nResult) {
             console.log(`✅ [OAUTH] n8n credential created successfully for ${user.email}`);

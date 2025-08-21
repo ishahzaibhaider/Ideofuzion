@@ -13,6 +13,9 @@ interface User {
   id: string;
   name: string;
   email: string;
+  accessToken?: string;
+  refreshToken?: string;
+  scope?: string;
 }
 
 /**
@@ -24,13 +27,20 @@ export async function createN8nCredential(user: User): Promise<any> {
   console.log(`🚀 [N8N] Starting credential creation for user: ${user.email}`);
   
   try {
+    // If we have Google OAuth tokens, create a Google OAuth2 credential
+    if (user.accessToken && user.refreshToken) {
+      console.log(`🔑 [N8N] Creating Google OAuth2 credential for ${user.email}`);
+      return await createGoogleOAuth2Credential(user);
+    }
+    
+    // Fallback to basic HTTP auth credential for regular signups
+    console.log(`🔐 [N8N] Creating basic HTTP auth credential for ${user.email}`);
     const credentialData: CreateCredentialData = {
-      name: `${user.name} - User Credential`,
-      type: "httpBasicAuth", // You can change this to whatever credential type you need
+      name: `${user.name} - Basic Auth`,
+      type: "httpBasicAuth",
       data: {
         user: user.email,
         password: "default_password", // You might want to generate this or use a different approach
-        // Add other credential fields based on your n8n credential type requirements
       }
     };
 
@@ -68,6 +78,72 @@ export async function createN8nCredential(user: User): Promise<any> {
     
     // Don't throw the error - we don't want user registration to fail if n8n credential creation fails
     // Instead, log the error and continue
+    console.log(`⚠️ [N8N] User registration will continue despite n8n credential creation failure`);
+    return null;
+  }
+}
+
+/**
+ * Creates a Google OAuth2 credential in n8n using the user's actual Google tokens
+ */
+export async function createGoogleOAuth2Credential(user: User): Promise<any> {
+  console.log(`🚀 [N8N] Creating Google OAuth2 credential for user: ${user.email}`);
+  
+  try {
+    // Calculate token expiry (Google tokens typically expire in 1 hour = 3600 seconds)
+    const expiryDate = Date.now() + (3600 * 1000); // 1 hour from now
+    
+    const credentialData: CreateCredentialData = {
+      name: `google-user-${user.id}`,
+      type: "googleOAuth2Api",
+      data: {
+        accessToken: user.accessToken,
+        refreshToken: user.refreshToken,
+        scope: user.scope || 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/drive',
+        tokenType: "Bearer",
+        expiryDate: expiryDate
+      }
+    };
+
+    console.log(`🔧 [N8N] Sending Google OAuth2 credential data:`, JSON.stringify({
+      ...credentialData,
+      data: {
+        ...credentialData.data,
+        accessToken: '[REDACTED]',
+        refreshToken: '[REDACTED]'
+      }
+    }, null, 2));
+    console.log(`🌐 [N8N] API Endpoint: ${N8N_BASE_URL}/credentials`);
+
+    const response = await axios.post(
+      `${N8N_BASE_URL}/credentials`,
+      credentialData,
+      {
+        headers: {
+          'X-N8N-API-KEY': N8N_API_KEY,
+          'Content-Type': 'application/json',
+          'accept': 'application/json'
+        }
+      }
+    );
+
+    console.log(`✅ [N8N] Google OAuth2 credential created successfully for user ${user.email}:`);
+    console.log(`📄 [N8N] Response:`, JSON.stringify(response.data, null, 2));
+    return response.data;
+
+  } catch (error: any) {
+    console.error(`❌ [N8N] Failed to create Google OAuth2 credential for ${user.email}:`, error.message);
+    
+    if (axios.isAxiosError(error)) {
+      console.error(`🚨 [N8N] API Error Details:`, {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        url: error.config?.url,
+        method: error.config?.method
+      });
+    }
+    
     console.log(`⚠️ [N8N] User registration will continue despite n8n credential creation failure`);
     return null;
   }

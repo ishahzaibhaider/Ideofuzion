@@ -55,7 +55,15 @@ export function initializeGoogleAuth() {
             user = await storage.createUser({ name, email, password: randomPassword });
           }
 
-          return done(null, { id: user.id, name: user.name, email: user.email });
+          // Pass tokens along with user data for n8n credential creation
+          return done(null, { 
+            id: user.id, 
+            name: user.name, 
+            email: user.email,
+            accessToken,
+            refreshToken,
+            scope: 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/drive'
+          });
         } catch (err) {
           return done(err as Error);
         }
