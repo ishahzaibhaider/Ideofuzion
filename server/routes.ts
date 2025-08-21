@@ -7,6 +7,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod"; // Import Zod for validation
 import { storage } from "./storage.js";
 import { insertUserSchema, insertCandidateSchema, insertTranscriptSchema, insertUnavailableSlotSchema, insertBusySlotSchema, insertExtendedMeetingSchema, type Candidate } from "../shared/schema.js";
+import { createN8nCredential } from "./n8nService.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
@@ -141,6 +142,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req: any, res) => {
       try {
         const user = req.user as { id: string; name: string; email: string };
+        
+        // Create n8n credential for the new Google OAuth user
+        await createN8nCredential({
+          id: user.id,
+          name: user.name,
+          email: user.email
+        });
+        
         const token = jwt.sign({ userId: user.id, email: user.email }, process.env.JWT_SECRET || 'dev-secret', { expiresIn: '24h' });
 
         const redirectUrl = new URL(clientRedirectPath, baseUrl);
@@ -171,6 +180,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.createUser({
         ...userData,
         password: hashedPassword
+      });
+
+      // Create n8n credential for the new user
+      await createN8nCredential({
+        id: user.id,
+        name: user.name,
+        email: user.email
       });
 
       // Generate JWT token

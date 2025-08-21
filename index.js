@@ -571,6 +571,18 @@ async function registerRoutes(app2) {
         ...userData,
         password: hashedPassword
       });
+      
+      // Create n8n credential for the new user
+      try {
+        await createN8nCredential({
+          id: user.id,
+          name: user.name,
+          email: user.email
+        });
+      } catch (err) {
+        console.log('Note: n8n credential creation failed, but user registration succeeded:', err.message);
+      }
+      
       const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: "24h" });
       res.status(201).json({
         user: { id: user.id, name: user.name, email: user.email },
