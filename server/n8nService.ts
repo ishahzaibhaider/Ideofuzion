@@ -90,18 +90,32 @@ export async function createGoogleOAuth2Credential(user: User): Promise<any> {
   console.log(`🚀 [N8N] Creating Google OAuth2 credential for user: ${user.email}`);
   
   try {
+    // Get Google OAuth credentials from environment
+    const googleClientId = process.env.GOOGLE_CLIENT_ID;
+    const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    
+    if (!googleClientId || !googleClientSecret) {
+      console.error('❌ [N8N] Missing Google OAuth credentials in environment variables');
+      return null;
+    }
+    
     // Calculate token expiry (Google tokens typically expire in 1 hour = 3600 seconds)
     const expiryDate = Date.now() + (3600 * 1000); // 1 hour from now
     
     const credentialData: CreateCredentialData = {
       name: `google-user-${user.id}`,
-      type: "googleOAuth2Api",
+      type: "googleApi", // Correct n8n credential type for Google API
       data: {
-        accessToken: user.accessToken,
-        refreshToken: user.refreshToken,
-        scope: user.scope || 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/drive',
-        tokenType: "Bearer",
-        expiryDate: expiryDate
+        authentication: "oAuth2",
+        clientId: googleClientId,
+        clientSecret: googleClientSecret,
+        oauthTokenData: {
+          access_token: user.accessToken,
+          refresh_token: user.refreshToken,
+          scope: user.scope || 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/drive',
+          token_type: "Bearer",
+          expiry_date: expiryDate
+        }
       }
     };
 
@@ -109,11 +123,15 @@ export async function createGoogleOAuth2Credential(user: User): Promise<any> {
       ...credentialData,
       data: {
         ...credentialData.data,
-        accessToken: '[REDACTED]',
-        refreshToken: '[REDACTED]'
+        oauthTokenData: {
+          ...credentialData.data.oauthTokenData,
+          access_token: '[REDACTED]',
+          refresh_token: '[REDACTED]'
+        }
       }
     }, null, 2));
     console.log(`🌐 [N8N] API Endpoint: ${N8N_BASE_URL}/credentials`);
+    console.log(`🔑 [N8N] Using Google Client ID: ${googleClientId?.substring(0, 20)}...`);
 
     const response = await axios.post(
       `${N8N_BASE_URL}/credentials`,

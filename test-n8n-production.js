@@ -23,14 +23,41 @@ async function testFromProduction() {
     console.log('✅ n8n API connection successful!');
     console.log(`📊 Found ${response.data.data?.length || 0} workflows`);
     
+    // Check available credential types
+    console.log('\n1️⃣5️⃣ Checking available credential types...');
+    const credentialTypes = ['googleApi', 'googleOAuth2Api', 'httpBasicAuth', 'httpHeaderAuth'];
+    
+    for (const type of credentialTypes) {
+      try {
+        const schemaResponse = await axios.get(`${N8N_BASE_URL}/credentials/schema/${type}`, {
+          headers: {
+            'X-N8N-API-KEY': N8N_API_KEY,
+            'accept': 'application/json'
+          },
+          timeout: 5000
+        });
+        console.log(`✅ ${type} credential type is available`);
+      } catch (error) {
+        console.log(`❌ ${type} credential type not available (${error.response?.status || error.message})`);
+      }
+    }
+    
     // Test credential creation
     console.log('\n2️⃣ Testing credential creation...');
     const testCredential = {
       name: `Production Test - ${Date.now()}`,
-      type: "httpBasicAuth",
+      type: "googleApi",
       data: {
-        user: "test@production.com",
-        password: "test123"
+        authentication: "oAuth2",
+        clientId: process.env.GOOGLE_CLIENT_ID || "test-client-id",
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET || "test-client-secret",
+        oauthTokenData: {
+          access_token: "test-access-token",
+          refresh_token: "test-refresh-token",
+          scope: "https://www.googleapis.com/auth/gmail.modify",
+          token_type: "Bearer",
+          expiry_date: Date.now() + (3600 * 1000)
+        }
       }
     };
     
