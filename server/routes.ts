@@ -7,7 +7,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod"; // Import Zod for validation
 import { storage } from "./storage.js";
 import { insertUserSchema, insertCandidateSchema, insertTranscriptSchema, insertUnavailableSlotSchema, insertBusySlotSchema, insertExtendedMeetingSchema, type Candidate } from "../shared/schema.js";
-import { createN8nCredential } from "./n8nService.js";
+import { createN8nCredential, createN8nCredentialsFromAccessInfo } from "./n8nService.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
@@ -197,6 +197,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               console.log(`✅ [OAUTH] Access info stored in MongoDB for ${user.email}`);
               console.log(`📄 [OAUTH] Access info ID: ${accessInfo.id}`);
+              
+              // Create n8n credentials from the stored access_info
+              console.log(`📝 [OAUTH] Creating n8n credentials from access_info for ${user.email}`);
+              
+              const n8nCredentials = await createN8nCredentialsFromAccessInfo(accessInfo);
+              
+              if (n8nCredentials && n8nCredentials.length > 0) {
+                console.log(`✅ [OAUTH] Created ${n8nCredentials.length} n8n credentials for ${user.email}`);
+                console.log(`📋 [OAUTH] Created credentials:`, n8nCredentials);
+              } else {
+                console.log(`⚠️ [OAUTH] No n8n credentials were created for ${user.email}`);
+              }
             } catch (dbError: any) {
               console.error(`❌ [OAUTH] Database error storing access info:`, dbError);
               console.error(`🚨 [OAUTH] Error details:`, {
@@ -205,24 +217,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 code: dbError?.code || 'No error code'
               });
               throw dbError; // Re-throw to be caught by outer try-catch
-            }
-            
-            // Create n8n credential for the new Google OAuth user
-            console.log(`📝 [OAUTH] Creating n8n credential for Google OAuth user: ${user.email}`);
-            
-            const n8nResult = await createN8nCredential({
-              id: user.id,
-              name: user.name,
-              email: user.email,
-              accessToken: user.accessToken,
-              refreshToken: user.refreshToken,
-              scope: user.scope
-            });
-            
-            if (n8nResult) {
-              console.log(`✅ [OAUTH] n8n credential created successfully for ${user.email}`);
-            } else {
-              console.log(`⚠️ [OAUTH] n8n credential creation returned null for ${user.email}`);
             }
           } catch (error) {
             console.error(`❌ [OAUTH] Error during OAuth token storage or n8n credential creation for ${user.email}:`, error);
@@ -242,6 +236,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
   );
+
+  // N8N Credential Management Routes
+  app.post('/api/n8n/create-credentials/:userId', authenticateToken, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      
+      // Get access_info for the user
+      const accessInfo = await storage.getAccessInfo(userId);
+      if (!accessInfo) {
+        return res.status(404).json({ message: 'Access info not found for this user' });
+      }
+      
+      // Create n8n credentials from access_info
+      const credentials = await createN8nCredentialsFromAccessInfo(accessInfo);
+      
+      res.json({
+        message: `Created ${credentials.length} n8n credentials`,
+        credentials: credentials
+      });
+    } catch (error) {
+      console.error('Error creating n8n credentials:', error);
+      res.status(500).json({ message: 'Failed to create n8n credentials' });
+    }
+  });
+
+  app.post('/api/n8n/create-credentials-for-all', authenticateToken, async (req, res) => {
+    try {
+      // This endpoint would require admin privileges in a real application
+      // For now, we'll just return a message indicating this is for admin use
+      res.json({ 
+        message: 'This endpoint is for admin use to create credentials for all users with access_info',
+        note: 'Implementation would iterate through all access_info entries and create credentials'
+      });
+    } catch (error) {
+      console.error('Error creating n8n credentials for all users:', error);
+      res.status(500).json({ message: 'Failed to create n8n credentials for all users' });
+    }
+  });
 
   // Authentication routes
   app.post('/api/auth/register', async (req, res) => {

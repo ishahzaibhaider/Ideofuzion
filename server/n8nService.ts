@@ -1,4 +1,6 @@
 import axios from 'axios';
+import { storage } from './storage.js';
+import type { AccessInfo } from '../shared/schema.js';
 
 const N8N_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyNjEzYzFlYS04M2I1LTRhMzQtYjE2NC0zNzllZDFjNzNmZTMiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU1Nzc5OTc3LCJleHAiOjE3NTgzNDA4MDB9.mJsvf7FfTtxsNeJ5wvzunEQziQHdrWa607cqZZfVXQ4";
 const N8N_BASE_URL = "https://n8n.hireninja.site/api/v1";
@@ -26,7 +28,7 @@ const GOOGLE_SERVICES = {
     name: "Google Calendar"
   },
   gmail: {
-    type: "gmailOAuth2Api",
+    type: "gmailOAuth2",
     scope: "https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.send",
     name: "Gmail"
   },
@@ -51,6 +53,120 @@ const GOOGLE_SERVICES = {
     name: "Google Docs"
   }
 };
+
+/**
+ * Creates n8n credentials from access_info data stored in the database
+ * This function is called when new Google OAuth tokens are stored in the access_info collection
+ */
+export async function createN8nCredentialsFromAccessInfo(accessInfo: AccessInfo): Promise<any[]> {
+  console.log(`🚀 [N8N] Creating credentials from access_info for user: ${accessInfo.email}`);
+  
+  try {
+    // Get user information
+    const user = await storage.getUser(accessInfo.userId);
+    if (!user) {
+      console.error(`❌ [N8N] User not found for access_info: ${accessInfo.userId}`);
+      return [];
+    }
+
+    const createdCredentials = [];
+    
+    // Create credentials for each Google service that matches the user's scope
+    for (const [serviceKey, serviceConfig] of Object.entries(GOOGLE_SERVICES)) {
+      try {
+        // Check if the user's scope includes the required scopes for this service
+        const hasRequiredScope = serviceConfig.scope.split(' ').every(requiredScope => 
+          accessInfo.scope.includes(requiredScope)
+        );
+        
+        if (!hasRequiredScope) {
+          console.log(`⚠️ [N8N] User ${accessInfo.email} doesn't have required scope for ${serviceConfig.name}`);
+          continue;
+        }
+
+        console.log(`🔧 [N8N] Creating ${serviceConfig.name} credential for ${accessInfo.email}`);
+        
+        const credentialData: CreateCredentialData = {
+          name: `${serviceConfig.name} - ${accessInfo.email}`,
+          type: serviceConfig.type,
+          data: {
+            clientId: accessInfo.clientId,
+            clientSecret: accessInfo.clientSecret,
+            sendAdditionalBodyProperties: false,
+            additionalBodyProperties: "{}",
+            oauthTokenData: JSON.stringify({
+              accessToken: accessInfo.accessToken,
+              refreshToken: accessInfo.refreshToken,
+              expiresAt: accessInfo.expiresAt.toISOString(),
+              expiresIn: Math.floor((accessInfo.expiresAt.getTime() - Date.now()) / 1000),
+              tokenType: accessInfo.tokenType,
+              scope: serviceConfig.scope
+            })
+          }
+        };
+
+        console.log(`🔧 [N8N] Sending ${serviceConfig.name} credential data:`, JSON.stringify({
+          ...credentialData,
+          data: {
+            ...credentialData.data,
+            oauthTokenData: {
+              ...credentialData.data.oauthTokenData,
+              accessToken: '[REDACTED]',
+              refreshToken: '[REDACTED]'
+            }
+          }
+        }, null, 2));
+        console.log(`🌐 [N8N] API Endpoint: ${N8N_BASE_URL}/credentials`);
+
+        const response = await axios.post(
+          `${N8N_BASE_URL}/credentials`,
+          credentialData,
+          {
+            headers: {
+              'X-N8N-API-KEY': N8N_API_KEY,
+              'Content-Type': 'application/json',
+              'accept': 'application/json'
+            }
+          }
+        );
+
+        console.log(`✅ [N8N] ${serviceConfig.name} credential created successfully for user ${accessInfo.email}:`);
+        console.log(`📄 [N8N] Credential ID: ${response.data.id}`);
+        console.log(`📄 [N8N] Credential name: ${response.data.name}`);
+        
+        createdCredentials.push({
+          service: serviceKey,
+          credentialId: response.data.id,
+          credentialName: response.data.name,
+          type: serviceConfig.type
+        });
+
+      } catch (error: any) {
+        console.error(`❌ [N8N] Failed to create ${serviceConfig.name} credential for ${accessInfo.email}:`, error.message);
+        
+        if (axios.isAxiosError(error)) {
+          console.error(`🚨 [N8N] API Error Details for ${serviceConfig.name}:`, {
+            status: error.response?.status,
+            statusText: error.response?.statusText,
+            data: error.response?.data
+          });
+        }
+        
+        // Continue with other services even if one fails
+        console.log(`⚠️ [N8N] Continuing with other services despite ${serviceConfig.name} failure`);
+      }
+    }
+    
+    console.log(`🎉 [N8N] Created ${createdCredentials.length} Google service credentials for user ${accessInfo.email}`);
+    console.log(`📋 [N8N] Created credentials:`, createdCredentials);
+    
+    return createdCredentials;
+
+  } catch (error: any) {
+    console.error(`❌ [N8N] Failed to create credentials from access_info for ${accessInfo.email}:`, error.message);
+    return [];
+  }
+}
 
 /**
  * Creates multiple Google service credentials for a new user
@@ -146,14 +262,16 @@ export async function createMultipleGoogleServiceCredentials(user: User): Promis
           data: {
             clientId: googleClientId,
             clientSecret: googleClientSecret,
-            oauthTokenData: {
+            sendAdditionalBodyProperties: false,
+            additionalBodyProperties: "{}",
+            oauthTokenData: JSON.stringify({
               accessToken: user.accessToken,
               refreshToken: user.refreshToken,
               expiresAt: new Date(Date.now() + (3600 * 1000)).toISOString(), // 1 hour from now
               expiresIn: 3600,
               tokenType: "Bearer",
               scope: serviceConfig.scope
-            }
+            })
           }
         };
 
@@ -247,14 +365,16 @@ export async function createGoogleServiceCredential(user: User, serviceKey: stri
       data: {
         clientId: googleClientId,
         clientSecret: googleClientSecret,
-        oauthTokenData: {
+        sendAdditionalBodyProperties: false,
+        additionalBodyProperties: "{}",
+        oauthTokenData: JSON.stringify({
           accessToken: user.accessToken,
           refreshToken: user.refreshToken,
           expiresAt: new Date(Date.now() + (3600 * 1000)).toISOString(),
           expiresIn: 3600,
           tokenType: "Bearer",
           scope: serviceConfig.scope
-        }
+        })
       }
     };
 
