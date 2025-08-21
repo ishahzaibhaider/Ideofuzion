@@ -121,12 +121,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })
   );
 
-  // Debug route to catch any OAuth callback attempts
-  app.get('/oauth/google/callback', (req, res) => {
-    console.log(`🚨 [DEBUG] OLD CALLBACK ROUTE HIT: /oauth/google/callback`);
-    console.log(`🚨 [DEBUG] This route should not be called anymore`);
-    res.redirect('/login?error=wrong_callback');
-  });
+  // REMOVED: Debug route for old callback URL
 
   app.get(
     '/auth/google/callback',

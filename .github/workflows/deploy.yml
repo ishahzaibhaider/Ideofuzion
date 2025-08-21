@@ -57,7 +57,7 @@ jobs:
               -e BASE_URL="https://hireninja.site" \
               -e GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}" \
               -e GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
-              -e GOOGLE_CALLBACK_URL="https://hireninja.site/oauth/google/callback" \
+              -e GOOGLE_CALLBACK_URL="https://hireninja.site/auth/google/callback" \
               -e OAUTH_SUCCESS_REDIRECT="/login" \
               -e SESSION_SECRET="${{ secrets.SESSION_SECRET }}" \
               -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
