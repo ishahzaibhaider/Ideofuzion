@@ -18,19 +18,52 @@ interface User {
   scope?: string;
 }
 
+// Google service configurations with their specific scopes and credential types
+const GOOGLE_SERVICES = {
+  calendar: {
+    type: "googleCalendarOAuth2Api",
+    scope: "https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events",
+    name: "Google Calendar"
+  },
+  gmail: {
+    type: "gmailOAuth2Api",
+    scope: "https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.send",
+    name: "Gmail"
+  },
+  contacts: {
+    type: "googleContactsOAuth2Api",
+    scope: "https://www.googleapis.com/auth/contacts https://www.googleapis.com/auth/contacts.readonly",
+    name: "Google Contacts"
+  },
+  drive: {
+    type: "googleDriveOAuth2Api",
+    scope: "https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/drive.file",
+    name: "Google Drive"
+  },
+  sheets: {
+    type: "googleSheetsOAuth2Api",
+    scope: "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/spreadsheets.readonly",
+    name: "Google Sheets"
+  },
+  docs: {
+    type: "googleDocsOAuth2Api",
+    scope: "https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/documents.readonly",
+    name: "Google Docs"
+  }
+};
+
 /**
- * Creates an n8n credential for a new user
- * This can be customized based on what type of credential you want to create
- * Currently creating a generic HTTP credential as an example
+ * Creates multiple Google service credentials for a new user
+ * This creates credentials for Calendar, Gmail, Contacts, Drive, Sheets, and Docs
  */
 export async function createN8nCredential(user: User): Promise<any> {
   console.log(`🚀 [N8N] Starting credential creation for user: ${user.email}`);
   
   try {
-    // If we have Google OAuth tokens, create a Google OAuth2 credential
+    // If we have Google OAuth tokens, create multiple Google service credentials
     if (user.accessToken && user.refreshToken) {
-      console.log(`🔑 [N8N] Creating Google OAuth2 credential for ${user.email}`);
-      return await createGoogleOAuth2Credential(user);
+      console.log(`🔑 [N8N] Creating Google service credentials for ${user.email}`);
+      return await createMultipleGoogleServiceCredentials(user);
     }
     
     // Fallback to basic HTTP auth credential for regular signups
@@ -84,10 +117,11 @@ export async function createN8nCredential(user: User): Promise<any> {
 }
 
 /**
- * Creates a Google OAuth2 credential in n8n using the user's actual Google tokens
+ * Creates multiple Google service credentials for a user
+ * Based on the examples provided, this creates credentials for Calendar, Gmail, Contacts, Drive, Sheets, and Docs
  */
-export async function createGoogleOAuth2Credential(user: User): Promise<any> {
-  console.log(`🚀 [N8N] Creating Google OAuth2 credential for user: ${user.email}`);
+export async function createMultipleGoogleServiceCredentials(user: User): Promise<any[]> {
+  console.log(`🚀 [N8N] Creating multiple Google service credentials for user: ${user.email}`);
   
   try {
     // Get Google OAuth credentials from environment
@@ -96,44 +130,133 @@ export async function createGoogleOAuth2Credential(user: User): Promise<any> {
     
     if (!googleClientId || !googleClientSecret) {
       console.error('❌ [N8N] Missing Google OAuth credentials in environment variables');
+      return [];
+    }
+    
+    const createdCredentials = [];
+    
+    // Create credentials for each Google service
+    for (const [serviceKey, serviceConfig] of Object.entries(GOOGLE_SERVICES)) {
+      try {
+        console.log(`🔧 [N8N] Creating ${serviceConfig.name} credential for ${user.email}`);
+        
+        const credentialData: CreateCredentialData = {
+          name: `${serviceConfig.name} - ${user.email}`,
+          type: serviceConfig.type,
+          data: {
+            clientId: googleClientId,
+            clientSecret: googleClientSecret,
+            oauthTokenData: {
+              accessToken: user.accessToken,
+              refreshToken: user.refreshToken,
+              expiresAt: new Date(Date.now() + (3600 * 1000)).toISOString(), // 1 hour from now
+              expiresIn: 3600,
+              tokenType: "Bearer",
+              scope: serviceConfig.scope
+            }
+          }
+        };
+
+        console.log(`🔧 [N8N] Sending ${serviceConfig.name} credential data:`, JSON.stringify({
+          ...credentialData,
+          data: {
+            ...credentialData.data,
+            oauthTokenData: {
+              ...credentialData.data.oauthTokenData,
+              accessToken: '[REDACTED]',
+              refreshToken: '[REDACTED]'
+            }
+          }
+        }, null, 2));
+        console.log(`🌐 [N8N] API Endpoint: ${N8N_BASE_URL}/credentials`);
+
+        const response = await axios.post(
+          `${N8N_BASE_URL}/credentials`,
+          credentialData,
+          {
+            headers: {
+              'X-N8N-API-KEY': N8N_API_KEY,
+              'Content-Type': 'application/json',
+              'accept': 'application/json'
+            }
+          }
+        );
+
+        console.log(`✅ [N8N] ${serviceConfig.name} credential created successfully for user ${user.email}:`);
+        console.log(`📄 [N8N] Credential ID: ${response.data.id}`);
+        console.log(`📄 [N8N] Credential name: ${response.data.name}`);
+        
+        createdCredentials.push({
+          service: serviceKey,
+          credentialId: response.data.id,
+          credentialName: response.data.name,
+          type: serviceConfig.type
+        });
+
+      } catch (error: any) {
+        console.error(`❌ [N8N] Failed to create ${serviceConfig.name} credential for ${user.email}:`, error.message);
+        
+        if (axios.isAxiosError(error)) {
+          console.error(`🚨 [N8N] API Error Details for ${serviceConfig.name}:`, {
+            status: error.response?.status,
+            statusText: error.response?.statusText,
+            data: error.response?.data
+          });
+        }
+        
+        // Continue with other services even if one fails
+        console.log(`⚠️ [N8N] Continuing with other services despite ${serviceConfig.name} failure`);
+      }
+    }
+    
+    console.log(`🎉 [N8N] Created ${createdCredentials.length} Google service credentials for user ${user.email}`);
+    console.log(`📋 [N8N] Created credentials:`, createdCredentials);
+    
+    return createdCredentials;
+
+  } catch (error: any) {
+    console.error(`❌ [N8N] Failed to create Google service credentials for ${user.email}:`, error.message);
+    return [];
+  }
+}
+
+/**
+ * Creates a specific Google service credential (for individual service creation)
+ */
+export async function createGoogleServiceCredential(user: User, serviceKey: string): Promise<any> {
+  console.log(`🚀 [N8N] Creating ${serviceKey} credential for user: ${user.email}`);
+  
+  try {
+    const serviceConfig = GOOGLE_SERVICES[serviceKey as keyof typeof GOOGLE_SERVICES];
+    if (!serviceConfig) {
+      console.error(`❌ [N8N] Unknown service: ${serviceKey}`);
       return null;
     }
     
-    // Calculate token expiry (Google tokens typically expire in 1 hour = 3600 seconds)
-    const expiryDate = Date.now() + (3600 * 1000); // 1 hour from now
+    const googleClientId = process.env.GOOGLE_CLIENT_ID;
+    const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
     
-    // Create a proper Google OAuth2 credential based on n8n requirements
+    if (!googleClientId || !googleClientSecret) {
+      console.error('❌ [N8N] Missing Google OAuth credentials in environment variables');
+      return null;
+    }
+    
     const credentialData: CreateCredentialData = {
-      name: `google-user-${user.id}`,
-      type: "googleOAuth2Api", // Use the correct Google OAuth2 API type
+      name: `${serviceConfig.name} - ${user.email}`,
+      type: serviceConfig.type,
       data: {
         clientId: googleClientId,
         clientSecret: googleClientSecret,
-        sendAdditionalBodyProperties: false,
-        additionalBodyProperties: "",
         oauthTokenData: {
-          access_token: user.accessToken,
-          refresh_token: user.refreshToken,
-          scope: user.scope || 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/drive',
-          token_type: 'Bearer',
-          expiry_date: Date.now() + (3600 * 1000) // 1 hour from now
+          accessToken: user.accessToken,
+          refreshToken: user.refreshToken,
+          expiresAt: new Date(Date.now() + (3600 * 1000)).toISOString(),
+          expiresIn: 3600,
+          tokenType: "Bearer",
+          scope: serviceConfig.scope
         }
       }
     };
-
-    console.log(`🔧 [N8N] Sending Google OAuth2 credential data:`, JSON.stringify({
-      ...credentialData,
-      data: {
-        ...credentialData.data,
-        oauthTokenData: {
-          ...credentialData.data.oauthTokenData,
-          access_token: '[REDACTED]',
-          refresh_token: '[REDACTED]'
-        }
-      }
-    }, null, 2));
-    console.log(`🌐 [N8N] API Endpoint: ${N8N_BASE_URL}/credentials`);
-    console.log(`🔑 [N8N] Using Google Client ID: ${googleClientId?.substring(0, 20)}...`);
 
     const response = await axios.post(
       `${N8N_BASE_URL}/credentials`,
@@ -147,24 +270,11 @@ export async function createGoogleOAuth2Credential(user: User): Promise<any> {
       }
     );
 
-    console.log(`✅ [N8N] Google OAuth2 credential created successfully for user ${user.email}:`);
-    console.log(`📄 [N8N] Response:`, JSON.stringify(response.data, null, 2));
+    console.log(`✅ [N8N] ${serviceConfig.name} credential created successfully for user ${user.email}`);
     return response.data;
 
   } catch (error: any) {
-    console.error(`❌ [N8N] Failed to create Google OAuth2 credential for ${user.email}:`, error.message);
-    
-    if (axios.isAxiosError(error)) {
-      console.error(`🚨 [N8N] API Error Details:`, {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        url: error.config?.url,
-        method: error.config?.method
-      });
-    }
-    
-    console.log(`⚠️ [N8N] User registration will continue despite n8n credential creation failure`);
+    console.error(`❌ [N8N] Failed to create ${serviceKey} credential for ${user.email}:`, error.message);
     return null;
   }
 }
@@ -190,6 +300,13 @@ export async function getCredentialSchema(credentialType: string): Promise<any> 
     console.error(`Failed to get credential schema for ${credentialType}:`, error);
     return null;
   }
+}
+
+/**
+ * Get all available Google service configurations
+ */
+export function getAvailableGoogleServices(): Record<string, any> {
+  return GOOGLE_SERVICES;
 }
 
 /**

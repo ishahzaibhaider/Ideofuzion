@@ -1,0 +1,5 @@
+[33mcdad455[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Fix Google OAuth2 credential structure and signup test endpoint
+[33m9c21006[m Migrate n8n integration to new hosted instance at n8n.hireninja.site
+[33mac4372c[m Fix Google OAuth2 credential structure and signup test endpoint
+[33m0f78496[m Update test-signup-endpoint.js
+[33m3f431bb[m Update test-n8n-production.js
