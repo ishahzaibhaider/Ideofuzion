@@ -99,23 +99,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
   const clientRedirectPath = process.env.OAUTH_SUCCESS_REDIRECT || "/login";
   
-  // Handle production OAuth callback route
-  app.get('/oauth/google/callback',
-    passport.authenticate('google', { failureRedirect: '/login?error=google' }),
-    async (req: any, res) => {
-      try {
-        const user = req.user as { id: string; name: string; email: string };
-        const token = jwt.sign({ userId: user.id, email: user.email }, process.env.JWT_SECRET || 'dev-secret', { expiresIn: '24h' });
-
-        const redirectUrl = new URL(clientRedirectPath, baseUrl);
-        redirectUrl.searchParams.set('token', token);
-        res.redirect(redirectUrl.toString());
-      } catch (err) {
-        console.error('OAuth callback error:', err);
-        res.redirect('/login?error=oauth');
-      }
-    }
-  );
+  // REMOVED: Old conflicting OAuth callback route
+  // The correct route is /auth/google/callback below
 
   app.get('/auth/google',
     passport.authenticate('google', { 
@@ -136,10 +121,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })
   );
 
+  // Debug route to catch any OAuth callback attempts
+  app.get('/oauth/google/callback', (req, res) => {
+    console.log(`🚨 [DEBUG] OLD CALLBACK ROUTE HIT: /oauth/google/callback`);
+    console.log(`🚨 [DEBUG] This route should not be called anymore`);
+    res.redirect('/login?error=wrong_callback');
+  });
+
   app.get(
     '/auth/google/callback',
     passport.authenticate('google', { failureRedirect: '/login?error=google' }),
     async (req: any, res) => {
+      console.log(`🎯 [CALLBACK] /auth/google/callback route triggered`);
+      console.log(`🎯 [CALLBACK] Request URL: ${req.url}`);
+      console.log(`🎯 [CALLBACK] Request method: ${req.method}`);
+      console.log(`🎯 [CALLBACK] User object exists: ${!!req.user}`);
       try {
         console.log(`🚀 [OAUTH] Google OAuth callback triggered`);
         console.log(`👤 [OAUTH] User object received:`, {
