@@ -12,7 +12,8 @@
     "test:n8n": "node test-n8n-hosted.js",
     "test:n8n-only": "node test-n8n-integration-only.js",
     "test:google-services": "node test-google-services.js",
-    "test:n8n-debug": "node test-n8n-debug.js"
+    "test:n8n-debug": "node test-n8n-debug.js",
+    "test:new-api-key": "node test-new-api-key.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

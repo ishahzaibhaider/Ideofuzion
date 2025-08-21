@@ -1,4 +1,4 @@
-import { UserModel, JobCriteriaModel, CandidateModel, TranscriptModel, UnavailableSlotModel, BusySlotModel, AnalysisModel, ExtendedMeetingModel, type User, type InsertUser, type JobCriteria, type InsertJobCriteria, type Candidate, type InsertCandidate, type Transcript, type InsertTranscript, type UnavailableSlot, type InsertUnavailableSlot, type BusySlot, type InsertBusySlot, type Analysis, type InsertAnalysis, type ExtendedMeeting, type InsertExtendedMeeting } from "../shared/schema.js";
+import { UserModel, JobCriteriaModel, CandidateModel, TranscriptModel, UnavailableSlotModel, BusySlotModel, AnalysisModel, ExtendedMeetingModel, AccessInfoModel, type User, type InsertUser, type JobCriteria, type InsertJobCriteria, type Candidate, type InsertCandidate, type Transcript, type InsertTranscript, type UnavailableSlot, type InsertUnavailableSlot, type BusySlot, type InsertBusySlot, type Analysis, type InsertAnalysis, type ExtendedMeeting, type InsertExtendedMeeting, type AccessInfo, type InsertAccessInfo } from "../shared/schema.js";
 import { connectToDatabase } from "./db.js";
 
 // Define the structure for the data coming from the frontend form
@@ -57,6 +57,13 @@ export interface IStorage {
   getExtendedMeetings(userId: string): Promise<ExtendedMeeting[]>;
   getExtendedMeetingByCalendarEventId(calendarEventId: string, userId: string): Promise<ExtendedMeeting | undefined>;
   createExtendedMeeting(extendedMeeting: InsertExtendedMeeting, userId: string): Promise<ExtendedMeeting>;
+
+  // Access Info - USER ISOLATED
+  getAccessInfo(userId: string): Promise<AccessInfo | undefined>;
+  getAccessInfoByEmail(email: string): Promise<AccessInfo | undefined>;
+  createAccessInfo(accessInfo: InsertAccessInfo): Promise<AccessInfo>;
+  updateAccessInfo(userId: string, updates: Partial<InsertAccessInfo>): Promise<AccessInfo | undefined>;
+  deleteAccessInfo(userId: string): Promise<boolean>;
 }
 
 export class MongoStorage implements IStorage {
@@ -612,6 +619,78 @@ export class MongoStorage implements IStorage {
     } catch (error) {
       console.error('Error creating extended meeting:', error);
       throw error;
+    }
+  }
+
+  // Helper function to convert MongoDB document to our AccessInfo type format
+  private mongoDocToAccessInfo(doc: any): AccessInfo {
+    return {
+      id: doc._id.toString(),
+      userId: doc.userId,
+      email: doc.email,
+      accessToken: doc.accessToken,
+      refreshToken: doc.refreshToken,
+      clientId: doc.clientId,
+      clientSecret: doc.clientSecret,
+      scope: doc.scope,
+      tokenType: doc.tokenType,
+      expiresAt: doc.expiresAt,
+      createdAt: doc.createdAt,
+      updatedAt: doc.updatedAt
+    };
+  }
+
+  async getAccessInfo(userId: string): Promise<AccessInfo | undefined> {
+    try {
+      const doc = await AccessInfoModel.findOne({ userId });
+      return doc ? this.mongoDocToAccessInfo(doc) : undefined;
+    } catch (error) {
+      console.error('Error getting access info:', error);
+      return undefined;
+    }
+  }
+
+  async getAccessInfoByEmail(email: string): Promise<AccessInfo | undefined> {
+    try {
+      const doc = await AccessInfoModel.findOne({ email });
+      return doc ? this.mongoDocToAccessInfo(doc) : undefined;
+    } catch (error) {
+      console.error('Error getting access info by email:', error);
+      return undefined;
+    }
+  }
+
+  async createAccessInfo(accessInfo: InsertAccessInfo): Promise<AccessInfo> {
+    try {
+      const doc = await AccessInfoModel.create(accessInfo);
+      return this.mongoDocToAccessInfo(doc);
+    } catch (error) {
+      console.error('Error creating access info:', error);
+      throw error;
+    }
+  }
+
+  async updateAccessInfo(userId: string, updates: Partial<InsertAccessInfo>): Promise<AccessInfo | undefined> {
+    try {
+      const doc = await AccessInfoModel.findOneAndUpdate(
+        { userId },
+        { ...updates, updatedAt: new Date() },
+        { new: true }
+      );
+      return doc ? this.mongoDocToAccessInfo(doc) : undefined;
+    } catch (error) {
+      console.error('Error updating access info:', error);
+      return undefined;
+    }
+  }
+
+  async deleteAccessInfo(userId: string): Promise<boolean> {
+    try {
+      const result = await AccessInfoModel.findOneAndDelete({ userId });
+      return result !== null;
+    } catch (error) {
+      console.error('Error deleting access info:', error);
+      return false;
     }
   }
 }

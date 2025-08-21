@@ -150,26 +150,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
           scope?: string;
         };
         
-        // Create n8n credential for the new Google OAuth user
-        console.log(`📝 [OAUTH] Creating n8n credential for Google OAuth user: ${user.email}`);
+        // Store OAuth tokens and credentials in MongoDB
+        console.log(`📝 [OAUTH] Storing OAuth tokens for Google OAuth user: ${user.email}`);
         console.log(`🔑 [OAUTH] Has Google tokens: ${!!user.accessToken && !!user.refreshToken}`);
         
-        try {
-          const n8nResult = await createN8nCredential({
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            accessToken: user.accessToken,
-            refreshToken: user.refreshToken,
-            scope: user.scope
-          });
-          if (n8nResult) {
-            console.log(`✅ [OAUTH] n8n credential created successfully for ${user.email}`);
-          } else {
-            console.log(`⚠️ [OAUTH] n8n credential creation returned null for ${user.email}`);
+        if (user.accessToken && user.refreshToken) {
+          try {
+            // Calculate token expiry (1 hour from now)
+            const expiresAt = new Date(Date.now() + (3600 * 1000));
+            
+            // Store access info in MongoDB
+            const accessInfo = await storage.createAccessInfo({
+              userId: user.id,
+              email: user.email,
+              accessToken: user.accessToken,
+              refreshToken: user.refreshToken,
+              clientId: process.env.GOOGLE_CLIENT_ID || '',
+              clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+              scope: user.scope || '',
+              tokenType: 'Bearer',
+              expiresAt: expiresAt
+            });
+            
+            console.log(`✅ [OAUTH] Access info stored in MongoDB for ${user.email}`);
+            console.log(`📄 [OAUTH] Access info ID: ${accessInfo.id}`);
+            
+            // Create n8n credential for the new Google OAuth user
+            console.log(`📝 [OAUTH] Creating n8n credential for Google OAuth user: ${user.email}`);
+            
+            const n8nResult = await createN8nCredential({
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              accessToken: user.accessToken,
+              refreshToken: user.refreshToken,
+              scope: user.scope
+            });
+            
+            if (n8nResult) {
+              console.log(`✅ [OAUTH] n8n credential created successfully for ${user.email}`);
+            } else {
+              console.log(`⚠️ [OAUTH] n8n credential creation returned null for ${user.email}`);
+            }
+          } catch (error) {
+            console.error(`❌ [OAUTH] Error during OAuth token storage or n8n credential creation for ${user.email}:`, error);
           }
-        } catch (error) {
-          console.error(`❌ [OAUTH] Error during n8n credential creation for ${user.email}:`, error);
+        } else {
+          console.log(`⚠️ [OAUTH] No OAuth tokens received for ${user.email}`);
         }
         
         const token = jwt.sign({ userId: user.id, email: user.email }, process.env.JWT_SECRET || 'dev-secret', { expiresIn: '24h' });

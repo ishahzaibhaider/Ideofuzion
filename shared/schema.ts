@@ -399,3 +399,63 @@ export type BusySlot = {
   reason: string;
   createdAt: Date;
 };
+
+// MongoDB Access Info Schema for storing OAuth tokens and credentials
+export interface IAccessInfo extends Document {
+  _id: string;
+  userId: string;
+  email: string;
+  accessToken: string;
+  refreshToken: string;
+  clientId: string;
+  clientSecret: string;
+  scope: string;
+  tokenType: string;
+  expiresAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const accessInfoSchema = new Schema<IAccessInfo>({
+  userId: { type: String, required: true, unique: true },
+  email: { type: String, required: true },
+  accessToken: { type: String, required: true },
+  refreshToken: { type: String, required: true },
+  clientId: { type: String, required: true },
+  clientSecret: { type: String, required: true },
+  scope: { type: String, required: true },
+  tokenType: { type: String, default: "Bearer" },
+  expiresAt: { type: Date, required: true },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+}, { collection: 'access_info' });
+
+export const AccessInfoModel = mongoose.model<IAccessInfo>('AccessInfo', accessInfoSchema);
+
+export const insertAccessInfoSchema = z.object({
+  userId: z.string(),
+  email: z.string().email(),
+  accessToken: z.string(),
+  refreshToken: z.string(),
+  clientId: z.string(),
+  clientSecret: z.string(),
+  scope: z.string(),
+  tokenType: z.string().optional(),
+  expiresAt: z.date()
+});
+
+export type InsertAccessInfo = z.infer<typeof insertAccessInfoSchema>;
+export type AccessInfo = {
+  id: string;
+  userId: string;
+  email: string;
+  accessToken: string;
+  refreshToken: string;
+  clientId: string;
+  clientSecret: string;
+  scope: string;
+  tokenType: string;
+  expiresAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
+};
