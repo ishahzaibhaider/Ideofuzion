@@ -102,20 +102,15 @@ export async function createGoogleOAuth2Credential(user: User): Promise<any> {
     // Calculate token expiry (Google tokens typically expire in 1 hour = 3600 seconds)
     const expiryDate = Date.now() + (3600 * 1000); // 1 hour from now
     
+    // Create a comprehensive Google OAuth credential using httpHeaderAuth
+    // This stores the access token in the header and we'll store refresh token in the name
     const credentialData: CreateCredentialData = {
-      name: `google-user-${user.id}`,
-      type: "googleApi", // Correct n8n credential type for Google API
+      name: `google-user-${user.id} (Refresh: ${user.refreshToken?.substring(0, 20)}...)`,
+      type: "httpHeaderAuth", // Use httpHeaderAuth for Google OAuth tokens
       data: {
-        authentication: "oAuth2",
-        clientId: googleClientId,
-        clientSecret: googleClientSecret,
-        oauthTokenData: {
-          access_token: user.accessToken,
-          refresh_token: user.refreshToken,
-          scope: user.scope || 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/drive',
-          token_type: "Bearer",
-          expiry_date: expiryDate
-        }
+        name: "Authorization",
+        value: `Bearer ${user.accessToken}`,
+        useCustomAuth: false
       }
     };
 

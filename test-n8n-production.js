@@ -46,18 +46,11 @@ async function testFromProduction() {
     console.log('\n2️⃣ Testing credential creation...');
     const testCredential = {
       name: `Production Test - ${Date.now()}`,
-      type: "googleApi",
+      type: "httpHeaderAuth",
       data: {
-        authentication: "oAuth2",
-        clientId: process.env.GOOGLE_CLIENT_ID || "test-client-id",
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET || "test-client-secret",
-        oauthTokenData: {
-          access_token: "test-access-token",
-          refresh_token: "test-refresh-token",
-          scope: "https://www.googleapis.com/auth/gmail.modify",
-          token_type: "Bearer",
-          expiry_date: Date.now() + (3600 * 1000)
-        }
+        name: "Authorization",
+        value: "Bearer test-access-token",
+        useCustomAuth: false
       }
     };
     
