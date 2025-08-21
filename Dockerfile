@@ -30,6 +30,7 @@ COPY --from=builder /app/dist ./dist
 COPY test-n8n-production.js ./
 COPY simple-n8n-test.js ./
 COPY test-signup-flow.js ./
+COPY test-signup-endpoint.js ./
 
 # Expose the port the app runs on
 EXPOSE 3000
