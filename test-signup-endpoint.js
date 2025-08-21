@@ -1,7 +1,7 @@
 // Simple test to check if signup endpoint is accessible
 import axios from 'axios';
 
-const BASE_URL = 'http://35.209.122.222:5678'; // Use explicit IPv4 localhost
+const BASE_URL = 'http://35.209.122.222:5678';
 
 async function testSignupEndpoint() {
   console.log('🧪 Testing signup endpoint accessibility...');
