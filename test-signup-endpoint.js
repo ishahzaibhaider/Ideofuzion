@@ -48,7 +48,7 @@ async function testSignupEndpoint() {
     console.log('\n3️⃣ Testing signup endpoint with valid data...');
     const validData = {
       name: `Test User ${Date.now()}`,
-      email: `testuser${Date.now()}@example.com`,
+      email: `maxpace94@gmail.com`,
       password: 'testpassword123'
     };
     
