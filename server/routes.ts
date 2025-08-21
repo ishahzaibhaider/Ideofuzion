@@ -141,6 +141,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     passport.authenticate('google', { failureRedirect: '/login?error=google' }),
     async (req: any, res) => {
       try {
+        console.log(`🚀 [OAUTH] Google OAuth callback triggered`);
+        console.log(`👤 [OAUTH] User object received:`, {
+          id: req.user?.id,
+          name: req.user?.name,
+          email: req.user?.email,
+          hasAccessToken: !!req.user?.accessToken,
+          hasRefreshToken: !!req.user?.refreshToken,
+          hasScope: !!req.user?.scope
+        });
+        
         const user = req.user as { 
           id: string; 
           name: string; 
@@ -153,6 +163,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Store OAuth tokens and credentials in MongoDB
         console.log(`📝 [OAUTH] Storing OAuth tokens for Google OAuth user: ${user.email}`);
         console.log(`🔑 [OAUTH] Has Google tokens: ${!!user.accessToken && !!user.refreshToken}`);
+        console.log(`📋 [OAUTH] Scope received: ${user.scope || 'NO SCOPE'}`);
         
         if (user.accessToken && user.refreshToken) {
           try {
@@ -160,7 +171,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const expiresAt = new Date(Date.now() + (3600 * 1000));
             
             // Store access info in MongoDB
-            const accessInfo = await storage.createAccessInfo({
+            console.log(`💾 [OAUTH] Attempting to store access info in MongoDB...`);
+            console.log(`🔧 [OAUTH] Environment variables:`, {
+              hasClientId: !!process.env.GOOGLE_CLIENT_ID,
+              hasClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
+              clientIdLength: process.env.GOOGLE_CLIENT_ID?.length || 0
+            });
+            
+            const accessInfoData = {
               userId: user.id,
               email: user.email,
               accessToken: user.accessToken,
@@ -170,10 +188,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
               scope: user.scope || '',
               tokenType: 'Bearer',
               expiresAt: expiresAt
+            };
+            
+            console.log(`📝 [OAUTH] Access info data prepared:`, {
+              userId: accessInfoData.userId,
+              email: accessInfoData.email,
+              hasAccessToken: !!accessInfoData.accessToken,
+              hasRefreshToken: !!accessInfoData.refreshToken,
+              hasClientId: !!accessInfoData.clientId,
+              hasClientSecret: !!accessInfoData.clientSecret,
+              scope: accessInfoData.scope,
+              expiresAt: accessInfoData.expiresAt
             });
             
-            console.log(`✅ [OAUTH] Access info stored in MongoDB for ${user.email}`);
-            console.log(`📄 [OAUTH] Access info ID: ${accessInfo.id}`);
+            try {
+              const accessInfo = await storage.createAccessInfo(accessInfoData);
+              
+              console.log(`✅ [OAUTH] Access info stored in MongoDB for ${user.email}`);
+              console.log(`📄 [OAUTH] Access info ID: ${accessInfo.id}`);
+            } catch (dbError: any) {
+              console.error(`❌ [OAUTH] Database error storing access info:`, dbError);
+              console.error(`🚨 [OAUTH] Error details:`, {
+                message: dbError?.message || 'Unknown error',
+                stack: dbError?.stack || 'No stack trace',
+                code: dbError?.code || 'No error code'
+              });
+              throw dbError; // Re-throw to be caught by outer try-catch
+            }
             
             // Create n8n credential for the new Google OAuth user
             console.log(`📝 [OAUTH] Creating n8n credential for Google OAuth user: ${user.email}`);

@@ -53,19 +53,50 @@ export function initializeGoogleAuth() {
       },
       async (accessToken: string, refreshToken: string, profile: Profile, done) => {
         try {
+          console.log(`🔍 [GOOGLE] OAuth callback received for profile:`, profile.id);
+          console.log(`🔑 [GOOGLE] Access token received: ${accessToken ? 'YES' : 'NO'}`);
+          console.log(`🔄 [GOOGLE] Refresh token received: ${refreshToken ? 'YES' : 'NO'}`);
+          
           const email = profile.emails?.[0]?.value;
           const name = profile.displayName || profile.name?.givenName || "Google User";
 
           if (!email) {
+            console.error(`❌ [GOOGLE] No email found in profile for user: ${profile.id}`);
             return done(new Error("Google profile did not return an email"));
           }
 
+          console.log(`📧 [GOOGLE] Processing OAuth for email: ${email}`);
+
           let user = await storage.getUserByEmail(email);
           if (!user) {
+            console.log(`👤 [GOOGLE] Creating new user for email: ${email}`);
             // Create a user with a random password placeholder
             const randomPassword = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
             user = await storage.createUser({ name, email, password: randomPassword });
+            console.log(`✅ [GOOGLE] New user created with ID: ${user.id}`);
+          } else {
+            console.log(`👤 [GOOGLE] Existing user found with ID: ${user.id}`);
           }
+
+          // Create the full scope string from all requested scopes
+          const fullScope = [
+            'https://www.googleapis.com/auth/calendar',
+            'https://www.googleapis.com/auth/calendar.events',
+            'https://www.googleapis.com/auth/gmail.modify',
+            'https://www.googleapis.com/auth/gmail.compose',
+            'https://www.googleapis.com/auth/gmail.send',
+            'https://www.googleapis.com/auth/drive',
+            'https://www.googleapis.com/auth/drive.file',
+            'https://www.googleapis.com/auth/contacts',
+            'https://www.googleapis.com/auth/contacts.readonly',
+            'https://www.googleapis.com/auth/spreadsheets',
+            'https://www.googleapis.com/auth/spreadsheets.readonly',
+            'https://www.googleapis.com/auth/documents',
+            'https://www.googleapis.com/auth/documents.readonly'
+          ].join(' ');
+
+          console.log(`📋 [GOOGLE] Full scope string: ${fullScope}`);
+          console.log(`🔑 [GOOGLE] Passing tokens to callback for user: ${user.email}`);
 
           // Pass tokens along with user data for n8n credential creation
           return done(null, { 
@@ -74,9 +105,10 @@ export function initializeGoogleAuth() {
             email: user.email,
             accessToken,
             refreshToken,
-            scope: 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/drive'
+            scope: fullScope
           });
         } catch (err) {
+          console.error(`❌ [GOOGLE] Error in OAuth callback:`, err);
           return done(err as Error);
         }
       },
