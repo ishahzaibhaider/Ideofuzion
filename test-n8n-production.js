@@ -42,15 +42,17 @@ async function testFromProduction() {
       }
     }
     
-    // Test credential creation
+    // Test credential creation with Google OAuth2 structure
     console.log('\n2️⃣ Testing credential creation...');
     const testCredential = {
       name: `Production Test - ${Date.now()}`,
-      type: "httpHeaderAuth",
+      type: "googleOAuth2Api",
       data: {
-        name: "Authorization",
-        value: "Bearer test-access-token",
-        useCustomAuth: false
+        clientId: process.env.GOOGLE_CLIENT_ID || "test-client-id",
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET || "test-client-secret",
+        accessToken: "test-access-token",
+        refreshToken: "test-refresh-token",
+        scope: "https://www.googleapis.com/auth/gmail.modify"
       }
     };
     
