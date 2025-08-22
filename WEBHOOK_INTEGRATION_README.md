@@ -6,10 +6,13 @@ This document describes the webhook integration for the live interview functiona
 
 ## Webhook Configuration
 
-### Production Webhook URL
-```
-https://n8n.hireninja.site/webhook/meetbot-ideofuzion
-```
+### Interview Session Webhook
+- **URL**: `https://n8n.hireninja.site/webhook/meetbot-ideofuzion`
+- **Trigger**: When "Start Session" button is pressed on live interview page
+
+### Busy Slot Webhook
+- **URL**: `https://n8n.hireninja.site/webhook/busyslot-ideofuzion`
+- **Trigger**: When "Mark as Busy" button is pressed on dashboard
 
 ### Method
 - **HTTP Method**: POST
@@ -17,6 +20,8 @@ https://n8n.hireninja.site/webhook/meetbot-ideofuzion
 - **Authentication**: None (public webhook)
 
 ## Webhook Data Structure
+
+### Interview Session Webhook Data
 
 When an interview session is started, the following data is sent to the webhook:
 
@@ -40,7 +45,27 @@ When an interview session is started, the following data is sent to the webhook:
 }
 ```
 
-### Field Descriptions
+### Busy Slot Webhook Data
+
+When a busy slot is created, the following data is sent to the webhook:
+
+```json
+{
+  "userId": "string",
+  "userEmail": "string",
+  "userName": "string",
+  "slotId": "string",
+  "date": "string (YYYY-MM-DD)",
+  "startTime": "string (ISO 8601)",
+  "endTime": "string (ISO 8601)",
+  "reason": "string",
+  "timestamp": "string (ISO 8601)",
+  "action": "busy_slot_created",
+  "platform": "ideofuzion"
+}
+```
+
+### Interview Session Webhook Field Descriptions
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -58,6 +83,22 @@ When an interview session is started, the following data is sent to the webhook:
 | `timestamp` | string | When the webhook was triggered (ISO 8601 format) |
 | `action` | string | Always "interview_session_started" |
 | `sessionId` | string | Unique session identifier |
+| `platform` | string | Always "ideofuzion" |
+
+### Busy Slot Webhook Field Descriptions
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `userId` | string | Database ID of the logged-in user |
+| `userEmail` | string | Email address of the logged-in user |
+| `userName` | string | Name of the logged-in user |
+| `slotId` | string | Database ID of the busy slot |
+| `date` | string | Date of the busy slot (YYYY-MM-DD format) |
+| `startTime` | string | Start time of the busy slot (ISO 8601 format) |
+| `endTime` | string | End time of the busy slot (ISO 8601 format) |
+| `reason` | string | Reason for marking as busy (default: "Busy") |
+| `timestamp` | string | When the webhook was triggered (ISO 8601 format) |
+| `action` | string | Always "busy_slot_created" |
 | `platform` | string | Always "ideofuzion" |
 
 ## Implementation Details
@@ -131,16 +172,33 @@ The webhook integration is implemented in the live interview page (`client/src/p
 5. Verify webhook data in n8n platform
 
 ### Automated Testing
+
+#### Interview Session Webhook
 Use the test file `test-webhook-integration.js`:
 
 ```bash
 node test-webhook-integration.js
 ```
 
+#### Busy Slot Webhook
+Use the test file `test-busy-slot-webhook.js`:
+
+```bash
+node test-busy-slot-webhook.js
+```
+
 ### Health Check Testing
+
+#### Interview Session Webhook Health
 ```bash
 curl -H "Authorization: Bearer YOUR_TOKEN" \
      http://localhost:3000/api/webhook-health
+```
+
+#### Busy Slot Webhook Health
+```bash
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+     http://localhost:3000/api/busy-slot-webhook-health
 ```
 
 ## Troubleshooting

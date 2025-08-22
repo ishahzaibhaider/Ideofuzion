@@ -55,10 +55,23 @@ export default function AddBusySlotsDialog() {
       // Webhook is now handled server-side automatically
       console.log("Busy slot created successfully, webhook triggered on server");
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error('Error creating busy slot:', error);
+      let errorMessage = "Failed to add busy slot. Please try again.";
+      
+      if (error.message) {
+        if (error.message.includes("400")) {
+          errorMessage = "Invalid time format. Please check your selection.";
+        } else if (error.message.includes("401")) {
+          errorMessage = "Authentication failed. Please log in again.";
+        } else if (error.message.includes("500")) {
+          errorMessage = "Server error. Please try again later.";
+        }
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to add busy slot",
+        description: errorMessage,
         variant: "destructive",
       });
     },
@@ -97,6 +110,19 @@ export default function AddBusySlotsDialog() {
       toast({
         title: "Error",
         description: "Please select both start and end time",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate that end time is after start time
+    const startTimeIndex = timeOptions.indexOf(startTime);
+    const endTimeIndex = timeOptions.indexOf(endTime);
+    
+    if (startTimeIndex >= endTimeIndex) {
+      toast({
+        title: "Error",
+        description: "End time must be after start time",
         variant: "destructive",
       });
       return;
