@@ -181,10 +181,14 @@ export async function createN8nCredentialsFromAccessInfo(accessInfo: AccessInfo)
             clientId: accessInfo.clientId,
             clientSecret: accessInfo.clientSecret,
             sendAdditionalBodyProperties: false,
-            additionalBodyProperties: "{}"
-            // Note: We don't include oauthTokenData here because n8n will handle the OAuth2 flow
-            // when the workflow runs. The credential will be created in "pending" state
-            // and n8n will prompt for OAuth2 authorization when first used.
+            additionalBodyProperties: "{}",
+            oauthTokenData: {
+              access_token: freshToken.accessToken,
+              refresh_token: accessInfo.refreshToken,
+              scope: accessInfo.scope,
+              token_type: accessInfo.tokenType || 'Bearer',
+              expiry_date: freshToken.expiresAt.getTime()
+            }
           }
         };
 
@@ -194,8 +198,8 @@ export async function createN8nCredentialsFromAccessInfo(accessInfo: AccessInfo)
             ...credentialData.data,
             oauthTokenData: {
               ...credentialData.data.oauthTokenData,
-              accessToken: '[REDACTED]',
-              refreshToken: '[REDACTED]'
+              access_token: '[REDACTED]',
+              refresh_token: '[REDACTED]'
             }
           }
         }, null, 2));
