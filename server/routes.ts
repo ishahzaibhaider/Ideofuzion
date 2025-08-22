@@ -1455,6 +1455,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Calendar event not found" });
       }
 
+      // Validate that candidate has required fields
+      if (!candidate["Interview End"]) {
+        return res.status(400).json({ error: "Candidate does not have an interview end time" });
+      }
+
       // Validate that new end time is after current end time
       const currentEndTime = parseInterviewDateTime(candidate["Interview End"]);
       const newEndTime = parseInterviewDateTime(data.newEndTime);
@@ -1467,6 +1472,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "New end time must be after current end time" });
       }
 
+      // Validate that new end time is not too far in the future (e.g., not more than 24 hours later)
+      const maxExtensionTime = new Date(currentEndTime.getTime() + (24 * 60 * 60 * 1000)); // 24 hours
+      if (newEndTime > maxExtensionTime) {
+        return res.status(400).json({ error: "New end time cannot be more than 24 hours after current end time" });
+      }
+
       // Create extended meeting record
       const extendedMeeting = await storage.createExtendedMeeting(data, userId);
       
@@ -1477,30 +1488,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
         reason: data.reason
       });
 
+      // Get the current user data for webhook
+      const user = await storage.getUser(userId);
+      if (!user) {
+        console.error("User not found for webhook data");
+      }
+
       // Trigger webhook after successful meeting extension
       try {
         console.log("Triggering meeting extension webhook...");
-        const webhookResponse = await fetch("http://54.226.92.93:5678/webhook/4b63beb1-c7d1-4118-8bbb-3a2252298a1d", {
-          method: "POST",
-          headers: { 
-            "Content-Type": "application/json",
-            "User-Agent": "HiringPlatform/1.0"
-          },
-          body: JSON.stringify({ 
-            message: "Meeting extended",
-            calendarEventId: data.calendarEventId,
-            candidateName: candidate["Candidate Name"],
-            originalEndTime: candidate["Interview End"],
-            newEndTime: data.newEndTime,
-            reason: data.reason,
-            timestamp: new Date().toISOString()
-          })
-        });
+        const webhookData = {
+          userId: userId,
+          userEmail: user?.email || '',
+          userName: user?.name || '',
+          candidateId: candidate.id,
+          candidateName: candidate["Candidate Name"],
+          candidateEmail: candidate.Email,
+          jobTitle: candidate["Job Title"],
+          calendarEventId: data.calendarEventId,
+          originalEndTime: candidate["Interview End"],
+          newEndTime: data.newEndTime,
+          reason: data.reason,
+          timestamp: new Date().toISOString(),
+          action: "meeting_extended",
+          platform: "ideofuzion"
+        };
+
+        // Trigger webhook with timeout protection
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
         
-        if (webhookResponse.ok) {
-          console.log("Meeting extension webhook triggered successfully");
-        } else {
-          console.error("Meeting extension webhook failed:", webhookResponse.status);
+        try {
+          const webhookResponse = await fetch("https://n8n.hireninja.site/webhook/Extendmeeting-ideofuzion", {
+            method: "POST",
+            headers: { 
+              "Content-Type": "application/json",
+              "User-Agent": "HiringPlatform/1.0"
+            },
+            body: JSON.stringify(webhookData),
+            signal: controller.signal
+          });
+          
+          clearTimeout(timeoutId);
+          
+          if (webhookResponse.ok) {
+            console.log("Meeting extension webhook triggered successfully");
+          } else {
+            const errorText = await webhookResponse.text();
+            console.error("Meeting extension webhook failed:", {
+              status: webhookResponse.status,
+              statusText: webhookResponse.statusText,
+              error: errorText,
+              candidateId: candidate.id,
+              userId: userId
+            });
+          }
+        } catch (fetchError: any) {
+          clearTimeout(timeoutId);
+          if (fetchError.name === 'AbortError') {
+            console.error("Meeting extension webhook request timed out after 10 seconds");
+          } else {
+            console.error("Error making meeting extension webhook request:", fetchError);
+          }
         }
       } catch (webhookError) {
         console.error("Error triggering meeting extension webhook:", webhookError);
@@ -1737,6 +1786,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         status: "error",
         error: "Failed to check busy slot webhook health"
+      });
+    }
+  });
+
+  // Health check endpoint for extend meeting webhook connectivity
+  app.get("/api/extend-meeting-webhook-health", authenticateToken, async (req: any, res) => {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
+      try {
+        const response = await fetch("https://n8n.hireninja.site/webhook/Extendmeeting-ideofuzion", {
+          method: "HEAD", // Just check if endpoint is reachable
+          headers: { 
+            "User-Agent": "HiringPlatform/1.0"
+          },
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        res.json({ 
+          status: "healthy",
+          webhookReachable: true,
+          webhookStatus: response.status,
+          timestamp: new Date().toISOString()
+        });
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId);
+        res.json({ 
+          status: "unhealthy",
+          webhookReachable: false,
+          error: fetchError.message,
+          timestamp: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      console.error("Error checking extend meeting webhook health:", error);
+      res.status(500).json({ 
+        status: "error",
+        error: "Failed to check extend meeting webhook health"
       });
     }
   });

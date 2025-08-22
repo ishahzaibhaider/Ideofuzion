@@ -14,6 +14,10 @@ This document describes the webhook integration for the live interview functiona
 - **URL**: `https://n8n.hireninja.site/webhook/busyslot-ideofuzion`
 - **Trigger**: When "Mark as Busy" button is pressed on dashboard
 
+### Extend Meeting Webhook
+- **URL**: `https://n8n.hireninja.site/webhook/Extendmeeting-ideofuzion`
+- **Trigger**: When "Extend Meeting" button is pressed on dashboard
+
 ### Method
 - **HTTP Method**: POST
 - **Content-Type**: application/json
@@ -65,6 +69,29 @@ When a busy slot is created, the following data is sent to the webhook:
 }
 ```
 
+### Extend Meeting Webhook Data
+
+When a meeting is extended, the following data is sent to the webhook:
+
+```json
+{
+  "userId": "string",
+  "userEmail": "string",
+  "userName": "string",
+  "candidateId": "string",
+  "candidateName": "string",
+  "candidateEmail": "string",
+  "jobTitle": "string",
+  "calendarEventId": "string",
+  "originalEndTime": "string (ISO 8601)",
+  "newEndTime": "string (ISO 8601)",
+  "reason": "string",
+  "timestamp": "string (ISO 8601)",
+  "action": "meeting_extended",
+  "platform": "ideofuzion"
+}
+```
+
 ### Interview Session Webhook Field Descriptions
 
 | Field | Type | Description |
@@ -99,6 +126,25 @@ When a busy slot is created, the following data is sent to the webhook:
 | `reason` | string | Reason for marking as busy (default: "Busy") |
 | `timestamp` | string | When the webhook was triggered (ISO 8601 format) |
 | `action` | string | Always "busy_slot_created" |
+| `platform` | string | Always "ideofuzion" |
+
+### Extend Meeting Webhook Field Descriptions
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `userId` | string | Database ID of the logged-in user |
+| `userEmail` | string | Email address of the logged-in user |
+| `userName` | string | Name of the logged-in user |
+| `candidateId` | string | Database ID of the candidate |
+| `candidateName` | string | Full name of the candidate |
+| `candidateEmail` | string | Email address of the candidate |
+| `jobTitle` | string | Job title for the position |
+| `calendarEventId` | string | Calendar event ID |
+| `originalEndTime` | string | Original interview end time (ISO 8601 format) |
+| `newEndTime` | string | New extended end time (ISO 8601 format) |
+| `reason` | string | Reason for extending the meeting |
+| `timestamp` | string | When the webhook was triggered (ISO 8601 format) |
+| `action` | string | Always "meeting_extended" |
 | `platform` | string | Always "ideofuzion" |
 
 ## Implementation Details
@@ -187,6 +233,13 @@ Use the test file `test-busy-slot-webhook.js`:
 node test-busy-slot-webhook.js
 ```
 
+#### Extend Meeting Webhook
+Use the test file `test-extend-meeting-webhook.js`:
+
+```bash
+node test-extend-meeting-webhook.js
+```
+
 ### Health Check Testing
 
 #### Interview Session Webhook Health
@@ -199,6 +252,12 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 ```bash
 curl -H "Authorization: Bearer YOUR_TOKEN" \
      http://localhost:3000/api/busy-slot-webhook-health
+```
+
+#### Extend Meeting Webhook Health
+```bash
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+     http://localhost:3000/api/extend-meeting-webhook-health
 ```
 
 ## Troubleshooting

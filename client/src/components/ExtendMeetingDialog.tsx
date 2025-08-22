@@ -73,9 +73,23 @@ export default function ExtendMeetingDialog() {
       // Webhook is now handled server-side automatically
       console.log("Meeting extended successfully, webhook triggered on server");
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Error extending meeting:', error);
-      alert('Failed to extend meeting time. Please try again.');
+      let errorMessage = "Failed to extend meeting time. Please try again.";
+      
+      if (error.message) {
+        if (error.message.includes("400")) {
+          errorMessage = "Invalid time format or extension limit exceeded. Please check your selection.";
+        } else if (error.message.includes("401")) {
+          errorMessage = "Authentication failed. Please log in again.";
+        } else if (error.message.includes("404")) {
+          errorMessage = "Calendar event not found. Please refresh and try again.";
+        } else if (error.message.includes("500")) {
+          errorMessage = "Server error. Please try again later.";
+        }
+      }
+      
+      alert(errorMessage);
     },
   });
 
@@ -96,8 +110,32 @@ export default function ExtendMeetingDialog() {
       return;
     }
 
+    // Validate that new end time is after current end time
+    const currentEndTime = parseISO(selectedCandidate.interviewEnd);
+    const newEndTimeDate = parseISO(newEndTime);
+    
+    if (newEndTimeDate <= currentEndTime) {
+      alert('New end time must be after current end time');
+      return;
+    }
+
+    // Validate that new end time is not too far in the future (24 hours)
+    const maxExtensionTime = new Date(currentEndTime.getTime() + (24 * 60 * 60 * 1000));
+    if (newEndTimeDate > maxExtensionTime) {
+      alert('New end time cannot be more than 24 hours after current end time');
+      return;
+    }
+
     // Convert to ISO format with Pakistan timezone (+05:00)
     const newEndTimeISO = `${newEndTime}:00.000+05:00`;
+
+    console.log('Extending meeting for candidate:', {
+      name: selectedCandidate.name,
+      calendarEventId: selectedCandidate.calendarEventId,
+      originalEndTime: selectedCandidate.interviewEnd,
+      newEndTime: newEndTimeISO,
+      reason: reason.trim()
+    });
 
     extendMeetingMutation.mutate({
       calendarEventId: selectedCandidate.calendarEventId,
