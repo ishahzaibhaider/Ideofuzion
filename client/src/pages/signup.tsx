@@ -4,19 +4,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { auth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
+import { isValidCompanyEmail, getEmailDomain } from "@/lib/utils";
+import { CheckCircle, XCircle, Building2 } from "lucide-react";
 
 export default function SignupPage() {
   const [, setLocation] = useLocation();
-  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [isEmailValid, setIsEmailValid] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { toast } = useToast();
 
-  // Handle OAuth callback (same as login)
+  // Handle OAuth callback
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
@@ -68,131 +70,175 @@ export default function SignupPage() {
     }
   }, [toast, setLocation]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+  // Validate email when it changes
+  useEffect(() => {
+    if (email.trim()) {
+      const isValid = isValidCompanyEmail(email);
+      setIsEmailValid(isValid);
+    } else {
+      setIsEmailValid(null);
+    }
+  }, [email]);
 
-    try {
-      await auth.register(name, email, password);
+  const handleGoogleSignup = () => {
+    if (!isEmailValid) {
       toast({
-        title: "Success",
-        description: "Account created successfully",
-      });
-      setLocation("/dashboard");
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to create account",
+        title: "Invalid Email",
+        description: "Please enter a valid company email address",
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
+      return;
+    }
+    
+    setIsGoogleLoading(true);
+    const backendBase = window.location.origin;
+    // Pass email as state parameter for the OAuth flow
+    window.location.href = `${backendBase}/auth/google?email=${encodeURIComponent(email)}`;
+  };
+
+  const getEmailValidationMessage = () => {
+    if (email.trim() === "") return null;
+    
+    if (isEmailValid) {
+      return {
+        type: "success" as const,
+        message: `Valid company email: ${getEmailDomain(email)}`,
+        icon: CheckCircle
+      };
+    } else {
+      return {
+        type: "error" as const,
+        message: "Please use your company email address (personal emails like Gmail are not allowed)",
+        icon: XCircle
+      };
     }
   };
 
-  const handleGoogleSignup = () => {
-    setIsGoogleLoading(true);
-    const backendBase = window.location.origin;
-    window.location.href = `${backendBase}/auth/google`;
-  };
+  const validationMessage = getEmailValidationMessage();
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <div className="mx-auto h-12 w-12 bg-primary rounded-lg flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-lg">HP</span>
+          <div className="mx-auto h-16 w-16 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+            <span className="text-white font-bold text-xl">HP</span>
           </div>
-          <h2 className="mt-6 text-3xl font-bold text-gray-900">Create your account</h2>
+          <h2 className="mt-6 text-3xl font-bold text-gray-900">Join our platform</h2>
           <p className="mt-2 text-sm text-gray-600">
-            Get started with your hiring intelligence platform
+            Create your account to get started with hiring intelligence
           </p>
         </div>
         
-        <Card>
-          <CardHeader>
-            <CardTitle>Sign up</CardTitle>
-            <CardDescription>Create your account to get started</CardDescription>
+        <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl font-semibold text-center">Sign up</CardTitle>
+            <CardDescription className="text-center">
+              Use your company email to create your account
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            {/* Google Signup Button */}
-            <div className="mb-6">
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full flex items-center justify-center gap-2"
-                onClick={handleGoogleSignup}
-                disabled={isLoading || isGoogleLoading}
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                </svg>
-                {isGoogleLoading ? "Creating account..." : "Sign up with Google"}
-              </Button>
-            </div>
-
-            <div className="relative mb-6">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="bg-white px-2 text-gray-500">Or sign up with email</span>
-              </div>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="name">Full name</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Enter your full name"
-                />
-              </div>
-              <div>
-                <Label htmlFor="email">Email address</Label>
+          <CardContent className="space-y-6">
+            {/* Email Input Section */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <Building2 className="w-4 h-4" />
+                  Company Email Address
+                </Label>
                 <Input
                   id="email"
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
+                  placeholder="Enter your company email (e.g., john@company.com)"
+                  className={`h-12 border-2 transition-colors ${
+                    isEmailValid === null 
+                      ? 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                      : isEmailValid 
+                        ? 'border-green-500 focus:border-green-500 focus:ring-green-500'
+                        : 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                  }`}
                 />
               </div>
-              <div>
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Create a password"
-                />
-              </div>
+
+              {/* Email Validation Message */}
+              {validationMessage && (
+                <Alert className={`border-2 ${
+                  validationMessage.type === 'success' 
+                    ? 'border-green-200 bg-green-50' 
+                    : 'border-red-200 bg-red-50'
+                }`}>
+                  <validationMessage.icon className={`h-4 w-4 ${
+                    validationMessage.type === 'success' ? 'text-green-600' : 'text-red-600'
+                  }`} />
+                  <AlertDescription className={`${
+                    validationMessage.type === 'success' ? 'text-green-800' : 'text-red-800'
+                  }`}>
+                    {validationMessage.message}
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+
+            {/* Google Signup Button */}
+            <div className="space-y-3">
               <Button
-                type="submit"
-                className="w-full"
-                disabled={isLoading || isGoogleLoading}
+                type="button"
+                className={`w-full h-12 flex items-center justify-center gap-3 transition-all duration-200 ${
+                  isEmailValid 
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+                onClick={handleGoogleSignup}
+                disabled={!isEmailValid || isGoogleLoading}
               >
-                {isLoading ? "Creating account..." : "Create account"}
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                  <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+                {isGoogleLoading ? "Creating account..." : "Sign up with Google"}
               </Button>
-            </form>
+              
+              {!isEmailValid && email.trim() && (
+                <p className="text-xs text-gray-500 text-center">
+                  Please enter a valid company email to continue
+                </p>
+              )}
+            </div>
+
+            {/* Info Section */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-blue-900">
+                    Company Email Required
+                  </p>
+                  <p className="text-xs text-blue-700">
+                    We only accept company email addresses to ensure secure access for business users. 
+                    Personal email providers like Gmail, Yahoo, or Outlook are not allowed.
+                  </p>
+                </div>
+              </div>
+            </div>
             
-            <div className="mt-4 text-center space-y-2">
-              <Link href="/login" className="text-primary hover:text-primary/80 text-sm block">
-                Already have a account? Sign in
+            <div className="text-center space-y-2">
+              <Link 
+                href="/login" 
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
+              >
+                Already have an account? Sign in
               </Link>
-              <Link href="/privacy-policy" className="text-sm text-gray-500 hover:text-gray-700 block">
-                Privacy Policy
-              </Link>
+              <div className="pt-2">
+                <Link 
+                  href="/privacy-policy" 
+                  className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  Privacy Policy
+                </Link>
+              </div>
             </div>
           </CardContent>
         </Card>
