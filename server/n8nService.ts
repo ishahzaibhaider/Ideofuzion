@@ -20,6 +20,90 @@ interface User {
   scope?: string;
 }
 
+interface TokenRefreshResponse {
+  access_token: string;
+  refresh_token?: string;
+  expires_in: number;
+  token_type: string;
+  scope: string;
+}
+
+/**
+ * Refreshes a Google OAuth access token using the refresh token
+ */
+async function refreshGoogleToken(refreshToken: string, clientId: string, clientSecret: string): Promise<TokenRefreshResponse> {
+  try {
+    console.log(`🔄 [N8N] Refreshing Google OAuth token...`);
+    
+    const response = await axios.post('https://oauth2.googleapis.com/token', {
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+      grant_type: 'refresh_token'
+    });
+
+    console.log(`✅ [N8N] Token refreshed successfully`);
+    return response.data;
+  } catch (error: any) {
+    console.error(`❌ [N8N] Failed to refresh token:`, error.message);
+    throw error;
+  }
+}
+
+/**
+ * Gets fresh access token for a user, refreshing if necessary
+ */
+async function getFreshAccessToken(accessInfo: AccessInfo): Promise<{ accessToken: string; expiresAt: Date }> {
+  try {
+    // Check if current token is expired or will expire soon (within 5 minutes)
+    const now = new Date();
+    const expiresAt = new Date(accessInfo.expiresAt);
+    const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
+    
+    if (expiresAt > fiveMinutesFromNow) {
+      console.log(`✅ [N8N] Current token is still valid, expires at: ${expiresAt.toISOString()}`);
+      return {
+        accessToken: accessInfo.accessToken,
+        expiresAt: expiresAt
+      };
+    }
+    
+    console.log(`🔄 [N8N] Token expired or expiring soon, refreshing...`);
+    console.log(`📅 [N8N] Current time: ${now.toISOString()}`);
+    console.log(`📅 [N8N] Token expires at: ${expiresAt.toISOString()}`);
+    
+    // Refresh the token
+    const refreshResponse = await refreshGoogleToken(
+      accessInfo.refreshToken,
+      accessInfo.clientId,
+      accessInfo.clientSecret
+    );
+    
+    // Calculate new expiry time
+    const newExpiresAt = new Date(now.getTime() + (refreshResponse.expires_in * 1000));
+    
+    // Update the access info in the database with the new token
+    await storage.updateAccessInfo(accessInfo.userId, {
+      accessToken: refreshResponse.access_token,
+      expiresAt: newExpiresAt,
+      tokenType: refreshResponse.token_type,
+      scope: refreshResponse.scope
+    });
+    
+    console.log(`✅ [N8N] Token refreshed and stored in database`);
+    console.log(`📅 [N8N] New token expires at: ${newExpiresAt.toISOString()}`);
+    
+    return {
+      accessToken: refreshResponse.access_token,
+      expiresAt: newExpiresAt
+    };
+    
+  } catch (error: any) {
+    console.error(`❌ [N8N] Failed to get fresh access token:`, error.message);
+    throw error;
+  }
+}
+
 // Google service configurations with their specific scopes and credential types
 const GOOGLE_SERVICES = {
   calendar: {
@@ -69,6 +153,10 @@ export async function createN8nCredentialsFromAccessInfo(accessInfo: AccessInfo)
       return [];
     }
 
+    // Get fresh access token before creating credentials
+    console.log(`🔍 [N8N] Getting fresh access token for ${accessInfo.email}...`);
+    const freshToken = await getFreshAccessToken(accessInfo);
+    
     const createdCredentials = [];
     
     // Create credentials for each Google service that matches the user's scope
@@ -95,10 +183,10 @@ export async function createN8nCredentialsFromAccessInfo(accessInfo: AccessInfo)
             sendAdditionalBodyProperties: false,
             additionalBodyProperties: "{}",
             oauthTokenData: JSON.stringify({
-              accessToken: accessInfo.accessToken,
+              accessToken: freshToken.accessToken,
               refreshToken: accessInfo.refreshToken,
-              expiresAt: accessInfo.expiresAt.toISOString(),
-              expiresIn: Math.floor((accessInfo.expiresAt.getTime() - Date.now()) / 1000),
+              expiresAt: freshToken.expiresAt.toISOString(),
+              expiresIn: Math.floor((freshToken.expiresAt.getTime() - Date.now()) / 1000),
               tokenType: accessInfo.tokenType,
               scope: serviceConfig.scope
             })
@@ -249,6 +337,22 @@ export async function createMultipleGoogleServiceCredentials(user: User): Promis
       return [];
     }
     
+    // Get fresh access token if we have refresh token
+    let freshAccessToken = user.accessToken;
+    let freshExpiresAt = new Date(Date.now() + (3600 * 1000));
+    
+    if (user.refreshToken) {
+      try {
+        console.log(`🔍 [N8N] Getting fresh access token for ${user.email}...`);
+        const refreshResponse = await refreshGoogleToken(user.refreshToken, googleClientId, googleClientSecret);
+        freshAccessToken = refreshResponse.access_token;
+        freshExpiresAt = new Date(Date.now() + (refreshResponse.expires_in * 1000));
+        console.log(`✅ [N8N] Token refreshed for ${user.email}`);
+      } catch (error) {
+        console.warn(`⚠️ [N8N] Failed to refresh token for ${user.email}, using existing token`);
+      }
+    }
+    
     const createdCredentials = [];
     
     // Create credentials for each Google service
@@ -265,10 +369,10 @@ export async function createMultipleGoogleServiceCredentials(user: User): Promis
             sendAdditionalBodyProperties: false,
             additionalBodyProperties: "{}",
             oauthTokenData: JSON.stringify({
-              accessToken: user.accessToken,
+              accessToken: freshAccessToken,
               refreshToken: user.refreshToken,
-              expiresAt: new Date(Date.now() + (3600 * 1000)).toISOString(), // 1 hour from now
-              expiresIn: 3600,
+              expiresAt: freshExpiresAt.toISOString(),
+              expiresIn: Math.floor((freshExpiresAt.getTime() - Date.now()) / 1000),
               tokenType: "Bearer",
               scope: serviceConfig.scope
             })
@@ -359,6 +463,22 @@ export async function createGoogleServiceCredential(user: User, serviceKey: stri
       return null;
     }
     
+    // Get fresh access token if we have refresh token
+    let freshAccessToken = user.accessToken;
+    let freshExpiresAt = new Date(Date.now() + (3600 * 1000));
+    
+    if (user.refreshToken) {
+      try {
+        console.log(`🔍 [N8N] Getting fresh access token for ${user.email}...`);
+        const refreshResponse = await refreshGoogleToken(user.refreshToken, googleClientId, googleClientSecret);
+        freshAccessToken = refreshResponse.access_token;
+        freshExpiresAt = new Date(Date.now() + (refreshResponse.expires_in * 1000));
+        console.log(`✅ [N8N] Token refreshed for ${user.email}`);
+      } catch (error) {
+        console.warn(`⚠️ [N8N] Failed to refresh token for ${user.email}, using existing token`);
+      }
+    }
+    
     const credentialData: CreateCredentialData = {
       name: `${serviceConfig.name} - ${user.email}`,
       type: serviceConfig.type,
@@ -368,10 +488,10 @@ export async function createGoogleServiceCredential(user: User, serviceKey: stri
         sendAdditionalBodyProperties: false,
         additionalBodyProperties: "{}",
         oauthTokenData: JSON.stringify({
-          accessToken: user.accessToken,
+          accessToken: freshAccessToken,
           refreshToken: user.refreshToken,
-          expiresAt: new Date(Date.now() + (3600 * 1000)).toISOString(),
-          expiresIn: 3600,
+          expiresAt: freshExpiresAt.toISOString(),
+          expiresIn: Math.floor((freshExpiresAt.getTime() - Date.now()) / 1000),
           tokenType: "Bearer",
           scope: serviceConfig.scope
         })
@@ -427,6 +547,61 @@ export async function getCredentialSchema(credentialType: string): Promise<any> 
  */
 export function getAvailableGoogleServices(): Record<string, any> {
   return GOOGLE_SERVICES;
+}
+
+/**
+ * Manually refresh tokens and recreate n8n credentials for a user
+ * This is useful for fixing "unable to sign without access token" errors
+ */
+export async function refreshTokensAndRecreateCredentials(userId: string): Promise<any[]> {
+  console.log(`🔄 [N8N] Manually refreshing tokens and recreating credentials for user: ${userId}`);
+  
+  try {
+    // Get the user's access info
+    const accessInfo = await storage.getAccessInfo(userId);
+    if (!accessInfo) {
+      console.error(`❌ [N8N] No access info found for user: ${userId}`);
+      return [];
+    }
+    
+    console.log(`📝 [N8N] Found access info for user: ${accessInfo.email}`);
+    
+    // Force refresh the token (even if it's not expired)
+    console.log(`🔄 [N8N] Force refreshing token for ${accessInfo.email}...`);
+    const refreshResponse = await refreshGoogleToken(
+      accessInfo.refreshToken,
+      accessInfo.clientId,
+      accessInfo.clientSecret
+    );
+    
+    // Update the access info in the database
+    const newExpiresAt = new Date(Date.now() + (refreshResponse.expires_in * 1000));
+    await storage.updateAccessInfo(userId, {
+      accessToken: refreshResponse.access_token,
+      expiresAt: newExpiresAt,
+      tokenType: refreshResponse.token_type,
+      scope: refreshResponse.scope
+    });
+    
+    console.log(`✅ [N8N] Token refreshed and stored in database for ${accessInfo.email}`);
+    
+    // Create fresh credentials with the new token
+    const updatedAccessInfo = await storage.getAccessInfo(userId);
+    if (!updatedAccessInfo) {
+      console.error(`❌ [N8N] Failed to get updated access info for user: ${userId}`);
+      return [];
+    }
+    
+    console.log(`🔧 [N8N] Creating fresh credentials for ${accessInfo.email}...`);
+    const credentials = await createN8nCredentialsFromAccessInfo(updatedAccessInfo);
+    
+    console.log(`✅ [N8N] Successfully refreshed tokens and recreated ${credentials.length} credentials for ${accessInfo.email}`);
+    return credentials;
+    
+  } catch (error: any) {
+    console.error(`❌ [N8N] Failed to refresh tokens and recreate credentials for user ${userId}:`, error.message);
+    return [];
+  }
 }
 
 /**

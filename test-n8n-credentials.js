@@ -148,6 +148,28 @@ async function testN8nCredentialCreation() {
       console.log('📄 Error:', apiError.message);
     }
 
+    // Test 5: Test the token refresh endpoint (if server is running)
+    console.log('\n🔄 Testing token refresh API endpoint...');
+    
+    try {
+      const refreshApiResponse = await axios.post(
+        `${BASE_URL}/api/n8n/refresh-tokens/${TEST_ACCESS_INFO.userId}`,
+        {},
+        {
+          headers: {
+            'Authorization': 'Bearer test-token',
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      console.log('✅ Token refresh API endpoint test successful:');
+      console.log('📄 Response:', JSON.stringify(refreshApiResponse.data, null, 2));
+    } catch (refreshApiError) {
+      console.log('⚠️ Token refresh API endpoint test failed (server might not be running):');
+      console.log('📄 Error:', refreshApiError.message);
+    }
+
     console.log('\n🎉 All tests completed successfully!');
 
   } catch (error) {

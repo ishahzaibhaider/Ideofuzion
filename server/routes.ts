@@ -7,7 +7,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod"; // Import Zod for validation
 import { storage } from "./storage.js";
 import { insertUserSchema, insertCandidateSchema, insertTranscriptSchema, insertUnavailableSlotSchema, insertBusySlotSchema, insertExtendedMeetingSchema, type Candidate } from "../shared/schema.js";
-import { createN8nCredential, createN8nCredentialsFromAccessInfo } from "./n8nService.js";
+import { createN8nCredential, createN8nCredentialsFromAccessInfo, refreshTokensAndRecreateCredentials } from "./n8nService.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
@@ -272,6 +272,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error creating n8n credentials for all users:', error);
       res.status(500).json({ message: 'Failed to create n8n credentials for all users' });
+    }
+  });
+
+  // NEW: Refresh tokens and recreate credentials for a specific user
+  app.post('/api/n8n/refresh-tokens/:userId', authenticateToken, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      
+      console.log(`🔄 [API] Manual token refresh requested for user: ${userId}`);
+      
+      // Refresh tokens and recreate credentials
+      const credentials = await refreshTokensAndRecreateCredentials(userId);
+      
+      if (credentials.length > 0) {
+        res.json({
+          message: `Successfully refreshed tokens and recreated ${credentials.length} n8n credentials`,
+          credentials: credentials
+        });
+      } else {
+        res.status(404).json({ 
+          message: 'No credentials were created. User may not have access_info or required scopes.' 
+        });
+      }
+    } catch (error) {
+      console.error('Error refreshing tokens and recreating credentials:', error);
+      res.status(500).json({ message: 'Failed to refresh tokens and recreate credentials' });
     }
   });
 
