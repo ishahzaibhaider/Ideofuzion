@@ -1473,5 +1473,183 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Simple in-memory rate limiting for webhook calls
+  const webhookRateLimit = new Map<string, number>();
+  const RATE_LIMIT_WINDOW = 60000; // 1 minute
+  const MAX_REQUESTS_PER_WINDOW = 5; // Max 5 requests per minute per user
+
+  // Webhook endpoint for starting interview sessions
+  app.post("/api/start-interview-session", authenticateToken, async (req: any, res) => {
+    try {
+      const userId = req.user.userId;
+      const { candidateId } = req.body;
+
+      // Rate limiting check
+      const now = Date.now();
+      const userKey = `webhook_${userId}`;
+      const lastRequestTime = webhookRateLimit.get(userKey) || 0;
+      
+      if (now - lastRequestTime < RATE_LIMIT_WINDOW) {
+        const requestsInWindow = Math.floor((now - lastRequestTime) / (RATE_LIMIT_WINDOW / MAX_REQUESTS_PER_WINDOW));
+        if (requestsInWindow >= MAX_REQUESTS_PER_WINDOW) {
+          return res.status(429).json({ 
+            error: "Rate limit exceeded", 
+            message: "Too many webhook requests. Please wait before trying again." 
+          });
+        }
+      }
+      
+      webhookRateLimit.set(userKey, now);
+
+      if (!candidateId) {
+        return res.status(400).json({ error: "Candidate ID is required" });
+      }
+
+      // Get the candidate data
+      const candidate = await storage.getCandidate(candidateId, userId);
+      if (!candidate) {
+        return res.status(404).json({ error: "Candidate not found" });
+      }
+
+      // Validate that candidate has required fields
+      if (!candidate["Google Meet Id"]) {
+        return res.status(400).json({ error: "Candidate does not have a Google Meet ID" });
+      }
+
+      if (!candidate["Interview Start"]) {
+        return res.status(400).json({ error: "Candidate does not have an interview start time" });
+      }
+
+      // Get the current user data
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Prepare webhook data
+      const webhookData = {
+        userId: userId,
+        userEmail: user.email,
+        userName: user.name,
+        candidateId: candidate.id,
+        candidateName: candidate["Candidate Name"],
+        candidateEmail: candidate.Email,
+        jobTitle: candidate["Job Title"],
+        googleMeetId: candidate["Google Meet Id"],
+        interviewStart: candidate["Interview Start"],
+        interviewEnd: candidate["Interview End"],
+        calendarEventId: candidate["Calendar Event ID"],
+        timestamp: new Date().toISOString(),
+        action: "interview_session_started",
+        sessionId: `${userId}_${candidate.id}_${Date.now()}`, // Unique session identifier
+        platform: "ideofuzion"
+      };
+
+      // Trigger the production webhook with timeout
+      console.log("Triggering interview session webhook...");
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      try {
+        const webhookResponse = await fetch("https://n8n.hireninja.site/webhook/meetbot-ideofuzion", {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            "User-Agent": "HiringPlatform/1.0"
+          },
+          body: JSON.stringify(webhookData),
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (webhookResponse.ok) {
+          console.log("Interview session webhook triggered successfully");
+          res.json({ 
+            success: true, 
+            message: "Interview session started successfully",
+            candidate: {
+              name: candidate["Candidate Name"],
+              meetId: candidate["Google Meet Id"]
+            }
+          });
+        } else {
+          const errorText = await webhookResponse.text();
+          console.error("Interview session webhook failed:", {
+            status: webhookResponse.status,
+            statusText: webhookResponse.statusText,
+            error: errorText,
+            candidateId: candidate.id,
+            userId: userId
+          });
+          res.status(500).json({ 
+            error: "Failed to start interview session",
+            webhookStatus: webhookResponse.status,
+            webhookError: errorText
+          });
+        }
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId);
+        if (fetchError.name === 'AbortError') {
+          console.error("Webhook request timed out after 10 seconds");
+          res.status(500).json({ 
+            error: "Webhook request timed out",
+            message: "The webhook request took too long to respond"
+          });
+        } else {
+          console.error("Error making webhook request:", fetchError);
+          res.status(500).json({ 
+            error: "Failed to connect to webhook",
+            message: "Unable to reach the webhook endpoint"
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error starting interview session:", error);
+      res.status(500).json({ error: "Failed to start interview session" });
+    }
+  });
+
+  // Health check endpoint for webhook connectivity
+  app.get("/api/webhook-health", authenticateToken, async (req: any, res) => {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
+      try {
+        const response = await fetch("https://n8n.hireninja.site/webhook/meetbot-ideofuzion", {
+          method: "HEAD", // Just check if endpoint is reachable
+          headers: { 
+            "User-Agent": "HiringPlatform/1.0"
+          },
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        res.json({ 
+          status: "healthy",
+          webhookReachable: true,
+          webhookStatus: response.status,
+          timestamp: new Date().toISOString()
+        });
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId);
+        res.json({ 
+          status: "unhealthy",
+          webhookReachable: false,
+          error: fetchError.message,
+          timestamp: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      console.error("Error checking webhook health:", error);
+      res.status(500).json({ 
+        status: "error",
+        error: "Failed to check webhook health"
+      });
+    }
+  });
+
   return httpServer;
 }

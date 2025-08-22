@@ -19,6 +19,8 @@ export default function LiveInterviewPage() {
   const [manualSelection, setManualSelection] = useState(false);
   const [open, setOpen] = useState(false);
   const [isStartingSession, setIsStartingSession] = useState(false);
+  const [webhookStatus, setWebhookStatus] = useState<'checking' | 'healthy' | 'unhealthy' | 'unknown'>('unknown');
+  const [lastSessionStart, setLastSessionStart] = useState<number>(0);
   const { toast } = useToast();
 
   // Get all candidates for dropdown
@@ -53,6 +55,40 @@ export default function LiveInterviewPage() {
     },
     enabled: !!selectedCandidateId && !!allCandidates,
   });
+
+  // Check webhook health
+  const checkWebhookHealth = async () => {
+    try {
+      setWebhookStatus('checking');
+      const response = await authenticatedApiRequest("GET", "/api/webhook-health");
+      const result = await response.json();
+      
+      if (result.webhookReachable) {
+        setWebhookStatus('healthy');
+        console.log('Webhook health check passed');
+      } else {
+        setWebhookStatus('unhealthy');
+        console.warn('Webhook health check failed:', result.error);
+      }
+    } catch (error: any) {
+      console.error('Error checking webhook health:', error);
+      setWebhookStatus('unhealthy');
+      
+      // Show toast notification for webhook issues
+      if (error.message?.includes('401')) {
+        toast({
+          title: "Authentication Error",
+          description: "Please log in again to check webhook status",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  // Check webhook health on component mount
+  useEffect(() => {
+    checkWebhookHealth();
+  }, []);
 
   // Only show manually selected candidates or currently ongoing interviews (not upcoming)
   const displayCandidate = manualSelection && selectedCandidateData 
@@ -137,39 +173,79 @@ export default function LiveInterviewPage() {
       return;
     }
 
+    // Validate candidate has required fields
+    if (!displayCandidate["Google Meet Id"]) {
+      toast({
+        title: "Missing Google Meet ID",
+        description: "This candidate does not have a Google Meet ID configured",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!displayCandidate["Interview Start"]) {
+      toast({
+        title: "Missing Interview Time",
+        description: "This candidate does not have an interview start time configured",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Prevent rapid successive session starts (within 5 seconds)
+    const now = Date.now();
+    if (now - lastSessionStart < 5000) {
+      toast({
+        title: "Please Wait",
+        description: "Please wait a few seconds before starting another session",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsStartingSession(true);
     try {
-      const webhookData = {
-        candidateId: displayCandidate.id,
-        candidateName: displayCandidate["Candidate Name"],
-        candidateEmail: displayCandidate.Email,
-        jobTitle: displayCandidate["Job Title"],
-        googleMeetId: displayCandidate["Google Meet Id"],
-        interviewStart: displayCandidate["Interview Start"],
-        timestamp: new Date().toISOString()
-      };
-
-      const response = await fetch('http://54.226.92.93:5678/webhook/f04e8b6a-39c9-4654-ac7b-0aee4b6bd4fb', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(webhookData)
+      console.log('Starting interview session for candidate:', {
+        id: displayCandidate.id,
+        name: displayCandidate["Candidate Name"],
+        meetId: displayCandidate["Google Meet Id"]
       });
 
-      if (response.ok) {
+      const response = await authenticatedApiRequest("POST", "/api/start-interview-session", {
+        candidateId: displayCandidate.id
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setLastSessionStart(Date.now());
         toast({
           title: "Session Started",
           description: `Interview session started for ${displayCandidate["Candidate Name"]}`,
         });
+        console.log('Interview session started successfully:', result);
       } else {
-        throw new Error(`Webhook failed with status: ${response.status}`);
+        throw new Error(result.error || "Failed to start session");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error starting session:', error);
+      let errorMessage = "Failed to start interview session. Please try again.";
+      
+      if (error.message) {
+        if (error.message.includes("401")) {
+          errorMessage = "Authentication failed. Please log in again.";
+        } else if (error.message.includes("404")) {
+          errorMessage = "Candidate not found. Please refresh and try again.";
+        } else if (error.message.includes("400")) {
+          errorMessage = "Invalid candidate data. Please check the candidate configuration.";
+        } else if (error.message.includes("500")) {
+          errorMessage = "Server error. Please try again later.";
+        }
+      }
+      
       toast({
         title: "Session Start Failed",
-        description: "Failed to start interview session. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -422,7 +498,32 @@ export default function LiveInterviewPage() {
                 </span>
               </div>
             </div>
-            <div className="flex space-x-3">
+            <div className="flex space-x-3 items-center">
+              {/* Webhook Status Indicator */}
+              <div className="flex items-center space-x-2">
+                <div className={`w-2 h-2 rounded-full ${
+                  webhookStatus === 'healthy' ? 'bg-green-500' :
+                  webhookStatus === 'unhealthy' ? 'bg-red-500' :
+                  webhookStatus === 'checking' ? 'bg-yellow-500' :
+                  'bg-gray-400'
+                }`} />
+                <span className="text-xs text-gray-600">
+                  {webhookStatus === 'healthy' ? 'Webhook Ready' :
+                   webhookStatus === 'unhealthy' ? 'Webhook Offline' :
+                   webhookStatus === 'checking' ? 'Checking...' :
+                   'Unknown'}
+                </span>
+                {webhookStatus === 'unhealthy' && (
+                  <button
+                    onClick={checkWebhookHealth}
+                    className="text-xs text-blue-600 hover:text-blue-800 underline"
+                    title="Retry webhook connection"
+                  >
+                    Retry
+                  </button>
+                )}
+              </div>
+              
               <Button
                 variant="outline"
                 onClick={handleViewResume}
@@ -441,9 +542,10 @@ export default function LiveInterviewPage() {
               <Button
                 variant="default"
                 onClick={handleStartSession}
-                disabled={isStartingSession || !displayCandidate}
+                disabled={isStartingSession || !displayCandidate || webhookStatus === 'unhealthy'}
                 className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
                 data-testid="button-start-session"
+                title={webhookStatus === 'unhealthy' ? 'Webhook is offline. Cannot start session.' : ''}
               >
                 {isStartingSession ? 'Starting...' : 'Start Session'}
               </Button>
