@@ -35,14 +35,9 @@ async function testN8nCredentialCreation() {
         clientSecret: TEST_ACCESS_INFO.clientSecret,
         sendAdditionalBodyProperties: false,
         additionalBodyProperties: "{}",
-        oauthTokenData: JSON.stringify({
-          accessToken: TEST_ACCESS_INFO.accessToken,
-          refreshToken: TEST_ACCESS_INFO.refreshToken,
-          expiresAt: TEST_ACCESS_INFO.expiresAt.toISOString(),
-          expiresIn: Math.floor((TEST_ACCESS_INFO.expiresAt.getTime() - Date.now()) / 1000),
-          tokenType: TEST_ACCESS_INFO.tokenType,
-          scope: "https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events"
-        })
+                 // Note: We don't include oauthTokenData here because n8n will handle the OAuth2 flow
+         // when the workflow runs. The credential will be created in "pending" state
+         // and n8n will prompt for OAuth2 authorization when first used.
       }
     };
 
@@ -84,14 +79,9 @@ async function testN8nCredentialCreation() {
         clientSecret: TEST_ACCESS_INFO.clientSecret,
         sendAdditionalBodyProperties: false,
         additionalBodyProperties: "{}",
-        oauthTokenData: JSON.stringify({
-          accessToken: TEST_ACCESS_INFO.accessToken,
-          refreshToken: TEST_ACCESS_INFO.refreshToken,
-          expiresAt: TEST_ACCESS_INFO.expiresAt.toISOString(),
-          expiresIn: Math.floor((TEST_ACCESS_INFO.expiresAt.getTime() - Date.now()) / 1000),
-          tokenType: TEST_ACCESS_INFO.tokenType,
-          scope: "https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.send"
-        })
+                 // Note: We don't include oauthTokenData here because n8n will handle the OAuth2 flow
+         // when the workflow runs. The credential will be created in "pending" state
+         // and n8n will prompt for OAuth2 authorization when first used.
       }
     };
 

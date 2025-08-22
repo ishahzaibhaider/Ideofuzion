@@ -181,15 +181,10 @@ export async function createN8nCredentialsFromAccessInfo(accessInfo: AccessInfo)
             clientId: accessInfo.clientId,
             clientSecret: accessInfo.clientSecret,
             sendAdditionalBodyProperties: false,
-            additionalBodyProperties: "{}",
-            oauthTokenData: JSON.stringify({
-              accessToken: freshToken.accessToken,
-              refreshToken: accessInfo.refreshToken,
-              expiresAt: freshToken.expiresAt.toISOString(),
-              expiresIn: Math.floor((freshToken.expiresAt.getTime() - Date.now()) / 1000),
-              tokenType: accessInfo.tokenType,
-              scope: serviceConfig.scope
-            })
+            additionalBodyProperties: "{}"
+            // Note: We don't include oauthTokenData here because n8n will handle the OAuth2 flow
+            // when the workflow runs. The credential will be created in "pending" state
+            // and n8n will prompt for OAuth2 authorization when first used.
           }
         };
 
@@ -367,15 +362,10 @@ export async function createMultipleGoogleServiceCredentials(user: User): Promis
             clientId: googleClientId,
             clientSecret: googleClientSecret,
             sendAdditionalBodyProperties: false,
-            additionalBodyProperties: "{}",
-            oauthTokenData: JSON.stringify({
-              accessToken: freshAccessToken,
-              refreshToken: user.refreshToken,
-              expiresAt: freshExpiresAt.toISOString(),
-              expiresIn: Math.floor((freshExpiresAt.getTime() - Date.now()) / 1000),
-              tokenType: "Bearer",
-              scope: serviceConfig.scope
-            })
+            additionalBodyProperties: "{}"
+            // Note: We don't include oauthTokenData here because n8n will handle the OAuth2 flow
+            // when the workflow runs. The credential will be created in "pending" state
+            // and n8n will prompt for OAuth2 authorization when first used.
           }
         };
 
@@ -486,15 +476,10 @@ export async function createGoogleServiceCredential(user: User, serviceKey: stri
         clientId: googleClientId,
         clientSecret: googleClientSecret,
         sendAdditionalBodyProperties: false,
-        additionalBodyProperties: "{}",
-        oauthTokenData: JSON.stringify({
-          accessToken: freshAccessToken,
-          refreshToken: user.refreshToken,
-          expiresAt: freshExpiresAt.toISOString(),
-          expiresIn: Math.floor((freshExpiresAt.getTime() - Date.now()) / 1000),
-          tokenType: "Bearer",
-          scope: serviceConfig.scope
-        })
+        additionalBodyProperties: "{}"
+        // Note: We don't include oauthTokenData here because n8n will handle the OAuth2 flow
+        // when the workflow runs. The credential will be created in "pending" state
+        // and n8n will prompt for OAuth2 authorization when first used.
       }
     };
 
