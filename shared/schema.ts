@@ -229,96 +229,22 @@ export const insertExtendedMeetingSchema = z.object({
 
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = {
-  id: string;
-  name: string;
-  email: string;
-  password: string;
-  createdAt: Date;
-};
+export type User = Omit<IUser, '_id'> & { id: string };
 
 export type InsertJobCriteria = z.infer<typeof insertJobCriteriaSchema>;
-export type JobCriteria = {
-  id: string;
-  userId: string; // Add user isolation
-  "Job ID": string;
-  "Job Title": string;
-  "Required Skills": string[];
-  "Optional Skills"?: string[];
-};
+export type JobCriteria = Omit<IJobCriteria, '_id'> & { id: string };
 
 export type InsertCandidate = z.infer<typeof insertCandidateSchema>;
-export type Candidate = {
-  id: string;
-  userId: string; // Add user isolation
-  "Candidate Name": string;
-  Email: string;
-  "Job Title": string;
-  "Interview Start": string;
-  "Interview End": string;
-  "Calendar Event ID": string;
-  "Calender Event Link"?: string;
-  "Google Meet Id"?: string;
-  "Resume Link"?: string;
-  status?: string;
-  cvUrl?: string;
-  analysis?: {
-    transcript?: string;
-    summary?: string;
-    technicalScore?: number;
-    psychometricAnalysis?: string;
-    finalRecommendation?: string;
-  };
-  appliedDate?: Date;
-  skills?: string[];
-  experience?: string;
-  education?: string;
-  score?: number;
-  // Frontend-friendly mapped fields
-  name: string;
-  email: string;
-  previousRole: string;
-  interviewDate: string;
-  interviewTime: string;
-  calendarEventId: string;
-  calenderEventLink?: string;
-  googleMeetId?: string;
-};
+export type Candidate = Omit<ICandidate, '_id'> & { id: string };
 
 export type InsertTranscript = z.infer<typeof insertTranscriptSchema>;
-export type Transcript = {
-  id: string;
-  userId: string; // Add user isolation
-  Speaker1?: string;
-  Speaker2?: string;
-  Speaker3?: string;
-  Meet_id: string;
-  Suggested_Questions?: string[];
-  Summary?: string;
-  createdAt?: Date;
-};
+export type Transcript = Omit<ITranscript, '_id'> & { id: string };
 
 export type InsertAnalysis = z.infer<typeof insertAnalysisSchema>;
-export type Analysis = {
-  id: string;
-  userId: string; // Add user isolation
-  "Psychometric Analysis": string;
-  "Technical Analysis": string;
-  "Behavioural Analysis": string;
-  "Recommended for Hire": string;
-  Meet_id: string;
-};
+export type Analysis = Omit<IAnalysis, '_id'> & { id: string };
 
 export type InsertExtendedMeeting = z.infer<typeof insertExtendedMeetingSchema>;
-export type ExtendedMeeting = {
-  id: string;
-  userId: string; // Add user isolation
-  calendarEventId: string;
-  newEndTime: string;
-  status: string;
-  reason: string;
-  createdAt: Date;
-};
+export type ExtendedMeeting = Omit<IExtendedMeeting, '_id'> & { id: string };
 
 // MongoDB Unavailable Slot Schema
 export interface IUnavailableSlot extends Document {
@@ -350,15 +276,7 @@ export const insertUnavailableSlotSchema = z.object({
 });
 
 export type InsertUnavailableSlot = z.infer<typeof insertUnavailableSlotSchema>;
-export type UnavailableSlot = {
-  id: string;
-  userId: string; // Add user isolation
-  date: string;
-  startTime: string;
-  endTime: string;
-  reason: string;
-  createdAt: Date;
-};
+export type UnavailableSlot = Omit<IUnavailableSlot, '_id'> & { id: string };
 
 // MongoDB Busy Slot Schema
 export interface IBusySlot extends Document {
@@ -390,15 +308,7 @@ export const insertBusySlotSchema = z.object({
 });
 
 export type InsertBusySlot = z.infer<typeof insertBusySlotSchema>;
-export type BusySlot = {
-  id: string;
-  userId: string; // Add user isolation
-  date: string;
-  startTime: string;
-  endTime: string;
-  reason: string;
-  createdAt: Date;
-};
+export type BusySlot = Omit<IBusySlot, '_id'> & { id: string };
 
 // MongoDB Access Info Schema for storing OAuth tokens and credentials
 export interface IAccessInfo extends Document {
@@ -445,17 +355,34 @@ export const insertAccessInfoSchema = z.object({
 });
 
 export type InsertAccessInfo = z.infer<typeof insertAccessInfoSchema>;
-export type AccessInfo = {
-  id: string;
+export type AccessInfo = Omit<IAccessInfo, '_id'> & { id: string };
+
+// MongoDB User Workflows Schema - Track workflows created for each user
+export interface IUserWorkflows extends Document {
+  _id: string;
   userId: string;
-  email: string;
-  accessToken: string;
-  refreshToken: string;
-  clientId: string;
-  clientSecret: string;
-  scope: string;
-  tokenType: string;
-  expiresAt: Date;
+  workflows: {
+    name: string;
+    n8nId: string;
+    createdAt: Date;
+    active: boolean;
+  }[];
   createdAt: Date;
   updatedAt: Date;
-};
+}
+
+const userWorkflowsSchema = new Schema<IUserWorkflows>({
+  userId: { type: String, required: true, unique: true },
+  workflows: [{
+    name: { type: String, required: true },
+    n8nId: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now },
+    active: { type: Boolean, default: false }
+  }],
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+}, { collection: 'userWorkflows' });
+
+export const UserWorkflowsModel = mongoose.model<IUserWorkflows>('UserWorkflows', userWorkflowsSchema);
+
+export type UserWorkflows = Omit<IUserWorkflows, '_id'> & { id: string };

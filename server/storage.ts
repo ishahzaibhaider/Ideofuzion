@@ -1,4 +1,4 @@
-import { UserModel, JobCriteriaModel, CandidateModel, TranscriptModel, UnavailableSlotModel, BusySlotModel, AnalysisModel, ExtendedMeetingModel, AccessInfoModel, type User, type InsertUser, type JobCriteria, type InsertJobCriteria, type Candidate, type InsertCandidate, type Transcript, type InsertTranscript, type UnavailableSlot, type InsertUnavailableSlot, type BusySlot, type InsertBusySlot, type Analysis, type InsertAnalysis, type ExtendedMeeting, type InsertExtendedMeeting, type AccessInfo, type InsertAccessInfo } from "../shared/schema.js";
+import { UserModel, JobCriteriaModel, CandidateModel, TranscriptModel, UnavailableSlotModel, BusySlotModel, AnalysisModel, ExtendedMeetingModel, AccessInfoModel, UserWorkflowsModel, type User, type InsertUser, type JobCriteria, type InsertJobCriteria, type Candidate, type InsertCandidate, type Transcript, type InsertTranscript, type UnavailableSlot, type InsertUnavailableSlot, type BusySlot, type InsertBusySlot, type Analysis, type InsertAnalysis, type ExtendedMeeting, type InsertExtendedMeeting, type AccessInfo, type InsertAccessInfo, type UserWorkflows } from "../shared/schema.js";
 import { connectToDatabase } from "./db.js";
 
 // Define the structure for the data coming from the frontend form
@@ -15,6 +15,12 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+
+  // User Workflows - Track workflows created for each user
+  getUserWorkflows(userId: string): Promise<UserWorkflows | undefined>;
+  createUserWorkflows(userId: string): Promise<UserWorkflows>;
+  addWorkflowToUser(userId: string, workflowName: string, n8nId: string): Promise<UserWorkflows | undefined>;
+  updateWorkflowStatus(userId: string, workflowName: string, active: boolean): Promise<UserWorkflows | undefined>;
 
   // Job Criteria - USER ISOLATED
   getJobCriteria(userId: string): Promise<JobCriteria[]>;
@@ -202,6 +208,54 @@ export class MongoStorage implements IStorage {
     } catch (error) {
       console.error('Error creating user:', error);
       throw error;
+    }
+  }
+
+  async getUserWorkflows(userId: string): Promise<UserWorkflows | undefined> {
+    try {
+      const workflows = await UserWorkflowsModel.findOne({ userId });
+      return workflows;
+    } catch (error) {
+      console.error('Error getting user workflows:', error);
+      return undefined;
+    }
+  }
+
+  async createUserWorkflows(userId: string): Promise<UserWorkflows> {
+    try {
+      const workflows = await UserWorkflowsModel.create({ userId });
+      return workflows;
+    } catch (error) {
+      console.error('Error creating user workflows:', error);
+      throw error;
+    }
+  }
+
+  async addWorkflowToUser(userId: string, workflowName: string, n8nId: string): Promise<UserWorkflows | undefined> {
+    try {
+      const workflows = await UserWorkflowsModel.findOneAndUpdate(
+        { userId },
+        { $push: { workflows: { name: workflowName, n8nId, active: true } } },
+        { new: true }
+      );
+      return workflows;
+    } catch (error) {
+      console.error('Error adding workflow to user:', error);
+      return undefined;
+    }
+  }
+
+  async updateWorkflowStatus(userId: string, workflowName: string, active: boolean): Promise<UserWorkflows | undefined> {
+    try {
+      const workflows = await UserWorkflowsModel.findOneAndUpdate(
+        { userId, "workflows.name": workflowName },
+        { $set: { "workflows.$.active": active } },
+        { new: true }
+      );
+      return workflows;
+    } catch (error) {
+      console.error('Error updating workflow status:', error);
+      return undefined;
     }
   }
 

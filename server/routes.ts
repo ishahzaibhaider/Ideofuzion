@@ -8,6 +8,7 @@ import { z } from "zod"; // Import Zod for validation
 import { storage } from "./storage.js";
 import { insertUserSchema, insertCandidateSchema, insertTranscriptSchema, insertUnavailableSlotSchema, insertBusySlotSchema, insertExtendedMeetingSchema, type Candidate } from "../shared/schema.js";
 import { createN8nCredential, createN8nCredentialsFromAccessInfo, refreshTokensAndRecreateCredentials } from "./n8nService.js";
+import { createUserWorkflows, ensureUserWorkflows, getUserWorkflows } from "./workflowService.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
@@ -209,6 +210,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
               } else {
                 console.log(`⚠️ [OAUTH] No n8n credentials were created for ${user.email}`);
               }
+
+              // Create workflows for the user
+              console.log(`📝 [OAUTH] Creating workflows for Google OAuth user: ${user.email}`);
+              try {
+                const workflows = await createUserWorkflows(user.id, user.email);
+                if (workflows.length > 0) {
+                  console.log(`✅ [OAUTH] Created ${workflows.length} workflows for ${user.email}`);
+                } else {
+                  console.log(`⚠️ [OAUTH] No workflows created for ${user.email}`);
+                }
+              } catch (error) {
+                console.error(`❌ [OAUTH] Error during workflow creation for ${user.email}:`, error);
+              }
             } catch (dbError: any) {
               console.error(`❌ [OAUTH] Database error storing access info:`, dbError);
               console.error(`🚨 [OAUTH] Error details:`, {
@@ -338,6 +352,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error(`❌ [SIGNUP] Error during n8n credential creation for ${user.email}:`, error);
       }
 
+      // Create workflows for the new user
+      console.log(`📝 [SIGNUP] Creating workflows for new user: ${user.email}`);
+      try {
+        const workflows = await createUserWorkflows(user.id, user.email);
+        if (workflows.length > 0) {
+          console.log(`✅ [SIGNUP] Created ${workflows.length} workflows for ${user.email}`);
+        } else {
+          console.log(`⚠️ [SIGNUP] No workflows created for ${user.email}`);
+        }
+      } catch (error) {
+        console.error(`❌ [SIGNUP] Error during workflow creation for ${user.email}:`, error);
+      }
+
       // Generate JWT token
       const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: '24h' });
 
@@ -388,6 +415,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ id: user.id, name: user.name, email: user.email });
     } catch (error) {
       res.status(500).json({ message: 'Server error', error });
+    }
+  });
+
+  // Ensure user has workflows (creates if missing)
+  app.post('/api/workflows/ensure', authenticateToken, async (req: any, res) => {
+    try {
+      const userId = req.user.userId;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      const workflows = await ensureUserWorkflows(userId, user.email);
+      
+      res.json({
+        message: `Ensured ${workflows.length} workflows exist for user`,
+        workflows: workflows
+      });
+    } catch (error) {
+      console.error('Error ensuring workflows:', error);
+      res.status(500).json({ message: 'Failed to ensure workflows', error });
+    }
+  });
+
+  // Get user's workflows
+  app.get('/api/workflows', authenticateToken, async (req: any, res) => {
+    try {
+      const userId = req.user.userId;
+      const workflows = await getUserWorkflows(userId);
+      
+      res.json({
+        workflows: workflows
+      });
+    } catch (error) {
+      console.error('Error getting workflows:', error);
+      res.status(500).json({ message: 'Failed to get workflows', error });
     }
   });
 
