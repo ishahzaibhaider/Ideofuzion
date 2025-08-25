@@ -1,5 +1,5 @@
-import { N8nWorkflowModel, InsertN8nWorkflow, IN8nWorkflow } from '../shared/schema';
-import { connectToDatabase } from './db';
+import { N8nWorkflowModel, InsertN8nWorkflow, IN8nWorkflow } from '../shared/schema.js';
+import { connectToDatabase } from './db.js';
 
 interface N8nWorkflowResponse {
   id: string;
