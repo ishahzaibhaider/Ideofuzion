@@ -386,3 +386,74 @@ const userWorkflowsSchema = new Schema<IUserWorkflows>({
 export const UserWorkflowsModel = mongoose.model<IUserWorkflows>('UserWorkflows', userWorkflowsSchema);
 
 export type UserWorkflows = Omit<IUserWorkflows, '_id'> & { id: string };
+
+// MongoDB N8n Workflow Schema - Store complete workflow information
+export interface IN8nWorkflow extends Document {
+  _id: string;
+  userId: string;
+  n8nId: string; // The ID from n8n instance
+  name: string;
+  description?: string;
+  active: boolean;
+  workflowData: any; // The complete workflow JSON data
+  metadata: {
+    createdAt: Date;
+    updatedAt: Date;
+    version: string;
+    tags?: string[];
+    category?: string;
+  };
+  status: 'active' | 'inactive' | 'archived';
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const n8nWorkflowSchema = new Schema<IN8nWorkflow>({
+  userId: { type: String, required: true },
+  n8nId: { type: String, required: true },
+  name: { type: String, required: true },
+  description: { type: String },
+  active: { type: Boolean, default: false },
+  workflowData: { type: Schema.Types.Mixed, required: true }, // Store complete workflow JSON
+  metadata: {
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now },
+    version: { type: String, default: '1.0.0' },
+    tags: [{ type: String }],
+    category: { type: String }
+  },
+  status: { 
+    type: String, 
+    enum: ['active', 'inactive', 'archived'], 
+    default: 'inactive' 
+  },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+}, { 
+  collection: 'n8n_workflows',
+  timestamps: true 
+});
+
+// Create compound index for efficient queries
+n8nWorkflowSchema.index({ userId: 1, n8nId: 1 }, { unique: true });
+n8nWorkflowSchema.index({ userId: 1, status: 1 });
+n8nWorkflowSchema.index({ userId: 1, active: 1 });
+
+export const N8nWorkflowModel = mongoose.model<IN8nWorkflow>('N8nWorkflow', n8nWorkflowSchema);
+
+export const insertN8nWorkflowSchema = z.object({
+  n8nId: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  active: z.boolean().default(false),
+  workflowData: z.any(), // The complete workflow JSON
+  metadata: z.object({
+    version: z.string().default('1.0.0'),
+    tags: z.array(z.string()).optional(),
+    category: z.string().optional()
+  }).optional(),
+  status: z.enum(['active', 'inactive', 'archived']).default('inactive')
+});
+
+export type InsertN8nWorkflow = z.infer<typeof insertN8nWorkflowSchema>;
+export type N8nWorkflow = Omit<IN8nWorkflow, '_id'> & { id: string };

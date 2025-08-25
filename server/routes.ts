@@ -454,6 +454,127 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // N8n Workflow Management Routes
+  app.get('/api/n8n-workflows', authenticateToken, async (req: any, res) => {
+    try {
+      const userId = req.user.userId;
+      const { n8nWorkflowService } = await import('./n8nWorkflowService.js');
+      const workflows = await n8nWorkflowService.getUserWorkflows(userId);
+      
+      res.json({
+        success: true,
+        workflows: workflows
+      });
+    } catch (error) {
+      console.error('Error getting n8n workflows:', error);
+      res.status(500).json({ message: 'Failed to get n8n workflows', error });
+    }
+  });
+
+  app.get('/api/n8n-workflows/:n8nId', authenticateToken, async (req: any, res) => {
+    try {
+      const userId = req.user.userId;
+      const { n8nId } = req.params;
+      const { n8nWorkflowService } = await import('./n8nWorkflowService.js');
+      const workflow = await n8nWorkflowService.getUserWorkflow(userId, n8nId);
+      
+      if (!workflow) {
+        return res.status(404).json({ message: 'Workflow not found' });
+      }
+      
+      res.json({
+        success: true,
+        workflow: workflow
+      });
+    } catch (error) {
+      console.error('Error getting n8n workflow:', error);
+      res.status(500).json({ message: 'Failed to get n8n workflow', error });
+    }
+  });
+
+  app.post('/api/n8n-workflows/sync', authenticateToken, async (req: any, res) => {
+    try {
+      const userId = req.user.userId;
+      const { n8nWorkflowService } = await import('./n8nWorkflowService.js');
+      const result = await n8nWorkflowService.syncWorkflows(userId);
+      
+      res.json({
+        success: true,
+        message: `Synced ${result.synced} workflows successfully`,
+        synced: result.synced,
+        errors: result.errors
+      });
+    } catch (error) {
+      console.error('Error syncing n8n workflows:', error);
+      res.status(500).json({ message: 'Failed to sync n8n workflows', error });
+    }
+  });
+
+  app.put('/api/n8n-workflows/:n8nId/status', authenticateToken, async (req: any, res) => {
+    try {
+      const userId = req.user.userId;
+      const { n8nId } = req.params;
+      const { status } = req.body;
+      
+      if (!['active', 'inactive', 'archived'].includes(status)) {
+        return res.status(400).json({ message: 'Invalid status. Must be active, inactive, or archived' });
+      }
+      
+      const { n8nWorkflowService } = await import('./n8nWorkflowService.js');
+      const workflow = await n8nWorkflowService.updateWorkflowStatus(userId, n8nId, status);
+      
+      if (!workflow) {
+        return res.status(404).json({ message: 'Workflow not found' });
+      }
+      
+      res.json({
+        success: true,
+        message: 'Workflow status updated successfully',
+        workflow: workflow
+      });
+    } catch (error) {
+      console.error('Error updating n8n workflow status:', error);
+      res.status(500).json({ message: 'Failed to update workflow status', error });
+    }
+  });
+
+  app.delete('/api/n8n-workflows/:n8nId', authenticateToken, async (req: any, res) => {
+    try {
+      const userId = req.user.userId;
+      const { n8nId } = req.params;
+      const { n8nWorkflowService } = await import('./n8nWorkflowService.js');
+      const deleted = await n8nWorkflowService.deleteWorkflow(userId, n8nId);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: 'Workflow not found' });
+      }
+      
+      res.json({
+        success: true,
+        message: 'Workflow deleted successfully'
+      });
+    } catch (error) {
+      console.error('Error deleting n8n workflow:', error);
+      res.status(500).json({ message: 'Failed to delete workflow', error });
+    }
+  });
+
+  app.get('/api/n8n-workflows/stats', authenticateToken, async (req: any, res) => {
+    try {
+      const userId = req.user.userId;
+      const { n8nWorkflowService } = await import('./n8nWorkflowService.js');
+      const stats = await n8nWorkflowService.getWorkflowStats(userId);
+      
+      res.json({
+        success: true,
+        stats: stats
+      });
+    } catch (error) {
+      console.error('Error getting n8n workflow stats:', error);
+      res.status(500).json({ message: 'Failed to get workflow stats', error });
+    }
+  });
+
   // Candidates routes
   app.get('/api/candidates', authenticateToken, async (req: any, res) => {
     try {

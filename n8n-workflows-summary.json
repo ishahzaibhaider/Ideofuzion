@@ -1,0 +1,65 @@
+{
+  "timestamp": "2025-08-25T11:32:01.372Z",
+  "totalWorkflows": 9,
+  "activeWorkflows": 3,
+  "inactiveWorkflows": 6,
+  "processed": 9,
+  "stored": 9,
+  "errors": [],
+  "workflows": [
+    {
+      "name": "cv  processing",
+      "n8nId": "3pbxdpuFQHjmGkCu",
+      "active": false,
+      "status": "inactive"
+    },
+    {
+      "name": "My workflow 3",
+      "n8nId": "DZzPvMkxrdfsnp4Y",
+      "active": false,
+      "status": "inactive"
+    },
+    {
+      "name": "Meeting Bot & Analysis",
+      "n8nId": "QCxCZmYREkK0FODI",
+      "active": true,
+      "status": "active"
+    },
+    {
+      "name": "Cv Processing Workflow",
+      "n8nId": "gshw8NOB3t8ZH1cL",
+      "active": false,
+      "status": "inactive"
+    },
+    {
+      "name": "My workflow",
+      "n8nId": "i4GiBdoxJVIbPjDX",
+      "active": false,
+      "status": "inactive"
+    },
+    {
+      "name": "oldest",
+      "n8nId": "mpiXqRo5n5P1vrnh",
+      "active": false,
+      "status": "inactive"
+    },
+    {
+      "name": "Extending Meeting Time",
+      "n8nId": "qLVwvsZGpIOSBNYu",
+      "active": true,
+      "status": "active"
+    },
+    {
+      "name": "Busy Slots Working",
+      "n8nId": "w7k9ejgAD16tskZl",
+      "active": true,
+      "status": "active"
+    },
+    {
+      "name": "My workflow 2",
+      "n8nId": "zdAfk6jqmDfErDfo",
+      "active": false,
+      "status": "inactive"
+    }
+  ]
+}
