@@ -9,6 +9,7 @@ import { storage } from "./storage.js";
 import { insertUserSchema, insertCandidateSchema, insertTranscriptSchema, insertUnavailableSlotSchema, insertBusySlotSchema, insertExtendedMeetingSchema, type Candidate } from "../shared/schema.js";
 import { createN8nCredential, createN8nCredentialsFromAccessInfo, refreshTokensAndRecreateCredentials } from "./n8nService.js";
 import { createUserWorkflows, ensureUserWorkflows, getUserWorkflows } from "./workflowService.js";
+import { processUserSignup, cleanupFailedSignup } from "./userSignupService.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
@@ -199,29 +200,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
               console.log(`✅ [OAUTH] Access info stored in MongoDB for ${user.email}`);
               console.log(`📄 [OAUTH] Access info ID: ${accessInfo.id}`);
               
-              // Create n8n credentials from the stored access_info
-              console.log(`📝 [OAUTH] Creating n8n credentials from access_info for ${user.email}`);
+              // Use the comprehensive signup service to create credentials and workflows
+              console.log(`🚀 [OAUTH] Starting comprehensive signup process for OAuth user: ${user.email}`);
               
-              const n8nCredentials = await createN8nCredentialsFromAccessInfo(accessInfo);
-              
-              if (n8nCredentials && n8nCredentials.length > 0) {
-                console.log(`✅ [OAUTH] Created ${n8nCredentials.length} n8n credentials for ${user.email}`);
-                console.log(`📋 [OAUTH] Created credentials:`, n8nCredentials);
-              } else {
-                console.log(`⚠️ [OAUTH] No n8n credentials were created for ${user.email}`);
-              }
-
-              // Create workflows for the user
-              console.log(`📝 [OAUTH] Creating workflows for Google OAuth user: ${user.email}`);
               try {
-                const workflows = await createUserWorkflows(user.id, user.email);
-                if (workflows.length > 0) {
-                  console.log(`✅ [OAUTH] Created ${workflows.length} workflows for ${user.email}`);
+                const signupResult = await processUserSignup({
+                  id: user.id,
+                  name: user.name,
+                  email: user.email,
+                  accessToken: user.accessToken,
+                  refreshToken: user.refreshToken,
+                  scope: user.scope
+                }, accessInfo);
+                
+                if (signupResult.success) {
+                  console.log(`🎉 [OAUTH] Comprehensive signup completed successfully for ${user.email}`);
+                  console.log(`📊 [OAUTH] Created ${signupResult.workflows.length} workflows and ${signupResult.credentials.length} credentials`);
                 } else {
-                  console.log(`⚠️ [OAUTH] No workflows created for ${user.email}`);
+                  console.log(`⚠️ [OAUTH] Comprehensive signup completed with errors for ${user.email}`);
+                  console.log(`📊 [OAUTH] Errors: ${signupResult.errors.length}`);
+                  
+                  // If signup failed completely, cleanup any created resources
+                  if (signupResult.workflows.length === 0) {
+                    console.log(`🧹 [OAUTH] Cleaning up failed signup for ${user.email}`);
+                    await cleanupFailedSignup(
+                      user.id,
+                      signupResult.credentials.map(c => c.id),
+                      signupResult.workflows.map(w => w.id)
+                    );
+                  }
                 }
-              } catch (error) {
-                console.error(`❌ [OAUTH] Error during workflow creation for ${user.email}:`, error);
+                
+                // Log detailed results
+                if (signupResult.workflows.length > 0) {
+                  console.log(`✅ [OAUTH] Successfully created workflows:`, signupResult.workflows.map(w => `${w.name} (${w.id})`));
+                }
+                
+                if (signupResult.errors.length > 0) {
+                  console.log(`❌ [OAUTH] Errors encountered:`, signupResult.errors);
+                }
+                
+              } catch (error: any) {
+                console.error(`❌ [OAUTH] Critical error during comprehensive signup for ${user.email}:`, error.message);
+                // Don't fail the OAuth flow - user can still access the app
               }
             } catch (dbError: any) {
               console.error(`❌ [OAUTH] Database error storing access info:`, dbError);
@@ -335,34 +356,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
         password: hashedPassword
       });
 
-      // Create n8n credential for the new user
-      console.log(`📝 [SIGNUP] Creating n8n credential for new user: ${user.email}`);
+      // Use the comprehensive signup service to create credentials and workflows
+      console.log(`🚀 [SIGNUP] Starting comprehensive signup process for user: ${user.email}`);
+      
       try {
-        const n8nResult = await createN8nCredential({
+        const signupResult = await processUserSignup({
           id: user.id,
           name: user.name,
           email: user.email
         });
-        if (n8nResult) {
-          console.log(`✅ [SIGNUP] n8n credential created successfully for ${user.email}`);
+        
+        if (signupResult.success) {
+          console.log(`🎉 [SIGNUP] Comprehensive signup completed successfully for ${user.email}`);
+          console.log(`📊 [SIGNUP] Created ${signupResult.workflows.length} workflows and ${signupResult.credentials.length} credentials`);
         } else {
-          console.log(`⚠️ [SIGNUP] n8n credential creation returned null for ${user.email}`);
+          console.log(`⚠️ [SIGNUP] Comprehensive signup completed with errors for ${user.email}`);
+          console.log(`📊 [SIGNUP] Errors: ${signupResult.errors.length}`);
+          
+          // If signup failed completely, cleanup any created resources
+          if (signupResult.workflows.length === 0) {
+            console.log(`🧹 [SIGNUP] Cleaning up failed signup for ${user.email}`);
+            await cleanupFailedSignup(
+              user.id,
+              signupResult.credentials.map(c => c.id),
+              signupResult.workflows.map(w => w.id)
+            );
+          }
         }
-      } catch (error) {
-        console.error(`❌ [SIGNUP] Error during n8n credential creation for ${user.email}:`, error);
-      }
-
-      // Create workflows for the new user
-      console.log(`📝 [SIGNUP] Creating workflows for new user: ${user.email}`);
-      try {
-        const workflows = await createUserWorkflows(user.id, user.email);
-        if (workflows.length > 0) {
-          console.log(`✅ [SIGNUP] Created ${workflows.length} workflows for ${user.email}`);
-        } else {
-          console.log(`⚠️ [SIGNUP] No workflows created for ${user.email}`);
+        
+        // Log detailed results
+        if (signupResult.workflows.length > 0) {
+          console.log(`✅ [SIGNUP] Successfully created workflows:`, signupResult.workflows.map(w => `${w.name} (${w.id})`));
         }
-      } catch (error) {
-        console.error(`❌ [SIGNUP] Error during workflow creation for ${user.email}:`, error);
+        
+        if (signupResult.errors.length > 0) {
+          console.log(`❌ [SIGNUP] Errors encountered:`, signupResult.errors);
+        }
+        
+      } catch (error: any) {
+        console.error(`❌ [SIGNUP] Critical error during comprehensive signup for ${user.email}:`, error.message);
+        // Don't fail the user registration - they can still use the app
       }
 
       // Generate JWT token
