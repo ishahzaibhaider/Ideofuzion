@@ -71,6 +71,11 @@ try {
     });
     
     console.log(`✅ [WORKFLOW] Loaded ${Object.keys(WORKFLOW_TEMPLATES).length} workflow templates from config file`);
+    console.log(`📊 [WORKFLOW] Template details:`);
+    Object.keys(WORKFLOW_TEMPLATES).forEach(name => {
+      const template = WORKFLOW_TEMPLATES[name];
+      console.log(`   - ${name}: ${template.nodes.length} nodes, ${Object.keys(template.connections).length} connections`);
+    });
   } else {
     console.log(`⚠️ [WORKFLOW] workflow-configs.json not found, using fallback templates`);
     // Fallback to basic templates if config file doesn't exist
@@ -215,23 +220,28 @@ export async function createUserWorkflows(userId: string, userEmail: string): Pr
     // Create each workflow template
     for (const [workflowName, template] of Object.entries(WORKFLOW_TEMPLATES)) {
       try {
-        console.log(`🔧 [WORKFLOW] Creating ${workflowName} for ${userEmail}`);
+        console.log(`🔧 [WORKFLOW] Creating EXACT replica of ${workflowName} for ${userEmail}`);
+        console.log(`📊 [WORKFLOW] Template has ${template.nodes.length} nodes and ${Object.keys(template.connections).length} connections`);
         
-        // Customize template for user
-        const customizedTemplate = {
-          ...template,
+        // Create EXACT replica with user customization
+        const exactReplica = {
           name: `${workflowName} - ${userEmail}`,
           nodes: template.nodes.map((node: WorkflowNode) => ({
             ...node,
-            id: `${node.id}-${userId}`,
+            id: `${node.id}-${userId}`, // Make node IDs unique per user
             // Add credentials if available
             credentials: accessInfo ? getCredentialsForNode(node.type, accessInfo) : undefined
-          }))
+          })),
+          connections: template.connections,
+          settings: template.settings,
+          staticData: template.staticData || {}
         };
+
+        console.log(`📊 [WORKFLOW] Replica will have ${exactReplica.nodes.length} nodes`);
 
         const response = await axios.post(
           `${N8N_BASE_URL}/workflows`,
-          customizedTemplate,
+          exactReplica,
           {
             headers: {
               'X-N8N-API-KEY': N8N_API_KEY,
@@ -241,8 +251,10 @@ export async function createUserWorkflows(userId: string, userEmail: string): Pr
           }
         );
 
-        console.log(`✅ [WORKFLOW] ${workflowName} created successfully for ${userEmail}`);
+        console.log(`✅ [WORKFLOW] EXACT replica of ${workflowName} created successfully for ${userEmail}`);
         console.log(`📄 [WORKFLOW] Workflow ID: ${response.data.id}`);
+        console.log(`📊 [WORKFLOW] Created nodes: ${response.data.nodes.length}`);
+        console.log(`🔗 [WORKFLOW] Created connections: ${Object.keys(response.data.connections).length}`);
 
         // Track the workflow in our database
         await storage.addWorkflowToUser(userId, workflowName, response.data.id);
@@ -250,11 +262,13 @@ export async function createUserWorkflows(userId: string, userEmail: string): Pr
         createdWorkflows.push({
           name: workflowName,
           id: response.data.id,
-          active: response.data.active
+          active: response.data.active,
+          nodes: response.data.nodes.length,
+          connections: Object.keys(response.data.connections).length
         });
 
       } catch (error: any) {
-        console.error(`❌ [WORKFLOW] Failed to create ${workflowName} for ${userEmail}:`, error.message);
+        console.error(`❌ [WORKFLOW] Failed to create EXACT replica of ${workflowName} for ${userEmail}:`, error.message);
         
         if (axios.isAxiosError(error)) {
           console.error(`🚨 [WORKFLOW] API Error Details for ${workflowName}:`, {
@@ -269,7 +283,7 @@ export async function createUserWorkflows(userId: string, userEmail: string): Pr
       }
     }
     
-    console.log(`🎉 [WORKFLOW] Created ${createdWorkflows.length} workflows for user ${userEmail}`);
+    console.log(`🎉 [WORKFLOW] Created ${createdWorkflows.length} EXACT workflow replicas for user ${userEmail}`);
     console.log(`📋 [WORKFLOW] Created workflows:`, createdWorkflows);
     
     return createdWorkflows;
@@ -321,7 +335,7 @@ export async function ensureUserWorkflows(userId: string, userEmail: string): Pr
         active: w.active
       }));
     } else {
-      console.log(`🆕 [WORKFLOW] User ${userEmail} needs workflows, creating them`);
+      console.log(`🆕 [WORKFLOW] User ${userEmail} needs workflows, creating EXACT replicas`);
       return await createUserWorkflows(userId, userEmail);
     }
   } catch (error: any) {
