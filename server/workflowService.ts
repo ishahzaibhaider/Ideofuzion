@@ -7,14 +7,56 @@ import path from 'path';
 const N8N_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyNjEzYzFlYS04M2I1LTRhMzQtYjE2NC0zNzllZDFjNzNmZTMiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU1Nzc5OTc3LCJleHAiOjE3NTgzNDA4MDB9.mJsvf7FfTtxsNeJ5wvzunEQziQHdrWa607cqZZfVXQ4";
 const N8N_BASE_URL = "https://n8n.hireninja.site/api/v1";
 
+// Type definitions for workflow templates
+interface WorkflowNode {
+  id: string;
+  name: string;
+  type: string;
+  typeVersion?: number;
+  position: [number, number];
+  parameters?: any;
+  credentials?: any;
+  disabled?: boolean;
+  notesInFlow?: boolean;
+  notes?: string;
+  executeOnce?: boolean;
+  alwaysOutputData?: boolean;
+  retryOnFail?: boolean;
+  maxTries?: number;
+  waitBetweenTries?: number;
+  onError?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+interface WorkflowTemplate {
+  name: string;
+  nodes: WorkflowNode[];
+  connections: Record<string, any>;
+  settings?: any;
+  staticData?: any;
+}
+
+interface WorkflowConfigs {
+  [key: string]: {
+    id: string;
+    name: string;
+    active: boolean;
+    nodes: WorkflowNode[];
+    connections: Record<string, any>;
+    settings: any;
+    staticData: any;
+  };
+}
+
 // Load actual workflow configurations from the fetched data
-let WORKFLOW_TEMPLATES: any = {};
+let WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {};
 
 try {
   const configPath = path.join(process.cwd(), 'workflow-configs.json');
   if (fs.existsSync(configPath)) {
     const configData = fs.readFileSync(configPath, 'utf8');
-    const configs = JSON.parse(configData);
+    const configs: WorkflowConfigs = JSON.parse(configData);
     
     // Transform the fetched configurations into templates
     Object.keys(configs).forEach(workflowName => {
@@ -39,7 +81,7 @@ try {
   WORKFLOW_TEMPLATES = getFallbackTemplates();
 }
 
-function getFallbackTemplates() {
+function getFallbackTemplates(): Record<string, WorkflowTemplate> {
   return {
     "Meeting Bot & Analysis": {
       name: "Meeting Bot & Analysis",
@@ -179,7 +221,7 @@ export async function createUserWorkflows(userId: string, userEmail: string): Pr
         const customizedTemplate = {
           ...template,
           name: `${workflowName} - ${userEmail}`,
-          nodes: template.nodes.map(node => ({
+          nodes: template.nodes.map((node: WorkflowNode) => ({
             ...node,
             id: `${node.id}-${userId}`,
             // Add credentials if available
