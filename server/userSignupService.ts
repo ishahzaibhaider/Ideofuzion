@@ -29,6 +29,16 @@ interface CreateCredentialData {
 }
 
 interface WorkflowResponse {
+  id?: string;
+  name: string;
+  active?: boolean;
+  nodes: any[];
+  connections: any;
+  settings?: any;
+  staticData?: any;
+}
+
+interface TemplateWorkflowResponse {
   id: string;
   name: string;
   active: boolean;
@@ -145,7 +155,7 @@ async function createUserCredentials(user: User, accessInfo?: AccessInfo): Promi
  * Step 2: Fetch the Master Template Workflow
  * Fetches a specific template workflow by ID
  */
-async function fetchTemplateWorkflow(templateId: string): Promise<WorkflowResponse> {
+async function fetchTemplateWorkflow(templateId: string): Promise<TemplateWorkflowResponse> {
   console.log(`📋 [SIGNUP] Step 2: Fetching template workflow ${templateId}`);
   
   try {
@@ -177,7 +187,7 @@ async function fetchTemplateWorkflow(templateId: string): Promise<WorkflowRespon
  * Creates a deep copy and modifies it for the new user
  */
 function modifyWorkflowForUser(
-  templateWorkflow: WorkflowResponse, 
+  templateWorkflow: TemplateWorkflowResponse, 
   userId: string, 
   userEmail: string, 
   credentialIds: string[]
