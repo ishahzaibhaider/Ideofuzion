@@ -139,8 +139,8 @@ export default function LiveInterviewHub({ candidate }: LiveInterviewHubProps) {
     try {
       const response = await apiRequest("POST", "/api/start-interview-bot", {
         candidateId: candidate.id,
-        candidateName: candidate.name,
-        candidateEmail: candidate.email,
+        candidateName: candidate["Candidate Name"],
+        candidateEmail: candidate.Email,
         interviewTime: new Date().toISOString(),
         googleMeetLink: candidate["Google Meet Id"] || `https://meet.google.com/example-${candidate.id}`
       });
@@ -185,7 +185,7 @@ export default function LiveInterviewHub({ candidate }: LiveInterviewHubProps) {
       
       const webhookData = {
         meetingId: candidateMeetId,
-        candidateName: candidate.name,
+        candidateName: candidate["Candidate Name"],
         candidateId: candidate.id
       };
 
@@ -271,11 +271,11 @@ export default function LiveInterviewHub({ candidate }: LiveInterviewHubProps) {
           <div className="text-center mb-6">
             <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full mx-auto mb-4 flex items-center justify-center">
               <span className="text-lg font-bold text-white">
-                {candidate.name.split(' ').map(n => n[0]).join('')}
+                {candidate["Candidate Name"].split(' ').map((n: string) => n[0]).join('')}
               </span>
             </div>
-            <h4 className="text-xl font-semibold text-gray-900">{candidate.name}</h4>
-            <p className="text-gray-600">{candidate.previousRole || 'N/A'}</p>
+            <h4 className="text-xl font-semibold text-gray-900">{candidate["Candidate Name"]}</h4>
+            <p className="text-gray-600">{candidate["Job Title"] || 'N/A'}</p>
           </div>
           
           <div className="space-y-4">
@@ -295,7 +295,7 @@ export default function LiveInterviewHub({ candidate }: LiveInterviewHubProps) {
             
             <div>
               <h5 className="font-medium text-gray-900 mb-2">Previous Role</h5>
-              <p className="text-sm text-gray-600">{candidate.previousRole}</p>
+              <p className="text-sm text-gray-600">{candidate["Job Title"]}</p>
             </div>
             
             <div>

@@ -89,9 +89,9 @@ export default function CandidatesPage() {
 
   // Filter candidates based on search and status - using normalized field names
   const filteredCandidates = candidates?.filter((candidate: Candidate) => {
-    const candidateName = candidate.name || '';
-    const candidateEmail = candidate.email || '';
-    const candidateRole = candidate.previousRole || '';
+    const candidateName = candidate["Candidate Name"] || '';
+    const candidateEmail = candidate.Email || '';
+    const candidateRole = candidate["Job Title"] || '';
 
     const matchesSearch = searchTerm === "" ||
       candidateName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -238,18 +238,18 @@ export default function CandidatesPage() {
                         <div className="flex items-center">
                           <div className="h-10 w-10 bg-gray-200 rounded-full flex items-center justify-center">
                             <span className="text-xs font-medium text-gray-600">
-                              {getInitials(candidate.name || '')}
+                              {getInitials(candidate["Candidate Name"] || '')}
                             </span>
                           </div>
                           <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">{candidate.name || 'N/A'}</div>
-                            <div className="text-sm text-gray-500">{candidate.email || 'N/A'}</div>
+                            <div className="text-sm font-medium text-gray-900">{candidate["Candidate Name"] || 'N/A'}</div>
+                            <div className="text-sm text-gray-500">{candidate.Email || 'N/A'}</div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{candidate.previousRole || 'N/A'}</div>
-                        <div className="text-sm text-gray-500">{candidate.interviewDate || 'N/A'} | {candidate.interviewTime || 'N/A'}</div>
+                        <div className="text-sm text-gray-900">{candidate["Job Title"] || 'N/A'}</div>
+                        <div className="text-sm text-gray-500">{candidate["Interview Start"] || 'N/A'} | {candidate["Interview End"] || 'N/A'}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <Badge className={getStatusBadge(candidate.status || "New")}>
@@ -257,7 +257,7 @@ export default function CandidatesPage() {
                         </Badge>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {candidate.interviewDate || 'N/A'}
+                        {candidate["Interview Start"] || 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <DropdownMenu>
@@ -281,11 +281,11 @@ export default function CandidatesPage() {
                               onClick={() => {
                                 setEditingCandidate(candidate);
                                 setEditForm({
-                                  name: candidate.name,
-                                  email: candidate.email,
-                                  previousRole: candidate.previousRole,
-                                  interviewDate: candidate.interviewDate,
-                                  interviewTime: candidate.interviewTime,
+                                  "Candidate Name": candidate["Candidate Name"],
+                                  Email: candidate.Email,
+                                  "Job Title": candidate["Job Title"],
+                                  "Interview Start": candidate["Interview Start"],
+                                  "Interview End": candidate["Interview End"],
                                   status: candidate.status || "New"
                                 });
                                 setShowEditDialog(true);
@@ -505,8 +505,8 @@ export default function CandidatesPage() {
                 <Label htmlFor="name">Candidate Name</Label>
                 <Input
                   id="name"
-                  value={editForm.name || ""}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                  value={editForm["Candidate Name"] || ""}
+                                      onChange={(e) => setEditForm(prev => ({ ...prev, "Candidate Name": e.target.value }))}
                 />
               </div>
               <div>
@@ -514,16 +514,16 @@ export default function CandidatesPage() {
                 <Input
                   id="email"
                   type="email"
-                  value={editForm.email || ""}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
+                  value={editForm.Email || ""}
+                                      onChange={(e) => setEditForm(prev => ({ ...prev, Email: e.target.value }))}
                 />
               </div>
               <div>
                 <Label htmlFor="previousRole">Job Title</Label>
                 <Input
                   id="previousRole"
-                  value={editForm.previousRole || ""}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, previousRole: e.target.value }))}
+                  value={editForm["Job Title"] || ""}
+                                      onChange={(e) => setEditForm(prev => ({ ...prev, "Job Title": e.target.value }))}
                 />
               </div>
               <div>
@@ -531,16 +531,16 @@ export default function CandidatesPage() {
                 <Input
                   id="interviewDate"
                   type="date"
-                  value={editForm.interviewDate || ""}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, interviewDate: e.target.value }))}
+                  value={editForm["Interview Start"] || ""}
+                                      onChange={(e) => setEditForm(prev => ({ ...prev, "Interview Start": e.target.value }))}
                 />
               </div>
               <div>
                 <Label htmlFor="interviewTime">Interview Time</Label>
                 <Input
                   id="interviewTime"
-                  value={editForm.interviewTime || ""}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, interviewTime: e.target.value }))}
+                  value={editForm["Interview End"] || ""}
+                                      onChange={(e) => setEditForm(prev => ({ ...prev, "Interview End": e.target.value }))}
                 />
               </div>
               <div>

@@ -98,7 +98,7 @@ export class MongoStorage implements IStorage {
       email: doc.email,
       password: doc.password,
       createdAt: doc.createdAt
-    };
+    } as User;
   }
 
   private mongoDocToJobCriteria(doc: any): JobCriteria {
@@ -109,7 +109,7 @@ export class MongoStorage implements IStorage {
       "Job Title": doc["Job Title"],
       "Required Skills": doc["Required Skills"],
       "Optional Skills": doc["Optional Skills"] || [] // Add optional skills with fallback
-    };
+    } as JobCriteria;
   }
 
   // In storage.ts
@@ -168,17 +168,8 @@ export class MongoStorage implements IStorage {
       skills: doc.skills,
       experience: doc.experience,
       education: doc.education,
-      score: doc.score,
-      // Frontend-friendly mapped fields
-      name: doc["Candidate Name"],
-      email: doc.Email,
-      previousRole: doc["Job Title"],
-      interviewDate: interviewDateTime.date,
-      interviewTime: interviewDateTime.time,
-      calendarEventId: doc["Calendar Event ID"],
-      calenderEventLink: doc["Calender Event Link"],
-      googleMeetId: doc["Google Meet Id"]
-    };
+      score: doc.score
+    } as Candidate;
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -214,7 +205,13 @@ export class MongoStorage implements IStorage {
   async getUserWorkflows(userId: string): Promise<UserWorkflows | undefined> {
     try {
       const workflows = await UserWorkflowsModel.findOne({ userId });
-      return workflows;
+      return workflows ? {
+        id: workflows._id.toString(),
+        userId: workflows.userId,
+        workflows: workflows.workflows,
+        createdAt: workflows.createdAt,
+        updatedAt: workflows.updatedAt
+      } as UserWorkflows : undefined;
     } catch (error) {
       console.error('Error getting user workflows:', error);
       return undefined;
@@ -224,7 +221,13 @@ export class MongoStorage implements IStorage {
   async createUserWorkflows(userId: string): Promise<UserWorkflows> {
     try {
       const workflows = await UserWorkflowsModel.create({ userId });
-      return workflows;
+      return {
+        id: workflows._id.toString(),
+        userId: workflows.userId,
+        workflows: workflows.workflows,
+        createdAt: workflows.createdAt,
+        updatedAt: workflows.updatedAt
+      } as UserWorkflows;
     } catch (error) {
       console.error('Error creating user workflows:', error);
       throw error;
@@ -238,7 +241,13 @@ export class MongoStorage implements IStorage {
         { $push: { workflows: { name: workflowName, n8nId, active: true } } },
         { new: true }
       );
-      return workflows;
+      return workflows ? {
+        id: workflows._id.toString(),
+        userId: workflows.userId,
+        workflows: workflows.workflows,
+        createdAt: workflows.createdAt,
+        updatedAt: workflows.updatedAt
+      } as UserWorkflows : undefined;
     } catch (error) {
       console.error('Error adding workflow to user:', error);
       return undefined;
@@ -252,7 +261,13 @@ export class MongoStorage implements IStorage {
         { $set: { "workflows.$.active": active } },
         { new: true }
       );
-      return workflows;
+      return workflows ? {
+        id: workflows._id.toString(),
+        userId: workflows.userId,
+        workflows: workflows.workflows,
+        createdAt: workflows.createdAt,
+        updatedAt: workflows.updatedAt
+      } as UserWorkflows : undefined;
     } catch (error) {
       console.error('Error updating workflow status:', error);
       return undefined;
@@ -359,11 +374,11 @@ export class MongoStorage implements IStorage {
       // Map frontend field names to database field names
       const mongoUpdates: any = {};
       
-      if (updates.name) mongoUpdates["Candidate Name"] = updates.name;
-      if (updates.email) mongoUpdates.Email = updates.email;
-      if (updates.previousRole) mongoUpdates["Job Title"] = updates.previousRole;
-      if (updates.interviewDate) mongoUpdates["Interview Date"] = updates.interviewDate;
-      if (updates.interviewTime) mongoUpdates["Interview Time"] = updates.interviewTime;
+      if (updates["Candidate Name"]) mongoUpdates["Candidate Name"] = updates["Candidate Name"];
+      if (updates.Email) mongoUpdates.Email = updates.Email;
+      if (updates["Job Title"]) mongoUpdates["Job Title"] = updates["Job Title"];
+      if (updates["Interview Start"]) mongoUpdates["Interview Start"] = updates["Interview Start"];
+      if (updates["Interview End"]) mongoUpdates["Interview End"] = updates["Interview End"];
       if (updates.status) mongoUpdates.status = updates.status;
       if (updates.cvUrl) mongoUpdates.cvUrl = updates.cvUrl;
       if (updates.analysis) mongoUpdates.analysis = updates.analysis;
@@ -426,7 +441,7 @@ export class MongoStorage implements IStorage {
       Suggested_Questions: doc.Suggested_Questions || [],
       Summary: doc.Summary,
       createdAt: doc.createdAt
-    };
+    } as Transcript;
   }
 
   async getTranscripts(userId: string): Promise<Transcript[]> {
@@ -494,7 +509,7 @@ export class MongoStorage implements IStorage {
       endTime: doc.endTime,
       reason: doc.reason || "Unavailable",
       createdAt: doc.createdAt
-    };
+    } as UnavailableSlot;
   }
 
   async getUnavailableSlots(userId: string): Promise<UnavailableSlot[]> {
@@ -548,7 +563,7 @@ export class MongoStorage implements IStorage {
       endTime: doc.endTime,
       reason: doc.reason || "Busy",
       createdAt: doc.createdAt
-    };
+    } as BusySlot;
   }
 
   async getBusySlots(userId: string): Promise<BusySlot[]> {
@@ -602,7 +617,7 @@ export class MongoStorage implements IStorage {
       "Behavioural Analysis": doc["Behavioural Analysis"],
       "Recommended for Hire": doc["Recommended for Hire"],
       Meet_id: doc.Meet_id
-    };
+    } as Analysis;
   }
 
   async getAnalysisByMeetId(meetId: string, userId: string): Promise<Analysis | undefined> {
@@ -642,7 +657,7 @@ export class MongoStorage implements IStorage {
       status: doc.status,
       reason: doc.reason,
       createdAt: doc.createdAt
-    };
+    } as ExtendedMeeting;
   }
 
   async getExtendedMeetings(userId: string): Promise<ExtendedMeeting[]> {
@@ -691,7 +706,7 @@ export class MongoStorage implements IStorage {
       expiresAt: doc.expiresAt,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt
-    };
+    } as AccessInfo;
   }
 
   async getAccessInfo(userId: string): Promise<AccessInfo | undefined> {

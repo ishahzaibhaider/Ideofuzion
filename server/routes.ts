@@ -722,8 +722,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id: c.id,
         candidateName: c["Candidate Name"],
         position: c["Job Title"] || 'N/A',
-        time: c.interviewTime || 'TBD',
-        date: c.interviewDate || 'TBD',
+        time: c["Interview Start"] || 'TBD',
+        date: c["Interview Start"] || 'TBD',
         calendarLink: c["Calender Event Link"] || `https://calendar.google.com/calendar/event?eid=${c["Calendar Event ID"]}`
       }));
 
@@ -1159,8 +1159,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             id: c.id,
             candidateName: c["Candidate Name"],
             position: c["Job Title"] || 'N/A',
-            time: c.interviewTime || 'TBD',
-            date: c.interviewDate || 'TBD',
+            time: c["Interview Start"] || 'TBD',
+            date: c["Interview Start"] || 'TBD',
             calendarLink: c["Calender Event Link"] || `https://calendar.google.com/calendar/event?eid=${c["Calendar Event ID"]}`
           }))
           .slice(0, 4);
@@ -1173,8 +1173,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             id: c.id,
             candidateName: c["Candidate Name"],
             position: c["Job Title"] || 'N/A',
-            time: c.interviewTime || 'Time TBD',
-            date: c.interviewDate || 'Date TBD',
+            time: c["Interview Start"] || 'Time TBD',
+            date: c["Interview Start"] || 'Date TBD',
             calendarLink: c["Calender Event Link"] || `https://calendar.google.com/calendar/event?eid=${c["Calendar Event ID"]}`
           }))
           .slice(0, 4);
