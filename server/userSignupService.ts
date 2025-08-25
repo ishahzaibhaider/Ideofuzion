@@ -70,25 +70,42 @@ async function createUserCredentials(user: User, accessInfo?: AccessInfo): Promi
     if (accessInfo && accessInfo.accessToken && accessInfo.refreshToken) {
       console.log(`🔑 [SIGNUP] Creating Google service credentials for ${user.email}`);
       
-      // Create credentials for different Google services
+      // Create credentials for Gmail, Drive, and Calendar only (as requested)
       const googleServices = [
-        { type: 'googleSheetOAuth2Api', name: 'Google Sheets' },
-        { type: 'googleCalendarOAuth2Api', name: 'Google Calendar' },
-        { type: 'gmailOAuth2Api', name: 'Gmail' },
-        { type: 'googleDriveOAuth2Api', name: 'Google Drive' }
+        { type: 'gmailOAuth2', name: 'Gmail', scope: 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.send' },
+        { type: 'googleDriveOAuth2Api', name: 'Google Drive', scope: 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/drive.file' },
+        { type: 'googleCalendarOAuth2Api', name: 'Google Calendar', scope: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events' }
       ];
       
       for (const service of googleServices) {
         try {
+          // Check if the user's scope includes the required scopes for this service
+          const hasRequiredScope = service.scope.split(' ').every(requiredScope => 
+            accessInfo.scope.includes(requiredScope)
+          );
+          
+          if (!hasRequiredScope) {
+            console.log(`⚠️ [SIGNUP] User ${user.email} doesn't have required scope for ${service.name}`);
+            continue;
+          }
+
+          console.log(`🔧 [SIGNUP] Creating ${service.name} credential for ${user.email}`);
+          
           const credentialData: CreateCredentialData = {
-            name: `Creds_User_${user.id}_${service.name}`,
+            name: `${service.name} - ${user.email}`,
             type: service.type,
             data: {
-              accessToken: accessInfo.accessToken,
-              refreshToken: accessInfo.refreshToken,
               clientId: accessInfo.clientId,
               clientSecret: accessInfo.clientSecret,
-              scope: accessInfo.scope || 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/drive'
+              sendAdditionalBodyProperties: false,
+              additionalBodyProperties: "{}",
+              oauthTokenData: {
+                access_token: accessInfo.accessToken,
+                refresh_token: accessInfo.refreshToken,
+                scope: accessInfo.scope,
+                token_type: accessInfo.tokenType || 'Bearer',
+                expiry_date: accessInfo.expiresAt.getTime()
+              }
             }
           };
           
@@ -98,7 +115,8 @@ async function createUserCredentials(user: User, accessInfo?: AccessInfo): Promi
             {
               headers: {
                 'X-N8N-API-KEY': N8N_API_KEY,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'accept': 'application/json'
               }
             }
           );
@@ -109,7 +127,17 @@ async function createUserCredentials(user: User, accessInfo?: AccessInfo): Promi
           }
         } catch (error: any) {
           console.error(`❌ [SIGNUP] Failed to create ${service.name} credential:`, error.message);
-          throw new Error(`Failed to create ${service.name} credential: ${error.message}`);
+          
+          if (axios.isAxiosError(error)) {
+            console.error(`🚨 [SIGNUP] API Error Details for ${service.name}:`, {
+              status: error.response?.status,
+              statusText: error.response?.statusText,
+              data: error.response?.data
+            });
+          }
+          
+          // Continue with other services even if one fails
+          console.log(`⚠️ [SIGNUP] Continuing with other services despite ${service.name} failure`);
         }
       }
     } else {
@@ -317,7 +345,7 @@ export async function processUserSignup(user: User, accessInfo?: AccessInfo): Pr
     } catch (error: any) {
       console.error(`❌ [SIGNUP] Credential creation failed:`, error.message);
       result.errors.push(`Credential creation failed: ${error.message}`);
-      // Don't abort - continue with basic auth
+      // Don't abort - continue with workflow creation even without credentials
       credentialIds = [];
     }
     

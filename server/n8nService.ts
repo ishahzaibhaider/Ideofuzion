@@ -159,8 +159,14 @@ export async function createN8nCredentialsFromAccessInfo(accessInfo: AccessInfo)
     
     const createdCredentials = [];
     
-    // Create credentials for each Google service that matches the user's scope
-    for (const [serviceKey, serviceConfig] of Object.entries(GOOGLE_SERVICES)) {
+    // Create credentials for Gmail, Drive, and Calendar only (as requested)
+    const requestedServices = ['gmail', 'drive', 'calendar'];
+    for (const serviceKey of requestedServices) {
+      const serviceConfig = GOOGLE_SERVICES[serviceKey as keyof typeof GOOGLE_SERVICES];
+      if (!serviceConfig) {
+        console.log(`⚠️ [N8N] Service ${serviceKey} not found in GOOGLE_SERVICES`);
+        continue;
+      }
       try {
         // Check if the user's scope includes the required scopes for this service
         const hasRequiredScope = serviceConfig.scope.split(' ').every(requiredScope => 
@@ -354,8 +360,14 @@ export async function createMultipleGoogleServiceCredentials(user: User): Promis
     
     const createdCredentials = [];
     
-    // Create credentials for each Google service
-    for (const [serviceKey, serviceConfig] of Object.entries(GOOGLE_SERVICES)) {
+    // Create credentials for Gmail, Drive, and Calendar only (as requested)
+    const requestedServices = ['gmail', 'drive', 'calendar'];
+    for (const serviceKey of requestedServices) {
+      const serviceConfig = GOOGLE_SERVICES[serviceKey as keyof typeof GOOGLE_SERVICES];
+      if (!serviceConfig) {
+        console.log(`⚠️ [N8N] Service ${serviceKey} not found in GOOGLE_SERVICES`);
+        continue;
+      }
       try {
         console.log(`🔧 [N8N] Creating ${serviceConfig.name} credential for ${user.email}`);
         
@@ -366,10 +378,14 @@ export async function createMultipleGoogleServiceCredentials(user: User): Promis
             clientId: googleClientId,
             clientSecret: googleClientSecret,
             sendAdditionalBodyProperties: false,
-            additionalBodyProperties: "{}"
-            // Note: We don't include oauthTokenData here because n8n will handle the OAuth2 flow
-            // when the workflow runs. The credential will be created in "pending" state
-            // and n8n will prompt for OAuth2 authorization when first used.
+            additionalBodyProperties: "{}",
+            oauthTokenData: {
+              access_token: freshAccessToken,
+              refresh_token: user.refreshToken,
+              scope: user.scope || 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/calendar',
+              token_type: 'Bearer',
+              expiry_date: freshExpiresAt.getTime()
+            }
           }
         };
 
