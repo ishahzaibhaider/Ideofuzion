@@ -48,3 +48,77 @@ export function isValidCompanyEmail(email: string): boolean {
 export function getEmailDomain(email: string): string {
   return email.split('@')[1]?.toLowerCase() || '';
 }
+
+/**
+ * Formats an ISO date string to a user-friendly date format
+ * @param isoString - The ISO date string to format
+ * @returns Formatted date string (e.g., "Aug 26, 2025")
+ */
+export function formatDate(isoString: string | null | undefined): string {
+  if (!isoString) return 'N/A';
+  
+  try {
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) return 'N/A';
+    
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  } catch {
+    return 'N/A';
+  }
+}
+
+/**
+ * Formats an ISO date string to a user-friendly time format
+ * @param isoString - The ISO date string to format
+ * @returns Formatted time string (e.g., "11:00 AM")
+ */
+export function formatTime(isoString: string | null | undefined): string {
+  if (!isoString) return 'N/A';
+  
+  try {
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) return 'N/A';
+    
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  } catch {
+    return 'N/A';
+  }
+}
+
+/**
+ * Formats an ISO date string to a user-friendly date and time format
+ * @param isoString - The ISO date string to format
+ * @returns Formatted date and time string (e.g., "Aug 26, 2025 | 11:00 AM")
+ */
+export function formatDateTime(isoString: string | null | undefined): string {
+  if (!isoString) return 'N/A';
+  
+  try {
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) return 'N/A';
+    
+    const dateStr = date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+    
+    const timeStr = date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+    
+    return `${dateStr} | ${timeStr}`;
+  } catch {
+    return 'N/A';
+  }
+}

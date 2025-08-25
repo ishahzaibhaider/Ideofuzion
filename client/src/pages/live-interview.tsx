@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Search, Users, Clock, Check, ChevronsUpDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 import type { Candidate } from "@shared/schema";
 
 export default function LiveInterviewPage() {
@@ -103,9 +103,8 @@ export default function LiveInterviewPage() {
   const getInterviewDateTime = (candidate: Candidate) => {
     if (!candidate["Interview Start"]) return { date: "N/A", time: "N/A" };
     
-    const interviewStart = new Date(candidate["Interview Start"]);
-    const date = interviewStart.toLocaleDateString();
-    const time = interviewStart.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const formattedDateTime = formatDateTime(candidate["Interview Start"]);
+    const [date, time] = formattedDateTime.split(' | ');
     
     return { date, time };
   };
@@ -337,7 +336,7 @@ export default function LiveInterviewPage() {
                             <div className="text-right">
                               {candidate["Interview Start"] && (
                                 <span className="text-xs text-gray-400">
-                                  {new Date(candidate["Interview Start"]).toLocaleDateString()}
+                                  {formatDateTime(candidate["Interview Start"])}
                                 </span>
                               )}
                               <span className={`ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium ${
@@ -451,8 +450,7 @@ export default function LiveInterviewPage() {
                           <div className="text-right">
                             {candidate["Interview Start"] && (
                               <div className="text-xs text-gray-400">
-                                {new Date(candidate["Interview Start"]).toLocaleDateString()} at{" "}
-                                {new Date(candidate["Interview Start"]).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {formatDateTime(candidate["Interview Start"])}
                               </div>
                             )}
                             <span className={`mt-1 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium ${

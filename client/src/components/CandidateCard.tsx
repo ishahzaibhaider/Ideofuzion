@@ -5,6 +5,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { MoreHorizontal, Eye, Edit, Calendar, Video } from "lucide-react";
+import { formatDateTime } from "@/lib/utils";
 
 interface CandidateCardProps {
   candidate: Candidate;
@@ -114,11 +115,11 @@ export default function CandidateCard({ candidate, onDragStart, onDragEnd }: Can
                     </div>
                     <div>
                       <Label className="text-sm font-medium text-gray-500">Interview Date</Label>
-                      <p className="text-sm text-gray-900">{selectedCandidate["Interview Start"] ? new Date(selectedCandidate["Interview Start"]).toLocaleDateString() : 'N/A'}</p>
+                      <p className="text-sm text-gray-900">{formatDateTime(selectedCandidate["Interview Start"])}</p>
                     </div>
                     <div>
                       <Label className="text-sm font-medium text-gray-500">Interview Time</Label>
-                      <p className="text-sm text-gray-900">{selectedCandidate["Interview Start"] ? new Date(selectedCandidate["Interview Start"]).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</p>
+                      <p className="text-sm text-gray-900">{formatDateTime(selectedCandidate["Interview Start"])}</p>
                     </div>
                     {selectedCandidate["Calender Event Link"] && (
                       <div className="col-span-2">
@@ -186,7 +187,7 @@ export default function CandidateCard({ candidate, onDragStart, onDragEnd }: Can
         {candidate.status === 'Interview Scheduled' && candidate["Interview Start"] && (
           <div className="mt-2">
             <Badge className={getStatusColor(candidate.status)}>
-              {new Date(candidate["Interview Start"]).toLocaleDateString()} | {new Date(candidate["Interview Start"]).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {formatDateTime(candidate["Interview Start"])}
             </Badge>
           </div>
         )}

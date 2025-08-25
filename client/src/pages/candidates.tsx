@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Search, Edit2, Eye, Trash2, MoreVertical } from "lucide-react";
 import { Candidate } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { formatDateTime } from "@/lib/utils";
 
 export default function CandidatesPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -249,7 +250,7 @@ export default function CandidatesPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">{candidate["Job Title"] || 'N/A'}</div>
-                        <div className="text-sm text-gray-500">{candidate["Interview Start"] || 'N/A'} | {candidate["Interview End"] || 'N/A'}</div>
+                        <div className="text-sm text-gray-500">{formatDateTime(candidate["Interview Start"])} - {formatDateTime(candidate["Interview End"])}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <Badge className={getStatusBadge(candidate.status || "New")}>
@@ -257,7 +258,7 @@ export default function CandidatesPage() {
                         </Badge>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {candidate["Interview Start"] || 'N/A'}
+                        {formatDateTime(candidate["Interview Start"])}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <DropdownMenu>
@@ -374,11 +375,11 @@ export default function CandidatesPage() {
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-500">Interview Date</Label>
-                <p className="text-sm text-gray-900">{selectedCandidate["Interview Start"] ? new Date(selectedCandidate["Interview Start"]).toLocaleDateString() : 'N/A'}</p>
+                <p className="text-sm text-gray-900">{formatDateTime(selectedCandidate["Interview Start"])}</p>
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-500">Interview Time</Label>
-                <p className="text-sm text-gray-900">{selectedCandidate["Interview Start"] ? new Date(selectedCandidate["Interview Start"]).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</p>
+                <p className="text-sm text-gray-900">{formatDateTime(selectedCandidate["Interview Start"])}</p>
               </div>
               <div className="col-span-2">
                 <Label className="text-sm font-medium text-gray-500">Calendar Event ID</Label>
