@@ -1,158 +1,148 @@
 import axios from 'axios';
 import { storage } from './storage.js';
 import type { AccessInfo } from '../shared/schema.js';
+import fs from 'fs';
+import path from 'path';
 
 const N8N_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyNjEzYzFlYS04M2I1LTRhMzQtYjE2NC0zNzllZDFjNzNmZTMiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU1Nzc5OTc3LCJleHAiOjE3NTgzNDA4MDB9.mJsvf7FfTtxsNeJ5wvzunEQziQHdrWa607cqZZfVXQ4";
 const N8N_BASE_URL = "https://n8n.hireninja.site/api/v1";
 
-// Template workflows for new users
-const WORKFLOW_TEMPLATES = {
-  "CV Processing Workflow": {
-    name: "CV Processing Workflow",
-    nodes: [
-      {
-        id: "webhook-trigger",
-        name: "Webhook",
-        type: "n8n-nodes-base.webhook",
-        typeVersion: 2,
-        position: [0, 0],
-        parameters: {
-          httpMethod: "POST",
-          path: "cv-processing",
-          options: {}
-        }
-      },
-      {
-        id: "gmail-node",
-        name: "Gmail",
-        type: "n8n-nodes-base.gmail",
-        typeVersion: 1,
-        position: [200, 0],
-        parameters: {
-          operation: "getAll",
-          mailbox: "INBOX",
-          readToEnd: true
-        }
-      }
-    ],
-    connections: {
-      "Webhook": {
-        main: [[{ node: "Gmail", type: "main", index: 0 }]]
-      }
-    },
-    settings: {
-      executionOrder: "v1"
-    }
-  },
-  "Meeting Bot & Analysis": {
-    name: "Meeting Bot & Analysis",
-    nodes: [
-      {
-        id: "webhook-trigger",
-        name: "Webhook",
-        type: "n8n-nodes-base.webhook",
-        typeVersion: 2,
-        position: [0, 0],
-        parameters: {
-          httpMethod: "POST",
-          path: "meeting-analysis",
-          options: {}
-        }
-      },
-      {
-        id: "calendar-node",
-        name: "Google Calendar",
-        type: "n8n-nodes-base.googleCalendar",
-        typeVersion: 1,
-        position: [200, 0],
-        parameters: {
-          operation: "getAll",
-          calendar: "primary"
-        }
-      }
-    ],
-    connections: {
-      "Webhook": {
-        main: [[{ node: "Google Calendar", type: "main", index: 0 }]]
-      }
-    },
-    settings: {
-      executionOrder: "v1"
-    }
-  },
-  "Busy Slots Working": {
-    name: "Busy Slots Working",
-    nodes: [
-      {
-        id: "webhook-trigger",
-        name: "Webhook",
-        type: "n8n-nodes-base.webhook",
-        typeVersion: 2,
-        position: [0, 0],
-        parameters: {
-          httpMethod: "POST",
-          path: "busy-slots",
-          options: {}
-        }
-      },
-      {
-        id: "calendar-node",
-        name: "Google Calendar",
-        type: "n8n-nodes-base.googleCalendar",
-        typeVersion: 1,
-        position: [200, 0],
-        parameters: {
-          operation: "getAll",
-          calendar: "primary"
-        }
-      }
-    ],
-    connections: {
-      "Webhook": {
-        main: [[{ node: "Google Calendar", type: "main", index: 0 }]]
-      }
-    },
-    settings: {
-      executionOrder: "v1"
-    }
-  },
-  "Extending Meeting Time": {
-    name: "Extending Meeting Time",
-    nodes: [
-      {
-        id: "webhook-trigger",
-        name: "Webhook",
-        type: "n8n-nodes-base.webhook",
-        typeVersion: 2,
-        position: [0, 0],
-        parameters: {
-          httpMethod: "POST",
-          path: "extend-meeting",
-          options: {}
-        }
-      },
-      {
-        id: "calendar-node",
-        name: "Google Calendar",
-        type: "n8n-nodes-base.googleCalendar",
-        typeVersion: 1,
-        position: [200, 0],
-        parameters: {
-          operation: "update",
-          calendar: "primary"
-        }
-      }
-    ],
-    connections: {
-      "Webhook": {
-        main: [[{ node: "Google Calendar", type: "main", index: 0 }]]
-      }
-    },
-    settings: {
-      executionOrder: "v1"
-    }
+// Load actual workflow configurations from the fetched data
+let WORKFLOW_TEMPLATES: any = {};
+
+try {
+  const configPath = path.join(process.cwd(), 'workflow-configs.json');
+  if (fs.existsSync(configPath)) {
+    const configData = fs.readFileSync(configPath, 'utf8');
+    const configs = JSON.parse(configData);
+    
+    // Transform the fetched configurations into templates
+    Object.keys(configs).forEach(workflowName => {
+      const config = configs[workflowName];
+      WORKFLOW_TEMPLATES[workflowName] = {
+        name: config.name,
+        nodes: config.nodes,
+        connections: config.connections,
+        settings: config.settings,
+        staticData: config.staticData || {}
+      };
+    });
+    
+    console.log(`✅ [WORKFLOW] Loaded ${Object.keys(WORKFLOW_TEMPLATES).length} workflow templates from config file`);
+  } else {
+    console.log(`⚠️ [WORKFLOW] workflow-configs.json not found, using fallback templates`);
+    // Fallback to basic templates if config file doesn't exist
+    WORKFLOW_TEMPLATES = getFallbackTemplates();
   }
-};
+} catch (error) {
+  console.error(`❌ [WORKFLOW] Error loading workflow configs:`, error);
+  WORKFLOW_TEMPLATES = getFallbackTemplates();
+}
+
+function getFallbackTemplates() {
+  return {
+    "Meeting Bot & Analysis": {
+      name: "Meeting Bot & Analysis",
+      nodes: [
+        {
+          id: "webhook-trigger",
+          name: "Webhook",
+          type: "n8n-nodes-base.webhook",
+          typeVersion: 2,
+          position: [0, 0],
+          parameters: {
+            httpMethod: "POST",
+            path: "meeting-analysis",
+            options: {}
+          }
+        }
+      ],
+      connections: {
+        "Webhook": {
+          main: [[{ node: "Webhook", type: "main", index: 0 }]]
+        }
+      },
+      settings: {
+        executionOrder: "v1"
+      }
+    },
+    "Busy Slots Working": {
+      name: "Busy Slots Working",
+      nodes: [
+        {
+          id: "webhook-trigger",
+          name: "Webhook",
+          type: "n8n-nodes-base.webhook",
+          typeVersion: 2,
+          position: [0, 0],
+          parameters: {
+            httpMethod: "POST",
+            path: "busy-slots",
+            options: {}
+          }
+        }
+      ],
+      connections: {
+        "Webhook": {
+          main: [[{ node: "Webhook", type: "main", index: 0 }]]
+        }
+      },
+      settings: {
+        executionOrder: "v1"
+      }
+    },
+    "Extending Meeting Time": {
+      name: "Extending Meeting Time",
+      nodes: [
+        {
+          id: "webhook-trigger",
+          name: "Webhook",
+          type: "n8n-nodes-base.webhook",
+          typeVersion: 2,
+          position: [0, 0],
+          parameters: {
+            httpMethod: "POST",
+            path: "extend-meeting",
+            options: {}
+          }
+        }
+      ],
+      connections: {
+        "Webhook": {
+          main: [[{ node: "Webhook", type: "main", index: 0 }]]
+        }
+      },
+      settings: {
+        executionOrder: "v1"
+      }
+    },
+    "Cv Processing Workflow": {
+      name: "Cv Processing Workflow",
+      nodes: [
+        {
+          id: "webhook-trigger",
+          name: "Webhook",
+          type: "n8n-nodes-base.webhook",
+          typeVersion: 2,
+          position: [0, 0],
+          parameters: {
+            httpMethod: "POST",
+            path: "cv-processing",
+            options: {}
+          }
+        }
+      ],
+      connections: {
+        "Webhook": {
+          main: [[{ node: "Webhook", type: "main", index: 0 }]]
+        }
+      },
+      settings: {
+        executionOrder: "v1"
+      }
+    }
+  };
+}
 
 /**
  * Creates workflows for a new user
@@ -175,7 +165,7 @@ export async function createUserWorkflows(userId: string, userEmail: string): Pr
     // Get user's access info for credentials
     const accessInfo = await storage.getAccessInfo(userId);
     if (!accessInfo) {
-      console.log(`⚠️ [WORKFLOW] No access info found for user ${userEmail}, creating basic workflows`);
+      console.log(`⚠️ [WORKFLOW] No access info found for user ${userEmail}, creating workflows without credentials`);
     }
 
     const createdWorkflows = [];

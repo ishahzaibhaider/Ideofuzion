@@ -1,0 +1,3546 @@
+{
+  "Meeting Bot & Analysis": {
+    "id": "QCxCZmYREkK0FODI",
+    "name": "Meeting Bot & Analysis",
+    "active": true,
+    "nodes": [
+      {
+        "parameters": {
+          "jsCode": "// Get the single item from the input.\nconst item = $input.first();\n\n// Extract the start and end time strings from the JSON payload.\nconst startTimeStr = item.json['Interview Start'];\nconst endTimeStr = item.json['Interview End'];\nconst fullMeetingLink = item.json['Google Meet Id'];\n\n// Validate that the necessary date strings exist.\nif (!startTimeStr || !endTimeStr) {\n  return [{\n    json: {\n      meetingExists: false,\n      reason: \"Interview start or end time is missing from the input.\"\n    }\n  }];\n}\n\n// Get the current time.\nconst now = new Date();\n\n// Convert the interview end time string directly into a Date object.\n// JavaScript's Date constructor correctly parses ISO 8601 strings,\n// including those with timezone offsets like \"+05:00\".\nconst interviewEnd = new Date(endTimeStr);\n\n// A meeting is considered \"upcoming\" or \"in-progress\" if the current time\n// is before its scheduled end time. Both dates are compared in UTC internally.\nif (now.getTime() < interviewEnd.getTime()) {\n  // Extract the meeting code from the full Google Meet link.\n  const meetingCode = fullMeetingLink?.split('/').pop();\n\n  return [{\n    json: {\n      meetingExists: true,\n      meetingId: meetingCode\n    }\n  }];\n\n} else {\n  // If the current time is past the interview's end time, the meeting is over.\n  return [{\n    json: {\n      meetingExists: false\n    }\n  }];\n}"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -80,
+          -432
+        ],
+        "id": "fc310c85-9827-47b2-a694-e6f97bb879d4",
+        "name": "Check Interview",
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "rules": {
+            "values": [
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                    "version": 2
+                  },
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $json.meetingExists }}",
+                      "rightValue": "false",
+                      "operator": {
+                        "type": "boolean",
+                        "operation": "false",
+                        "singleValue": true
+                      },
+                      "id": "f3051e30-8a66-4062-ad28-7edef0df9f99"
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "dont allow"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                    "version": 2
+                  },
+                  "conditions": [
+                    {
+                      "id": "afcd4992-51f8-4911-82b0-b5184a7b46ab",
+                      "leftValue": "={{ $json.meetingExists }}",
+                      "rightValue": "true",
+                      "operator": {
+                        "type": "boolean",
+                        "operation": "true",
+                        "singleValue": true
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "allow"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.switch",
+        "typeVersion": 3.2,
+        "position": [
+          64,
+          -432
+        ],
+        "id": "704aa320-08d3-4732-9da7-5ae1ce6a429a",
+        "name": "Switch",
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "jsCode": "// n8n Code Node - Combine transcript by speaker (Robust Version)\n\nconst inputData = $input.all();\nconst finalResult = [];\n\n// Loop through each item received by the node\nfor (const item of inputData) {\n  try {\n    const data = item.json;\n\n    // Check if a 'segments' array exists and is not empty\n    if (!data.segments || !Array.isArray(data.segments) || data.segments.length === 0) {\n      // If no segments, pass the item through without changes\n      finalResult.push(item);\n      continue; // Skip to the next item\n    }\n\n    // --- Processing starts here ---\n    const speakerTexts = {};\n\n    // 1. Group all text fragments by speaker\n    data.segments.forEach(segment => {\n      // Use 'Unknown Speaker' for any segment that has no speaker assigned\n      const speaker = segment.speaker || 'Unknown Speaker';\n      \n      // Initialize an array for a new speaker\n      if (!speakerTexts[speaker]) {\n        speakerTexts[speaker] = [];\n      }\n      \n      // Add the text to the correct speaker's array\n      if (segment.text && typeof segment.text === 'string') {\n        speakerTexts[speaker].push(segment.text.trim());\n      }\n    });\n\n    // 2. Combine the text for each speaker into a single string\n    const speakerTranscripts = [];\n    for (const [speaker, texts] of Object.entries(speakerTexts)) {\n      speakerTranscripts.push({\n        speaker: speaker === 'Unknown Speaker' ? null : speaker,\n        text: texts.join(' ')\n      });\n    }\n\n    // 3. Build the new, final JSON object for the output\n    // This structure explicitly OMITS the old 'segments' field\n    const newJson = {\n      id: data.id,\n      platform: data.platform,\n      native_meeting_id: data.native_meeting_id,\n      constructed_meeting_url: data.constructed_meeting_url,\n      status: data.status,\n      start_time: data.start_time,\n      end_time: data.end_time,\n      speaker_transcripts: speakerTranscripts // Add the new combined transcripts\n    };\n\n    finalResult.push({ json: newJson });\n\n  } catch (error) {\n    // If an error occurs, return the error information\n    // This helps you see if the input data format is wrong\n    return [{ json: { error: error.message, item: item } }];\n  }\n}\n\n// Return the final array of processed items\nreturn finalResult;"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1856,
+          272
+        ],
+        "id": "8d5661d1-d314-4961-89d1-0a82cef628ec",
+        "name": "Format Transcripts 1"
+      },
+      {
+        "parameters": {
+          "jsCode": "// n8n Code Node - Combine transcript by speaker (Robust Version)\n\nconst inputData = $input.all();\nconst finalResult = [];\n\n// Loop through each item received by the node\nfor (const item of inputData) {\n  try {\n    const data = item.json;\n\n    // Check if a 'segments' array exists and is not empty\n    if (!data.segments || !Array.isArray(data.segments) || data.segments.length === 0) {\n      // If no segments, pass the item through without changes\n      finalResult.push(item);\n      continue; // Skip to the next item\n    }\n\n    // --- Processing starts here ---\n    const speakerTexts = {};\n\n    // 1. Group all text fragments by speaker\n    data.segments.forEach(segment => {\n      // Use 'Unknown Speaker' for any segment that has no speaker assigned\n      const speaker = segment.speaker || 'Unknown Speaker';\n      \n      // Initialize an array for a new speaker\n      if (!speakerTexts[speaker]) {\n        speakerTexts[speaker] = [];\n      }\n      \n      // Add the text to the correct speaker's array\n      if (segment.text && typeof segment.text === 'string') {\n        speakerTexts[speaker].push(segment.text.trim());\n      }\n    });\n\n    // 2. Combine the text for each speaker into a single string\n    const speakerTranscripts = [];\n    for (const [speaker, texts] of Object.entries(speakerTexts)) {\n      speakerTranscripts.push({\n        speaker: speaker === 'Unknown Speaker' ? null : speaker,\n        text: texts.join(' ')\n      });\n    }\n\n    // 3. Build the new, final JSON object for the output\n    // This structure explicitly OMITS the old 'segments' field\n    const newJson = {\n      id: data.id,\n      platform: data.platform,\n      native_meeting_id: data.native_meeting_id,\n      constructed_meeting_url: data.constructed_meeting_url,\n      status: data.status,\n      start_time: data.start_time,\n      end_time: data.end_time,\n      speaker_transcripts: speakerTranscripts // Add the new combined transcripts\n    };\n\n    finalResult.push({ json: newJson });\n\n  } catch (error) {\n    // If an error occurs, return the error information\n    // This helps you see if the input data format is wrong\n    return [{ json: { error: error.message, item: item } }];\n  }\n}\n\n// Return the final array of processed items\nreturn finalResult;"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1856,
+          592
+        ],
+        "id": "77b77873-99a5-4f5c-83e6-9c29be8041c3",
+        "name": "Format Transcripts 2"
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "e07ab440-cdd9-4240-9b55-bdb340572e20",
+                "name": "Speaker1",
+                "value": "={{ $json.speaker_transcripts[0].text }}",
+                "type": "string"
+              },
+              {
+                "id": "78273a45-859a-48a5-8919-31d4544c2efe",
+                "name": "Speaker2",
+                "value": "={{ $json.speaker_transcripts[1].text }}",
+                "type": "string"
+              },
+              {
+                "id": "ed330c6a-bd4c-45da-9f2e-d5d274220398",
+                "name": "Speaker3",
+                "value": "={{ $json.speaker_transcripts[2].text }}",
+                "type": "string"
+              },
+              {
+                "id": "8bc3e8b2-baa5-461a-bb27-b59ee282c1fa",
+                "name": "Meet_id",
+                "value": "={{ $json.native_meeting_id }}",
+                "type": "string"
+              },
+              {
+                "id": "20d3a290-cfb0-43c8-87ee-01ce1804b562",
+                "name": "userId",
+                "value": "={{ $('Webhook').item.json.body.userId }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          2000,
+          272
+        ],
+        "id": "b9f97a3f-8748-4018-83b7-b116aa5f4428",
+        "name": "Set Fields 1"
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "75ab4453-b1bf-4e96-8c4f-452d0f85d22c",
+                "name": "Speaker1",
+                "value": "={{ $json.speaker_transcripts[0].text }}",
+                "type": "string"
+              },
+              {
+                "id": "d4ea91ce-e216-4e12-9f47-f80cfaaf24b8",
+                "name": "Speaker2",
+                "value": "={{ $json.speaker_transcripts[1].text }}",
+                "type": "string"
+              },
+              {
+                "id": "0f0267de-d4c2-431f-8d0f-bbabe3a41690",
+                "name": "Speaker3",
+                "value": "={{ $json.speaker_transcripts[2].text }}",
+                "type": "string"
+              },
+              {
+                "id": "fe95cf23-e6ad-4146-b525-54d96d074243",
+                "name": "Meet_id",
+                "value": "={{ $json.native_meeting_id }}",
+                "type": "string"
+              },
+              {
+                "id": "783bd85c-2df4-4de6-8abe-befe2e419b82",
+                "name": "userId",
+                "value": "={{ $('Webhook').item.json.body.userId }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          2000,
+          592
+        ],
+        "id": "ec146f71-3e65-4b90-ab6d-eff19ffa5852",
+        "name": "Set Fields 2"
+      },
+      {
+        "parameters": {
+          "operation": "insert",
+          "collection": "transcripts",
+          "fields": "Speaker1, Speaker2, Speaker3,Meet_id, userId",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.mongoDb",
+        "typeVersion": 1.2,
+        "position": [
+          2144,
+          272
+        ],
+        "id": "5dbc5cb1-b0a2-4638-8bc2-a4095d012085",
+        "name": "Create Transcript",
+        "alwaysOutputData": true,
+        "credentials": {
+          "mongoDb": {
+            "id": "czLWond9VcLqtcLi",
+            "name": "Database Account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "update",
+          "collection": "transcripts",
+          "updateKey": "Meet_id",
+          "fields": "Speaker1, Speaker2, Speaker3,userId",
+          "upsert": true,
+          "options": {}
+        },
+        "type": "n8n-nodes-base.mongoDb",
+        "typeVersion": 1.2,
+        "position": [
+          2352,
+          592
+        ],
+        "id": "4b919e23-7703-43e3-a59a-e478041a11e1",
+        "name": "Update Transcript",
+        "alwaysOutputData": true,
+        "credentials": {
+          "mongoDb": {
+            "id": "czLWond9VcLqtcLi",
+            "name": "Database Account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=AIzaSyB09u5cRFaTUOfWpCDt-GHX_4A9ivJYf0I",
+          "sendBody": true,
+          "contentType": "raw",
+          "rawContentType": "json",
+          "body": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"Summarize the candidate’s latest response in 3–4 short bullet points focusing on key facts, experiences, and attitudes.\\n3. Suggest 2–3 follow-up questions that the employer can ask next. These should be insightful, specific, and encourage elaboration.\\n4. If the response is unclear, include a clarifying question.\\n\\nReturn only valid JSON in this format:\\n{\\n  \\\"summary\\\": [\\\"point 1\\\", \\\"point 2\\\", \\\"point 3\\\"],\\n  \\\"suggested_questions\\\": [\\\"question 1\\\", \\\"question 2\\\", \\\"question 3\\\"]\\n}\"\n        },\n        {\n          \"text\": \"{{ $json.Speaker1 }}:{{ $('Format Transcripts 1').item.json.speaker_transcripts[1] }} \\n{{ $json.Speaker2 }}:{{ $('Format Transcripts 1').item.json.speaker_transcripts[1] }} \"\n        }\n      ]\n    }\n  ]\n}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1744,
+          -528
+        ],
+        "id": "855ae66e-4b8f-4282-827a-1e2c8a745609",
+        "name": "Summary & Questions"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=AIzaSyB09u5cRFaTUOfWpCDt-GHX_4A9ivJYf0I",
+          "sendBody": true,
+          "contentType": "raw",
+          "rawContentType": "json",
+          "body": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"You are an AI assistant helping an employer during an interview.\\n\\nThe following is the conversation so far, along with a summary of what has already been discussed:\\n\\nContext summary of previous conversation:\\n\\\"\\\"\\\"\\n{{ $json.latest_summary }}\\n\\\"\\\"\\\"\\n\\nAnalyze the most recent transcripts:\\n\\\"\\\"\\\"\\n{{ $('Set Fields 2').item.json.Speaker1 }}\\n{{ $('Set Fields 2').item.json.Speaker2 }}\\n{{ $('Set Fields 2').item.json.Speaker3 }}\\n\\\"\\\"\\\"\\n\\nTasks:\\n1. Consider both the new transcripts and the provided context summary to fully understand the candidate’s communication and responses.\\n2. Summarize the candidate’s latest response in 3–4 short bullet points focusing on key facts, experiences, and attitudes.\\n3. Suggest 2–3 follow-up questions that the employer can ask next. These should be insightful, specific, and encourage elaboration.\\n4. If the response is unclear, include a clarifying question.\\n\\nReturn only valid JSON in this format:\\n{\\n  \\\"summary\\\": [\\\"point 1\\\", \\\"point 2\\\", \\\"point 3\\\"],\\n  \\\"suggested_questions\\\": [\\\"question 1\\\", \\\"question 2\\\", \\\"question 3\\\"]\\n}\"\n        }\n      ]\n    }\n  ]\n}\n",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2544,
+          1152
+        ],
+        "id": "10d7d346-3f00-485b-9d83-472c42e15d06",
+        "name": "Summary & Questions 2",
+        "retryOnFail": true,
+        "waitBetweenTries": 5000,
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Get all items from the previous node.\nconst items = $input.all();\nconst finalResult = [];\n\n// Loop through each item to process it individually.\nfor (const item of items) {\n  try {\n    const inputJson = item.json;\n\n    // --- Find the correct starting object (handles both array/object inputs) ---\n    let dataObject;\n    if (Array.isArray(inputJson) && inputJson.length > 0) {\n      dataObject = inputJson[0];\n    } else {\n      dataObject = inputJson;\n    }\n\n    // --- FIXED: Extract the nested data from the new path ---\n    // The raw JSON string is now located in `message.content`.\n    const textResponse = dataObject?.message?.content;\n\n    // If the expected data isn't in this item, pass the item through unchanged.\n    if (!textResponse) {\n      finalResult.push(item);\n      continue; // Move to the next item in the loop.\n    }\n\n    // --- FIXED: Parse the JSON string directly ---\n    // The new output doesn't include ```json markers, so we can parse directly.\n    const parsedData = JSON.parse(textResponse);\n\n    // --- Combine the arrays into single strings ---\n    // This logic remains the same, using a double newline for readability.\n    const summaryText = parsedData.summary?.join('\\n\\n') || '';\n    const questionsText = parsedData.suggested_questions?.join('\\n\\n') || '';\n\n    // --- Build the new output object ---\n    // 1. Create a copy of all original data fields.\n    const newJson = { ...dataObject };\n\n    // 2. FIXED: Remove the original 'message' field to avoid duplicate data.\n    delete newJson.message;\n\n    // 3. Add the new fields with the combined text.\n    newJson.summary_text = summaryText;\n    newJson.suggested_questions_text = questionsText;\n    \n    // Add the fully transformed item to our results.\n    finalResult.push({ json: newJson });\n\n  } catch (error) {\n    // If an error occurs, create an error object for easy debugging.\n    finalResult.push({\n      json: {\n        error: true,\n        message: `Processing failed: ${error.message}`,\n        originalItem: item.json\n      }\n    });\n  }\n}\n\n// Return the final array of all processed items.\nreturn finalResult;"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2832,
+          272
+        ],
+        "id": "fc6b5c9b-de18-4e88-ac1c-5f49674c832b",
+        "name": "Formatting"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Get all items from the previous node.\nconst items = $input.all();\nconst finalResult = [];\n\n// Loop through each item to process it individually.\nfor (const item of items) {\n  try {\n    const inputJson = item.json;\n\n    // --- Find the correct starting object (handles both array/object inputs) ---\n    let dataObject;\n    if (Array.isArray(inputJson) && inputJson.length > 0) {\n      dataObject = inputJson[0];\n    } else {\n      dataObject = inputJson;\n    }\n\n    // --- MODIFIED: Extract the nested data from the new path ---\n    // The raw JSON string is now located in `message.content`.\n    const textResponse = dataObject?.message?.content;\n\n    // If the expected data isn't in this item, pass the item through unchanged.\n    if (!textResponse) {\n      finalResult.push(item);\n      continue; // Move to the next item in the loop.\n    }\n\n    // --- MODIFIED: Parse the JSON string directly ---\n    // The new LLM output doesn't include ```json markers, so we can parse directly.\n    const parsedData = JSON.parse(textResponse);\n\n    // --- Combine the arrays into single strings ---\n    // This logic remains the same, using a double newline for readability.\n    const summaryText = parsedData.summary?.join('\\n\\n') || '';\n    const questionsText = parsedData.suggested_questions?.join('\\n\\n') || '';\n\n    // --- Build the new output object ---\n    // 1. Create a copy of all original data fields.\n    const newJson = { ...dataObject };\n\n    // 2. MODIFIED: Remove the original 'message' field to avoid duplicate data.\n    delete newJson.message;\n\n    // 3. Add the new fields with the combined text.\n    newJson.summary_text = summaryText;\n    newJson.suggested_questions_text = questionsText;\n    \n    // Add the fully transformed item to our results.\n    finalResult.push({ json: newJson });\n\n  } catch (error) {\n    // If an error occurs, create an error object for easy debugging.\n    finalResult.push({\n      json: {\n        error: true,\n        message: `Processing failed: ${error.message}`,\n        originalItem: item.json\n      }\n    });\n  }\n}\n\n// Return the final array of all processed items.\nreturn finalResult;"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          3056,
+          592
+        ],
+        "id": "b687a49d-f049-47fa-96cf-558a28b62a60",
+        "name": "Formatting 2"
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "32c135e7-c678-432c-add6-40ee539cb27a",
+                "name": "Summary",
+                "value": "={{ $json.summary_text }}",
+                "type": "string"
+              },
+              {
+                "id": "f4b32146-892a-4549-b232-a5476c38f027",
+                "name": "Suggested_Questions",
+                "value": "={{ $json.suggested_questions_text }}",
+                "type": "string"
+              },
+              {
+                "id": "dd4d30a7-ae24-41f2-b1e9-79930081ee2d",
+                "name": "Meet_id",
+                "value": "={{ $('Get Transcripts From Meeting').item.json.native_meeting_id }}",
+                "type": "string"
+              },
+              {
+                "id": "b7437b9d-9749-4749-b2e5-aebf9c674c63",
+                "name": "userId",
+                "value": "={{ $('Webhook').item.json.body.userId }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          2992,
+          272
+        ],
+        "id": "820d9ef6-6e3e-4d66-a32f-a9c586474a09",
+        "name": "Set Fields 3"
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "32c135e7-c678-432c-add6-40ee539cb27a",
+                "name": "Summary",
+                "value": "={{ $json.summary_text }}",
+                "type": "string"
+              },
+              {
+                "id": "f4b32146-892a-4549-b232-a5476c38f027",
+                "name": "Suggested_Questions",
+                "value": "={{ $json.suggested_questions_text }}",
+                "type": "string"
+              },
+              {
+                "id": "dd4d30a7-ae24-41f2-b1e9-79930081ee2d",
+                "name": "Meet_id",
+                "value": "={{ $('Format Transcripts 2').item.json.native_meeting_id }}",
+                "type": "string"
+              },
+              {
+                "id": "b7967049-a54f-4da8-a799-02381bd078b5",
+                "name": "userId",
+                "value": "={{ $('Webhook').item.json.body.userId }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          3200,
+          592
+        ],
+        "id": "535ae5b8-7315-48c2-818a-fa4c0f5bf78b",
+        "name": "Set Fields 4"
+      },
+      {
+        "parameters": {
+          "operation": "update",
+          "collection": "transcripts",
+          "updateKey": "Meet_id",
+          "fields": "Summary, Suggested_Questions,userId",
+          "upsert": true,
+          "options": {}
+        },
+        "type": "n8n-nodes-base.mongoDb",
+        "typeVersion": 1.2,
+        "position": [
+          3408,
+          432
+        ],
+        "id": "70b975d1-cf58-4329-bb30-68f2b36423c1",
+        "name": "Updating Summary & Questions",
+        "alwaysOutputData": true,
+        "credentials": {
+          "mongoDb": {
+            "id": "czLWond9VcLqtcLi",
+            "name": "Database Account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": " https://gateway.dev.vexa.ai/bots",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "X-API-Key",
+                "value": "CxtbOw7GCYwmO4mGKVJ8UsbmszwAfzdyzaQHgU3c"
+              }
+            ]
+          },
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "platform",
+                "value": "google_meet"
+              },
+              {
+                "name": "native_meeting_id",
+                "value": "={{ $json.meetId }}"
+              },
+              {
+                "name": "language",
+                "value": "en"
+              },
+              {
+                "name": "bot_name",
+                "value": "MyMeetingBot"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1136,
+          752
+        ],
+        "id": "a2273eaf-d41d-4cc2-aa51-7c51c348beb3",
+        "name": "Send Bot to Meeting",
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "88867ef1-82e3-45c9-afb9-1c3ae607dc6a",
+                "leftValue": "={{ $json.segments }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "array",
+                  "operation": "empty",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          1616,
+          432
+        ],
+        "id": "c59634ff-52ad-4901-9789-7917b4bb4abf",
+        "name": "Meeting ID Exists?"
+      },
+      {
+        "parameters": {
+          "collection": "candidates",
+          "options": {
+            "projection": "{\n\n  \"Interview End\":1,\n  \"Google Meet Id\":1\n  \n}"
+          },
+          "query": "={\n  \"Google Meet Id\": {\n    \"$regex\": \"{{ $json.Meet_id }}\"\n  }\n} "
+        },
+        "type": "n8n-nodes-base.mongoDb",
+        "typeVersion": 1.2,
+        "position": [
+          3568,
+          432
+        ],
+        "id": "4667b077-8039-406c-97f2-00ea49abedf8",
+        "name": "Get Meeting Time",
+        "credentials": {
+          "mongoDb": {
+            "id": "czLWond9VcLqtcLi",
+            "name": "Database Account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// Get the items from the previous node.\nconst items = $input.all();\n\n// Loop through each item to process it.\nfor (const item of items) {\n  // Get the \"Interview Time\" string from the item.\n  const interviewTimeStr = item.json['Interview Time'];\n  // Get the \"Google Meet Id\" string from the item.\n  const meetIdLink = item.json['Google Meet Id'];\n\n  // Check if the input is a string and not a number.\n  if (typeof interviewTimeStr === 'string' && interviewTimeStr.includes(' - ')) {\n    // Split the string by \" - \" to get the start and end times.\n    const timeParts = interviewTimeStr.split(' - ');\n    const endTimeStr = timeParts[1].trim();\n\n    // Parse the end time string into hours and minutes (local time).\n    const [time, period] = endTimeStr.split(' ');\n    let [hours, minutes] = time.split(':').map(Number);\n    if (period === 'PM' && hours !== 12) {\n      hours += 12;\n    }\n    if (period === 'AM' && hours === 12) {\n      hours = 0;\n    }\n\n    // Get today's date in UTC.\n    const nowUTC = new Date();\n    const yearUTC = nowUTC.getUTCFullYear();\n    const monthUTC = nowUTC.getUTCMonth();\n    const dayUTC = nowUTC.getUTCDate();\n    \n    // IMPORTANT: Convert the local time to UTC by subtracting the offset.\n    // PKT is UTC+5, so we subtract 5 hours.\n    const localTimezoneOffsetHours = 5;\n    const utcHours = hours - localTimezoneOffsetHours;\n\n    // Create the Date object using Date.UTC(), which is timezone-agnostic.\n    const endTime = new Date(Date.UTC(yearUTC, monthUTC, dayUTC, utcHours, minutes, 0));\n\n    // Store the extracted end time.\n    item.json.interviewEndTime = endTime;\n  }\n\n  // Add the meeting code to the output if the link exists.\n  if (meetIdLink) {\n    const meetCode = meetIdLink.split('/').pop();\n    item.json.meetingId = meetCode;\n  }\n}\n\n// Return the updated items.\nreturn items;"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          3728,
+          432
+        ],
+        "id": "eefc87d4-a181-4629-ac19-69c36edfab9d",
+        "name": "Extract Endtime"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "521e2054-cd98-4a35-ad8c-45ae7dd12930",
+                "leftValue": "={{$now }}",
+                "rightValue": "={{ new Date($json['Interview End']) }}",
+                "operator": {
+                  "type": "dateTime",
+                  "operation": "after"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          3888,
+          432
+        ],
+        "id": "b3abdc48-61b9-42a8-991c-f75b92ef98c0",
+        "name": "Is Meeting Time Over?",
+        "alwaysOutputData": false,
+        "executeOnce": false
+      },
+      {
+        "parameters": {
+          "method": "DELETE",
+          "url": "=http://api.vexa.ai/bots/google_meet/{{ $('meet Id get').item.json.meetId }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "X-API-Key",
+                "value": "WCAJ5dMpqEsFP8yi8VBRAEHTtFLx0SWIiFCgecLr"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          5712,
+          48
+        ],
+        "id": "1a5b76f1-d761-4f3b-abf5-5402ebdf56a3",
+        "name": "Stop Bot in Meeting"
+      },
+      {
+        "parameters": {
+          "url": "=\nhttps://gateway.dev.vexa.ai/transcripts/google_meet/{{ $('meet Id get').item.json.meetId }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "X-API-Key",
+                "value": "CxtbOw7GCYwmO4mGKVJ8UsbmszwAfzdyzaQHgU3c"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1456,
+          432
+        ],
+        "id": "8c215d6e-e8d4-4ef1-a5b4-be41556f5914",
+        "name": "Get Transcripts From Meeting",
+        "alwaysOutputData": true,
+        "retryOnFail": false,
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {},
+        "type": "n8n-nodes-base.noOp",
+        "typeVersion": 1,
+        "position": [
+          256,
+          -544
+        ],
+        "id": "9909c0a7-b3d8-4b30-a4b1-13dcd073cf9f",
+        "name": "Meeting Doesn't Exist",
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "url": "=\nhttps://gateway.dev.vexa.ai/transcripts/google_meet/{{ $('meet Id get').item.json.meetId }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "X-API-Key",
+                "value": "CxtbOw7GCYwmO4mGKVJ8UsbmszwAfzdyzaQHgU3c"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          4096,
+          640
+        ],
+        "id": "f8de5623-32c2-4818-af6c-75523a0eb258",
+        "name": "Get Transcripts From Meeting2",
+        "alwaysOutputData": true
+      },
+      {
+        "parameters": {},
+        "type": "n8n-nodes-base.noOp",
+        "typeVersion": 1,
+        "position": [
+          4816,
+          384
+        ],
+        "id": "105e6e8c-a3dc-4d17-a169-f1acfa8f1802",
+        "name": "No Operation, do nothing"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=AIzaSyCnZYGpXJg3Rdww2VozR_pVdhAtvS3ISkI",
+          "sendBody": true,
+          "contentType": "raw",
+          "rawContentType": "json",
+          "body": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"You are acting as an analyst of the Interview Process, use professional insight and critique in the procedure, only examine the interviewee not the interviewer: Perform Psychometric, Technical and Behavioural Analysis and make headings for each one.\\n2.The analysis should be insightful, specific, and detailed but not too long, max 5 lines for each.\\n3. If the candidate is unclear, include a critique of that.\\n4. Also add a 'Recommended for Hire' heading, the answer should only be YES, NO and MAYBE.\\n5. A Meet-id heading should be there that has{{ $json.Meet_id }} as it is .\\n\\nReturn only a valid JSON object in this format:\\n{\\n  \\\"Psychometric Analysis\\\": \\\"\\\",\\n  \\\"Technical Analysis\\\": \\\"\\\",\\n  \\\"Behavioural Analysis\\\": \\\"\\\",\\n  \\\"Meet_id\\\": \\\"\\\",\\n  \\\"Recommended for Hire\\\": \\\"\\\"\\n}\"\n        },\n        {\n          \"text\": \"Speaker1:{{ $json.Speaker1 }} \\nSpeaker2:{{ $json.Speaker2 }} \\nSpeaker3:{{ $json.Speaker3 }} \"\n        }\n      ]\n    }\n  ]\n}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          3760,
+          -1648
+        ],
+        "id": "8348dcb2-6fde-4a82-af03-8a3563e50fc5",
+        "name": "Analyzing Transcript"
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "c2f81334-23a2-40d7-9ca4-e7b34ded91c8",
+                "name": "Psychometric Analysis",
+                "value": "={{ $json['Psychometric Analysis'] }}",
+                "type": "string"
+              },
+              {
+                "id": "1a27eb15-e702-4413-8cd8-adfdf632b50f",
+                "name": "Technical Analysis",
+                "value": "={{ $json['Technical Analysis'] }}",
+                "type": "string"
+              },
+              {
+                "id": "441e211a-f82b-4b90-b9c5-7b51e187b848",
+                "name": "Behavioural Analysis",
+                "value": "={{ $json['Behavioural Analysis'] }}",
+                "type": "string"
+              },
+              {
+                "id": "99525ae3-1c93-4f52-ae4b-7513e7e6f8d0",
+                "name": "Recommended for Hire",
+                "value": "={{ $json['Recommended for Hire'] }}",
+                "type": "string"
+              },
+              {
+                "id": "68e3c47c-b7bd-498e-9d12-5d083b502f1f",
+                "name": "Meet_id",
+                "value": "={{ $('meet Id get').item.json.meetId }}",
+                "type": "string"
+              },
+              {
+                "id": "6ba7b7f8-2a20-4744-bf19-f4f27a06b4a1",
+                "name": "userId",
+                "value": "={{ $('Webhook').item.json.body.userId }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          5312,
+          48
+        ],
+        "id": "dfae6698-f19b-4c27-be27-69093e1b26b3",
+        "name": "Edit Fields"
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "d1230545-2f9a-4782-91c6-01180beddc89",
+                "name": "Meet_ID",
+                "value": "={{ $json.meetingId }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          4064,
+          272
+        ],
+        "id": "10b5c92e-a960-49ab-8adf-1364a5d81d96",
+        "name": "Edit Fields1"
+      },
+      {
+        "parameters": {
+          "rules": {
+            "values": [
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                    "version": 2
+                  },
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $json.Meet_id }}",
+                      "rightValue": "null",
+                      "operator": {
+                        "type": "string",
+                        "operation": "notEquals"
+                      },
+                      "id": "34f2d329-8be5-4a18-afdc-765530300c45"
+                    }
+                  ],
+                  "combinator": "and"
+                }
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                    "version": 2
+                  },
+                  "conditions": [
+                    {
+                      "id": "6141e2b4-2142-4cae-9fb7-d6f81e67537b",
+                      "leftValue": "={{ $json.Meet_id }}",
+                      "rightValue": "null",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals",
+                        "name": "filter.operator.equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                }
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.switch",
+        "typeVersion": 3.2,
+        "position": [
+          4416,
+          272
+        ],
+        "id": "96db270c-3c0d-4225-adf8-f84c12721de1",
+        "name": "Switch2"
+      },
+      {
+        "parameters": {
+          "operation": "insert",
+          "collection": "analysis",
+          "fields": "Psychometric Analysis, Technical Analysis, Behavioural Analysis, Recommended for Hire, Meet_id,userId",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.mongoDb",
+        "typeVersion": 1.2,
+        "position": [
+          5520,
+          48
+        ],
+        "id": "38bf1ac7-cd91-4905-9935-13d41db4351c",
+        "name": "MongoDB3",
+        "alwaysOutputData": true,
+        "credentials": {
+          "mongoDb": {
+            "id": "czLWond9VcLqtcLi",
+            "name": "Database Account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const items = $input.all();\nconst finalResult = [];\n\n// Loop through each item to process it safely.\nfor (const item of items) {\n  try {\n    const inputJson = item.json;\n\n    // --- Find the correct starting object (handles array/object inputs) ---\n    let dataObject;\n    if (Array.isArray(inputJson) && inputJson.length > 0) {\n      dataObject = inputJson[0];\n    } else {\n      dataObject = inputJson;\n    }\n\n    // --- FIXED: Access the nested string from the correct path ---\n    const rawDataString = dataObject?.message?.content;\n\n    // If the data isn't in this item, pass the item through unchanged.\n    if (!rawDataString) {\n        finalResult.push(item);\n        continue;\n    }\n\n    // --- FIXED: Parse the cleaned string directly ---\n    // The new format does not have ```json markers, so no replacement is needed.\n    const parsedData = JSON.parse(rawDataString);\n\n    // --- Create the final object with the desired fields ---\n    // This part of your logic was correct.\n    const formattedResponse = {\n      \"Psychometric Analysis\": parsedData[\"Psychometric Analysis\"],\n      \"Technical Analysis\": parsedData[\"Technical Analysis\"],\n      \"Behavioural Analysis\": parsedData[\"Behavioural Analysis\"],\n      \"Meet_id\": parsedData[\"Meet_id\"],\n      \"Recommended for Hire\": parsedData[\"Recommended for Hire\"]\n    };\n\n    // Add the fully transformed item to our results.\n    finalResult.push({ json: formattedResponse });\n\n  } catch (error) {\n    // If an error occurs, create an error object for easy debugging.\n    finalResult.push({\n      json: {\n        error: true,\n        message: `Processing failed: ${error.message}`,\n        originalItem: item.json\n      }\n    });\n  }\n}\n\n// Return the final array of all processed items.\nreturn finalResult;"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          5136,
+          48
+        ],
+        "id": "853454a4-165b-4a21-8367-10160232656b",
+        "name": "Formatting2"
+      },
+      {
+        "parameters": {
+          "amount": 15
+        },
+        "type": "n8n-nodes-base.wait",
+        "typeVersion": 1.1,
+        "position": [
+          4352,
+          688
+        ],
+        "id": "18fb052d-58d8-4381-9cff-1013bb6aa0fa",
+        "name": "Wait3",
+        "webhookId": "aaa938be-a4a6-47c5-9795-0230f15db7b6"
+      },
+      {
+        "parameters": {
+          "operation": "aggregate",
+          "collection": "candidates",
+          "query": "=[\n  {\n    \"$match\": {\n      \"userId\": \"{{ $('Webhook').item.json.body.userId }}\",\n      \"$expr\": {\n        \"$gt\": [\n          { \"$toDate\": \"$Interview End\" },\n          \"$$NOW\"\n        ]\n      }\n    }\n  },\n  {\n    \"$sort\": {\n      \"Interview Start\": 1\n    }\n  },\n  {\n    \"$limit\": 1\n  },\n  {\n    \"$project\": {\n      \"Interview Start\": 1,\n      \"Interview End\": 1,\n      \"Google Meet Id\": 1,\n      \"_id\": 0\n    }\n  }\n]"
+        },
+        "type": "n8n-nodes-base.mongoDb",
+        "typeVersion": 1.2,
+        "position": [
+          -336,
+          -528
+        ],
+        "id": "15a07cc2-f8ed-4a60-8a56-e7577fba7708",
+        "name": "Get Candidate Details",
+        "alwaysOutputData": false,
+        "credentials": {
+          "mongoDb": {
+            "id": "czLWond9VcLqtcLi",
+            "name": "Database Account"
+          }
+        },
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "amount": 10
+        },
+        "type": "n8n-nodes-base.wait",
+        "typeVersion": 1.1,
+        "position": [
+          1296,
+          432
+        ],
+        "id": "8f0d1faf-2343-496b-abd9-6dd040150230",
+        "name": "Wait for Admission",
+        "webhookId": "8bcee772-d685-426a-a87c-16707b5fd796"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "88867ef1-82e3-45c9-afb9-1c3ae607dc6a",
+                "leftValue": "={{ $json.Speaker1 }}",
+                "rightValue": "[null]",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              },
+              {
+                "id": "edbd53c1-44d8-43c5-8227-e4ba3c075a47",
+                "leftValue": "={{ $json.Speaker2 }}",
+                "rightValue": "[null]",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              },
+              {
+                "id": "8bf7135f-ce3a-45f4-b358-6fffdfeb8591",
+                "leftValue": "={{ $json.Speaker3 }}",
+                "rightValue": "[null]",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          2528,
+          480
+        ],
+        "id": "e098d636-5c9a-4a76-9c35-a220926db880",
+        "name": "Is Anyone Speaking?"
+      },
+      {
+        "parameters": {
+          "collection": "transcripts",
+          "options": {
+            "projection": "{\n  \"Speaker1\": 1,\n  \"Speaker2\": 1,\n  \"Speaker3\": 1,\n  \"Meet_id\": 1\n}"
+          },
+          "query": "={\n  \"Meet_id\": \"{{$node[\"Edit Fields1\"].json[\"Meet_ID\"]}}\"\n}"
+        },
+        "type": "n8n-nodes-base.mongoDb",
+        "typeVersion": 1.2,
+        "position": [
+          4240,
+          272
+        ],
+        "id": "bcc4255a-cb25-40cd-bc67-66655b150975",
+        "name": "Find Transcripts By Meet ID",
+        "credentials": {
+          "mongoDb": {
+            "id": "czLWond9VcLqtcLi",
+            "name": "Database Account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "meetbot-ideofuzion",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          256,
+          544
+        ],
+        "id": "6f709c73-77bc-4c89-bd76-c3db5cf98b4d",
+        "name": "Webhook",
+        "webhookId": "f04e8b6a-39c9-4654-ac7b-0aee4b6bd4fb"
+      },
+      {
+        "parameters": {
+          "modelId": {
+            "__rl": true,
+            "value": "gpt-5-nano",
+            "mode": "list",
+            "cachedResultName": "GPT-5-NANO"
+          },
+          "messages": {
+            "values": [
+              {
+                "content": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"You are an AI assistant helping an employer during an interview.\\n\\nThe following is the conversation so far, along with a summary of what has already been discussed:\\n\\nContext summary of previous conversation:\\n\\\"\\\"\\\"\\n{{ $json.latest_summary }}\\n\\\"\\\"\\\"\\n\\nAnalyze the most recent transcripts:\\n\\\"\\\"\\\"\\n{{ $('Set Fields 2').item.json.Speaker1 }}\\n{{ $('Set Fields 2').item.json.Speaker2 }}\\n{{ $('Set Fields 2').item.json.Speaker3 }}\\n\\\"\\\"\\\"\\n\\nTasks:\\n1. Consider both the new transcripts and the provided context summary to fully understand the candidate’s communication and responses.\\n2. Summarize the candidate’s latest response in 3–4 short bullet points focusing on key facts, experiences, and attitudes.\\n3. Suggest 2–3 follow-up questions that the employer can ask next. These should be insightful, specific, and encourage elaboration.\\n4. If the response is unclear, include a clarifying question.\\n\\nReturn only valid JSON in this format:\\n{\\n  \\\"summary\\\": [\\\"point 1\\\", \\\"point 2\\\", \\\"point 3\\\"],\\n  \\\"suggested_questions\\\": [\\\"question 1\\\", \\\"question 2\\\", \\\"question 3\\\"]\\n}\"\n        }\n      ]\n    }\n  ]\n}\n",
+                "role": "assistant"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "@n8n/n8n-nodes-langchain.openAi",
+        "typeVersion": 1.8,
+        "position": [
+          2768,
+          624
+        ],
+        "id": "92cf4cb9-364d-4464-b05a-9fabc6b2a945",
+        "name": "Summary and Questions",
+        "credentials": {
+          "openAiApi": {
+            "id": "9TB9UR9WXn9AhCai",
+            "name": "Ideofuzion testing"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "modelId": {
+            "__rl": true,
+            "value": "gpt-5-nano",
+            "mode": "list",
+            "cachedResultName": "GPT-5-NANO"
+          },
+          "messages": {
+            "values": [
+              {
+                "content": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"Summarize the candidate’s latest response in 3–4 short bullet points focusing on key facts, experiences, and attitudes.\\n3. Suggest 2–3 follow-up questions that the employer can ask next. These should be insightful, specific, and encourage elaboration.\\n4. If the response is unclear, include a clarifying question.\\n\\nReturn only valid JSON in this format:\\n{\\n  \\\"summary\\\": [\\\"point 1\\\", \\\"point 2\\\", \\\"point 3\\\"],\\n  \\\"suggested_questions\\\": [\\\"question 1\\\", \\\"question 2\\\", \\\"question 3\\\"]\\n}\"\n        },\n        {\n          \"text\": \"{{ $json.Speaker1 }}:{{ $('Format Transcripts 1').item.json.speaker_transcripts[1] }} \\n{{ $json.Speaker2 }}:{{ $('Format Transcripts 1').item.json.speaker_transcripts[1] }} \"\n        }\n      ]\n    }\n  ]\n}",
+                "role": "assistant"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "@n8n/n8n-nodes-langchain.openAi",
+        "typeVersion": 1.8,
+        "position": [
+          2352,
+          160
+        ],
+        "id": "4c317f32-64fe-4930-a443-d9102fee08ec",
+        "name": "Summary and Questions1",
+        "credentials": {
+          "openAiApi": {
+            "id": "9TB9UR9WXn9AhCai",
+            "name": "Ideofuzion testing"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "modelId": {
+            "__rl": true,
+            "value": "gpt-5-nano",
+            "mode": "list",
+            "cachedResultName": "GPT-5-NANO"
+          },
+          "messages": {
+            "values": [
+              {
+                "content": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"You are acting as an analyst of the Interview Process, use professional insight and critique in the procedure, only examine the interviewee not the interviewer: Perform Psychometric, Technical and Behavioural Analysis and make headings for each one.\\n2.The analysis should be insightful, specific, and detailed but not too long, max 5 lines for each.\\n3. If the candidate is unclear, include a critique of that.\\n4. Also add a 'Recommended for Hire' heading, the answer should only be YES, NO and MAYBE.\\n5. A Meet-id heading should be there that has{{ $json.Meet_id }} as it is .\\n\\nReturn only a valid JSON object in this format:\\n{\\n  \\\"Psychometric Analysis\\\": \\\"\\\",\\n  \\\"Technical Analysis\\\": \\\"\\\",\\n  \\\"Behavioural Analysis\\\": \\\"\\\",\\n  \\\"Meet_id\\\": \\\"\\\",\\n  \\\"Recommended for Hire\\\": \\\"\\\"\\n}\"\n        },\n        {\n          \"text\": \"Speaker1:{{ $json.Speaker1 }} \\nSpeaker2:{{ $json.Speaker2 }} \\nSpeaker3:{{ $json.Speaker3 }} \"\n        }\n      ]\n    }\n  ]\n}",
+                "role": "assistant"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "@n8n/n8n-nodes-langchain.openAi",
+        "typeVersion": 1.8,
+        "position": [
+          4688,
+          112
+        ],
+        "id": "a2bef44f-1400-4485-a7fd-8c7583dd30fa",
+        "name": "Analyzing Transcripts",
+        "credentials": {
+          "openAiApi": {
+            "id": "9TB9UR9WXn9AhCai",
+            "name": "Ideofuzion testing"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "/**\n * n8n Code Node Snippet\n *\n * This code extracts the unique meeting ID from a full Google Meet URL.\n * It assumes the input data is coming from the previous node and is available in the $json variable.\n *\n * Input (from previous node's JSON):\n * {\n * \"body\": {\n * \"googleMeetId\": \"meet.google.com/yur-qknh-jbo\"\n * }\n * }\n *\n * Output (this node's JSON):\n * {\n * \"meetId\": \"yur-qknh-jbo\"\n * }\n */\n\n// Access the googleMeetId from the body of the incoming JSON data.\nconst googleMeetId = $json.body.googleMeetId;\n\n// Check if the googleMeetId exists to prevent errors.\nif (googleMeetId && typeof googleMeetId === 'string') {\n  // Split the URL string by the \"/\" character.\n  // This creates an array, e.g., ['meet.google.com', 'yur-qknh-jbo']\n  const urlParts = googleMeetId.split('/');\n\n  // The meeting ID is the last element in the array.\n  // The pop() method removes the last element from an array and returns that element.\n  const meetId = urlParts.pop();\n\n  // Return a new JSON object with the extracted meetId.\n  // This will be the output of the Code Node.\n  return {\n    json: {\n      meetId: meetId\n    }\n  };\n}\n\n// If googleMeetId is not found, return an empty object or handle the error.\nreturn {\n  json: {}\n};\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          640,
+          544
+        ],
+        "id": "55684ed8-245d-47dd-a3f9-5b071f729f11",
+        "name": "meet Id get"
+      }
+    ],
+    "connections": {
+      "Check Interview": {
+        "main": [
+          [
+            {
+              "node": "Switch",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Switch": {
+        "main": [
+          [
+            {
+              "node": "Meeting Doesn't Exist",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          []
+        ]
+      },
+      "Format Transcripts 1": {
+        "main": [
+          [
+            {
+              "node": "Set Fields 1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Format Transcripts 2": {
+        "main": [
+          [
+            {
+              "node": "Set Fields 2",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Set Fields 1": {
+        "main": [
+          [
+            {
+              "node": "Create Transcript",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Set Fields 2": {
+        "main": [
+          [
+            {
+              "node": "Update Transcript",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Create Transcript": {
+        "main": [
+          [
+            {
+              "node": "Summary and Questions1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Update Transcript": {
+        "main": [
+          [
+            {
+              "node": "Is Anyone Speaking?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Summary & Questions": {
+        "main": [
+          []
+        ]
+      },
+      "Summary & Questions 2": {
+        "main": [
+          []
+        ]
+      },
+      "Formatting": {
+        "main": [
+          [
+            {
+              "node": "Set Fields 3",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Formatting 2": {
+        "main": [
+          [
+            {
+              "node": "Set Fields 4",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Set Fields 3": {
+        "main": [
+          [
+            {
+              "node": "Updating Summary & Questions",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Set Fields 4": {
+        "main": [
+          [
+            {
+              "node": "Updating Summary & Questions",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Send Bot to Meeting": {
+        "main": [
+          [
+            {
+              "node": "Wait for Admission",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Meeting ID Exists?": {
+        "main": [
+          [
+            {
+              "node": "Format Transcripts 1",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Format Transcripts 2",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Meeting Time": {
+        "main": [
+          [
+            {
+              "node": "Extract Endtime",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Extract Endtime": {
+        "main": [
+          [
+            {
+              "node": "Is Meeting Time Over?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Is Meeting Time Over?": {
+        "main": [
+          [
+            {
+              "node": "Edit Fields1",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Get Transcripts From Meeting2",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Transcripts From Meeting": {
+        "main": [
+          [
+            {
+              "node": "Meeting ID Exists?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Updating Summary & Questions": {
+        "main": [
+          [
+            {
+              "node": "Get Meeting Time",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Transcripts From Meeting2": {
+        "main": [
+          [
+            {
+              "node": "Wait3",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Analyzing Transcript": {
+        "main": [
+          []
+        ]
+      },
+      "Edit Fields": {
+        "main": [
+          [
+            {
+              "node": "MongoDB3",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Edit Fields1": {
+        "main": [
+          [
+            {
+              "node": "Find Transcripts By Meet ID",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Switch2": {
+        "main": [
+          [
+            {
+              "node": "Analyzing Transcripts",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "No Operation, do nothing",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Formatting2": {
+        "main": [
+          [
+            {
+              "node": "Edit Fields",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "MongoDB3": {
+        "main": [
+          [
+            {
+              "node": "Stop Bot in Meeting",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Wait3": {
+        "main": [
+          [
+            {
+              "node": "Format Transcripts 2",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Candidate Details": {
+        "main": [
+          [
+            {
+              "node": "Check Interview",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Wait for Admission": {
+        "main": [
+          [
+            {
+              "node": "Get Transcripts From Meeting",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Is Anyone Speaking?": {
+        "main": [
+          [
+            {
+              "node": "Get Transcripts From Meeting2",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Summary and Questions",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Find Transcripts By Meet ID": {
+        "main": [
+          [
+            {
+              "node": "Switch2",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "meet Id get",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Summary and Questions": {
+        "main": [
+          [
+            {
+              "node": "Formatting 2",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Summary and Questions1": {
+        "main": [
+          [
+            {
+              "node": "Formatting",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Analyzing Transcripts": {
+        "main": [
+          [
+            {
+              "node": "Formatting2",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "meet Id get": {
+        "main": [
+          [
+            {
+              "node": "Send Bot to Meeting",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": {}
+  },
+  "Busy Slots Working": {
+    "id": "w7k9ejgAD16tskZl",
+    "name": "Busy Slots Working",
+    "active": true,
+    "nodes": [
+      {
+        "parameters": {},
+        "type": "n8n-nodes-base.manualTrigger",
+        "typeVersion": 1,
+        "position": [
+          0,
+          0
+        ],
+        "id": "c383d976-db7c-4690-b4eb-067c5a65104b",
+        "name": "When clicking ‘Execute workflow’"
+      },
+      {
+        "parameters": {
+          "sendTo": "={{ $('Find Next Available Slot (Reschedule)').item.json.Email }}",
+          "subject": "Important Update: Your Interview with Ideofuzion has been Rescheduled",
+          "message": "=<div style=\"font-family: Arial, sans-serif; line-height: 1.6; color: #333;\">\n  <p>Dear <strong>{{ $('Find Next Available Slot (Reschedule)').item.json['Candidate Name'] }}</strong>,</p>\n  <p>Please note that your upcoming interview for the <strong>{{ $('Find Next Available Slot (Reschedule)').item.json['Job Title'] }}</strong> position has been rescheduled due to an unforeseen change in the interviewer's availability.</p>\n  <p>We apologize for any inconvenience this may cause. Your new interview details are as follows:</p>\n  \n  <table style=\"width: 100%; border-collapse: collapse; margin: 20px 0;\">\n    <tr style=\"border-bottom: 1px solid #ddd;\">\n      <td style=\"padding: 8px; text-align: left;\"><strong>Original Time:</strong></td>\n      <td style=\"padding: 8px; text-align: left;\">{{ $('Find Next Available Slot (Reschedule)').item.json.oldDateReadable }}, at {{ $('Find Next Available Slot (Reschedule)').item.json.oldTimeReadable }} PKT</td>\n    </tr>\n    <tr style=\"background-color: #e8f0fe;\">\n      <td style=\"padding: 8px; text-align: left;\"><strong>New Time:</strong></td>\n      <td style=\"padding: 8px; text-align: left;\"><strong>{{ $('Find Next Available Slot (Reschedule)').item.json.newDateReadable }}, at {{ $('Find Next Available Slot (Reschedule)').item.json.newTimeReadable }} PKT</strong></td>\n    </tr>\n  </table>\n\n  <p>An updated calendar invitation has been sent to your email. Please accept the new invitation to confirm the updated time.</p>\n  <p>We appreciate your flexibility and look forward to speaking with you.</p>\n  <p>\n    Best regards,<br>\n    <strong>The HR Team</strong><br>\n    Ideofuzion\n  </p>\n</div>\n",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.gmail",
+        "typeVersion": 2.1,
+        "position": [
+          2688,
+          384
+        ],
+        "id": "12437979-f0ad-4571-8b86-09ae934c1f2e",
+        "name": "Email to Candidate1",
+        "webhookId": "d0ce039a-3a82-4b4c-8f54-65a6a007488f",
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "9tI5tKl8dpmBDjV0",
+            "name": "Gmail - maxpace94@gmail.com"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "getAll",
+          "calendar": {
+            "__rl": true,
+            "value": "maxpace94@gmail.com",
+            "mode": "list",
+            "cachedResultName": "maxpace94@gmail.com"
+          },
+          "timeMax": "={{ $now.plus({ month: 1 }) }}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleCalendar",
+        "typeVersion": 1.3,
+        "position": [
+          896,
+          368
+        ],
+        "id": "3d127fce-fa97-49ff-aa73-ababb2681971",
+        "name": "Get many events1",
+        "alwaysOutputData": true,
+        "credentials": {
+          "googleCalendarOAuth2Api": {
+            "id": "TwyEij61n5ehN9wQ",
+            "name": "Google Calendar - maxpace94@gmail.com"
+          }
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "operation": "update",
+          "calendar": {
+            "__rl": true,
+            "value": "maxpace94@gmail.com",
+            "mode": "list",
+            "cachedResultName": "maxpace94@gmail.com"
+          },
+          "eventId": "={{ $json[\"Calendar Event ID\"] }}",
+          "updateFields": {
+            "end": "={{ $json.newEndTimeISO }}",
+            "start": "={{ $json.newStartTimeISO }}"
+          }
+        },
+        "type": "n8n-nodes-base.googleCalendar",
+        "typeVersion": 1.3,
+        "position": [
+          2016,
+          224
+        ],
+        "id": "02d38528-7df6-41af-a1ba-5dcc13b49f72",
+        "name": "Update Event",
+        "credentials": {
+          "googleCalendarOAuth2Api": {
+            "id": "TwyEij61n5ehN9wQ",
+            "name": "Google Calendar - maxpace94@gmail.com"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "update",
+          "collection": "candidates",
+          "updateKey": "_id",
+          "fields": "Interview Start, Interview End, status",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.mongoDb",
+        "typeVersion": 1.2,
+        "position": [
+          2464,
+          224
+        ],
+        "id": "e61129a1-6f6e-4171-a90e-8cc5485e1423",
+        "name": "Update Candidate Record",
+        "alwaysOutputData": true,
+        "credentials": {
+          "mongoDb": {
+            "id": "czLWond9VcLqtcLi",
+            "name": "Database Account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "93244220-00d2-4dcc-ae0a-3c86dbd5d605",
+                "name": "Interview Start",
+                "value": "={{ $json.start.dateTime }}",
+                "type": "string"
+              },
+              {
+                "id": "982e12bc-dfec-4d3d-856e-7711aa082c86",
+                "name": "Interview End",
+                "value": "={{ $json.end.dateTime }}",
+                "type": "string"
+              },
+              {
+                "id": "73bfd6e1-effc-4849-97b1-239551c34c4a",
+                "name": "status",
+                "value": "Rescheduled - Unavailability",
+                "type": "string"
+              },
+              {
+                "id": "afc0fd8a-0ed2-497e-959a-4d0d8d40f771",
+                "name": "Calendar Event ID",
+                "value": "={{ $('Find Next Available Slot (Reschedule)').item.json['Calendar Event ID'] }}",
+                "type": "string"
+              },
+              {
+                "id": "9625d313-b78d-48fa-8b58-9b8f0634baff",
+                "name": "_id",
+                "value": "={{ $('Find Next Available Slot (Reschedule)').item.json._id }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          2240,
+          224
+        ],
+        "id": "0052051b-29c1-4eb1-9b0e-c0b6a2119261",
+        "name": "Prepare Update Fields"
+      },
+      {
+        "parameters": {
+          "jsCode": "// This node reads the data from your MongoDB collection and\n// creates the 'startTimeISO' and 'endTimeISO' fields that the\n// rest of the workflow needs.\n\nconst items = $input.all();\n\n// Loop through each interview record fetched from the database.\nconst standardizedItems = items.map(item => {\n  const interview = item.json;\n\n  // Create the new, standardized fields from your existing ones.\n  const standardizedInterview = {\n    ...interview, // Keep all the original data\n    startTimeISO: interview['Interview Start'], // Create 'startTimeISO' from 'Interview Start'\n    endTimeISO: interview['Interview End']      // Create 'endTimeISO' from 'Interview End'\n  };\n\n  return {\n    json: standardizedInterview\n  };\n});\n\n// Return the corrected items for the next node to use.\nreturn standardizedItems;\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          672,
+          368
+        ],
+        "id": "75fffbe6-0d4f-497d-92b2-09b8f57b1b61",
+        "name": "Standardize Interview Data"
+      },
+      {
+        "parameters": {
+          "jsCode": "// This is the corrected version of the reliable \"end of the queue\" script.\n// It fixes the bug that caused one-hour slots and skipping of available times.\n\n// =============================================================================\n// HELPER FUNCTIONS\n// =============================================================================\n// (All your helper functions are correct and should remain here)\n\nfunction formatToReadableTime(date) {\n    if (!date) return 'Invalid Date';\n    return date.toLocaleTimeString('en-US', {\n        timeZone: 'Asia/Karachi',\n        hour: '2-digit',\n        minute: '2-digit',\n        hour12: true\n    });\n}\n\nfunction formatToReadableDate(date) {\n    if (!date) return 'Invalid Date';\n    return date.toLocaleDateString('en-US', {\n        timeZone: 'Asia/Karachi',\n        weekday: 'long',\n        year: 'numeric',\n        month: 'long',\n        day: 'numeric'\n    });\n}\n\nfunction formatToISOString(date) {\n    if (!date) return null;\n    const pktDate = new Date(date.toLocaleString(\"en-US\", { timeZone: \"Asia/Karachi\" }));\n    const year = pktDate.getFullYear();\n    const month = String(pktDate.getMonth() + 1).padStart(2, '0');\n    const day = String(pktDate.getDate()).padStart(2, '0');\n    const hours = String(pktDate.getHours()).padStart(2, '0');\n    const minutes = String(pktDate.getMinutes()).padStart(2, '0');\n    const seconds = String(pktDate.getSeconds()).padStart(2, '0');\n    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.000+05:00`;\n}\n\nfunction isValidBusinessTime(dateTime) {\n    if (!dateTime || !(dateTime instanceof Date) || isNaN(dateTime)) {\n        return false;\n    }\n    const pktDay = dateTime.toLocaleDateString('en-US', { timeZone: 'Asia/Karachi', weekday: 'short' });\n    if (pktDay === 'Sat' || pktDay === 'Sun') {\n        return false;\n    }\n    const pktHour = parseInt(dateTime.toLocaleTimeString('en-US', { timeZone: 'Asia/Karachi', hour12: false, hour: '2-digit' }));\n    if (pktHour < 10 || pktHour >= 16) {\n        return false;\n    }\n    return true;\n}\n\nfunction moveToNextBusinessDay(currentTime) {\n    let nextDay = new Date(currentTime);\n    nextDay.setUTCDate(nextDay.getUTCDate() + 1);\n    const dayOfWeek = nextDay.toLocaleDateString('en-US', { timeZone: 'Asia/Karachi', weekday: 'short' });\n    if (dayOfWeek === 'Sat') {\n        nextDay.setUTCDate(nextDay.getUTCDate() + 2); // Move to Monday\n    } else if (dayOfWeek === 'Sun') {\n        nextDay.setUTCDate(nextDay.getUTCDate() + 1); // Move to Monday\n    }\n    // Set to 10:00 AM Pakistan time (which is 5:00 AM UTC)\n    nextDay.setUTCHours(5, 0, 0, 0);\n    return nextDay;\n}\n\n\n// =============================================================================\n// MAIN LOGIC\n// =============================================================================\n\n// 1. Get all existing conflicts from the nodes that run before this one.\nconst calendarEvents = $('Get many events1').all().map(item => ({ startDateTime: new Date(item.json.start.dateTime), endDateTime: new Date(item.json.end.dateTime) }));\nconst unavailableSlots = $('Get All Unavailable Slots').all().map(item => ({ startDateTime: new Date(item.json.startTime), endDateTime: new Date(item.json.endTime) }));\nconst allInterviews = $('Standardize Interview Data').all().map(item => ({ startDateTime: new Date(item.json.startTimeISO), endDateTime: new Date(item.json.endTimeISO) }));\n\nconst allScheduledSlots = [...calendarEvents, ...unavailableSlots, ...allInterviews];\n\n// 2. Find the very last moment anything is scheduled to determine the \"end of the queue\".\nlet lastEndTime = new Date(); // Start with the current time as a baseline\nallScheduledSlots.forEach(slot => {\n    if (slot.endDateTime && !isNaN(slot.endDateTime.getTime()) && slot.endDateTime > lastEndTime) {\n        lastEndTime = slot.endDateTime;\n    }\n});\n\n// 3. The search for a new slot will start from this last known time.\nlet searchTime = new Date(lastEndTime);\n\n// 4. Start searching for the next available 30-minute slot.\nlet attemptCount = 0;\nfor (let i = 0; i < 2000; i++) {\n    attemptCount++;\n\n    // ** THIS IS THE FIX **\n    // First, round up to the next 30-minute mark. This ensures we start on a clean boundary.\n    const currentMinutes = searchTime.getMinutes();\n    if (currentMinutes % 30 !== 0) {\n        const minutesToAdd = 30 - (currentMinutes % 30);\n        searchTime = new Date(searchTime.getTime() + minutesToAdd * 60000);\n    }\n    searchTime.setSeconds(0, 0);\n    \n    // Now, check if this clean time is valid.\n    if (!isValidBusinessTime(searchTime)) {\n        searchTime = moveToNextBusinessDay(searchTime);\n        continue;\n    }\n\n    const proposedEnd = new Date(searchTime.getTime() + 30 * 60000);\n\n    if (!isValidBusinessTime(new Date(proposedEnd.getTime() - 1000))) {\n        searchTime = moveToNextBusinessDay(searchTime);\n        continue;\n    }\n\n    // Check for conflicts with ALL existing events.\n    const hasConflict = allScheduledSlots.some(slot =>\n        slot.startDateTime && !isNaN(slot.startDateTime.getTime()) &&\n        slot.endDateTime && !isNaN(slot.endDateTime.getTime()) &&\n        (searchTime < slot.endDateTime) && (slot.startDateTime < proposedEnd)\n    );\n\n    // If no conflict is found, we have our slot!\n    if (!hasConflict) {\n        const conflictingInterview = $input.first().json;\n        \n        return [{\n            json: {\n                ...conflictingInterview,\n                newStartTimeISO: formatToISOString(searchTime),\n                newEndTimeISO: formatToISOString(proposedEnd),\n                newDateReadable: formatToReadableDate(searchTime),\n                newTimeReadable: formatToReadableTime(searchTime),\n                oldDateReadable: formatToReadableDate(new Date(conflictingInterview.startTimeISO)),\n                oldTimeReadable: formatToReadableTime(new Date(conflictingInterview.startTimeISO)),\n            }\n        }];\n    }\n    \n    // ** THIS IS THE FIX **\n    // If a conflict was found, THEN we advance the time by 30 minutes for the next loop.\n    searchTime = new Date(searchTime.getTime() + 30 * 60000);\n}\n\nthrow new Error(`Could not find a reschedule slot within ${attemptCount} attempts.`);\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1792,
+          224
+        ],
+        "id": "e8bb7854-58d4-4de8-9619-5c2e3b3be106",
+        "name": "Find Next Available Slot (Reschedule)"
+      },
+      {
+        "parameters": {
+          "collection": "busy_slots",
+          "options": {},
+          "query": "={\n  \"_id\": \"{{ $('Webhook').item.json.body.slotId }}\"\n}"
+        },
+        "type": "n8n-nodes-base.mongoDb",
+        "typeVersion": 1.2,
+        "position": [
+          224,
+          480
+        ],
+        "id": "fff16bf6-2fb2-4b8c-bf1a-396fa8cdb0ae",
+        "name": "Get Last Busy Slot",
+        "alwaysOutputData": true,
+        "credentials": {
+          "mongoDb": {
+            "id": "czLWond9VcLqtcLi",
+            "name": "Database Account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "collection": "candidates",
+          "options": {},
+          "query": "={\n  \"Interview Start\": {\n    \"$gte\": \"{{ $now.toISO() }}\"\n  },\n  \"userId\": \"{{ $('Webhook').item.json.body.userId }}\"\n}"
+        },
+        "type": "n8n-nodes-base.mongoDb",
+        "typeVersion": 1.2,
+        "position": [
+          448,
+          368
+        ],
+        "id": "0a891c53-f019-41b1-a451-2ff41ebeab17",
+        "name": "Get All Future Interviews",
+        "alwaysOutputData": true,
+        "credentials": {
+          "mongoDb": {
+            "id": "czLWond9VcLqtcLi",
+            "name": "Database Account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "collection": "unavailable_slots",
+          "options": {},
+          "query": "={\n  \"userId\": \"{{ $('Webhook').item.json.body.userId }}\"\n}"
+        },
+        "type": "n8n-nodes-base.mongoDb",
+        "typeVersion": 1.2,
+        "position": [
+          1120,
+          368
+        ],
+        "id": "ebee507a-945a-4251-b82b-15c94e1432a6",
+        "name": "Get All Unavailable Slots",
+        "alwaysOutputData": true,
+        "executeOnce": false,
+        "credentials": {
+          "mongoDb": {
+            "id": "czLWond9VcLqtcLi",
+            "name": "Database Account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// This script is designed for the 'busy_slots' workflow.\n// It takes the single new busy slot and finds ALL interviews that conflict with it.\n\n// 1. Get the new busy slot from the first node in our workflow.\nconst busySlotItem = $('Get Last Busy Slot').first();\nif (!busySlotItem) {\n  throw new Error(\"No document found in busy_slots collection.\");\n}\nconst busySlot = busySlotItem.json;\nconst busySlotStart = new Date(busySlot.startTime);\nconst busySlotEnd = new Date(busySlot.endTime);\n\n// 2. Get the complete list of all future interviews.\nconst allInterviews = $('Standardize Interview Data').all();\n\n// 3. Filter this list to find every interview that overlaps with the new busy slot.\nconst conflictingInterviews = allInterviews.filter(interviewItem => {\n  const interview = interviewItem.json;\n  \n  if (!interview.startTimeISO || !interview.endTimeISO) {\n    return false;\n  }\n  \n  const interviewStart = new Date(interview.startTimeISO);\n  const interviewEnd = new Date(interview.endTimeISO);\n\n  // Standard overlap check: (StartA < EndB) and (StartB < EndA)\n  return (interviewStart < busySlotEnd) && (busySlotStart < interviewEnd);\n});\n\n// 4. Return the complete list of all conflicting interviews.\n// If this list is empty, the workflow will correctly stop.\nreturn conflictingInterviews;\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1344,
+          368
+        ],
+        "id": "6d65b34b-a112-4633-9e19-0137bdc4f748",
+        "name": "Find All Conflicting Interviews"
+      },
+      {
+        "parameters": {},
+        "type": "n8n-nodes-base.noOp",
+        "name": "Replace Me",
+        "typeVersion": 1,
+        "position": [
+          1792,
+          416
+        ],
+        "id": "f8bcc084-c056-4f0c-a6f3-179cf9f64d1b"
+      },
+      {
+        "parameters": {
+          "options": {}
+        },
+        "type": "n8n-nodes-base.splitInBatches",
+        "typeVersion": 3,
+        "position": [
+          1568,
+          368
+        ],
+        "id": "521f781b-18c2-4b1a-9c63-750e5bf2387f",
+        "name": "Split into batches"
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "busyslot-ideofuzion",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          0,
+          480
+        ],
+        "id": "9ea2c949-9c8f-4437-8cc8-730db0c5b0c9",
+        "name": "Webhook",
+        "webhookId": "9f5e6fba-ac86-45fa-a435-d686a388ea56"
+      }
+    ],
+    "connections": {
+      "Get many events1": {
+        "main": [
+          [
+            {
+              "node": "Get All Unavailable Slots",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Update Event": {
+        "main": [
+          [
+            {
+              "node": "Prepare Update Fields",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Update Candidate Record": {
+        "main": [
+          [
+            {
+              "node": "Email to Candidate1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Update Fields": {
+        "main": [
+          [
+            {
+              "node": "Update Candidate Record",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Standardize Interview Data": {
+        "main": [
+          [
+            {
+              "node": "Get many events1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Find Next Available Slot (Reschedule)": {
+        "main": [
+          [
+            {
+              "node": "Update Event",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Last Busy Slot": {
+        "main": [
+          [
+            {
+              "node": "Get All Future Interviews",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get All Future Interviews": {
+        "main": [
+          [
+            {
+              "node": "Standardize Interview Data",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get All Unavailable Slots": {
+        "main": [
+          [
+            {
+              "node": "Find All Conflicting Interviews",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Find All Conflicting Interviews": {
+        "main": [
+          [
+            {
+              "node": "Split into batches",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Replace Me": {
+        "main": [
+          [
+            {
+              "node": "Split into batches",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Split into batches": {
+        "main": [
+          [
+            {
+              "node": "Replace Me",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Find Next Available Slot (Reschedule)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Email to Candidate1": {
+        "main": [
+          [
+            {
+              "node": "Get Last Busy Slot",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Get Last Busy Slot",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": {}
+  },
+  "Extending Meeting Time": {
+    "id": "qLVwvsZGpIOSBNYu",
+    "name": "Extending Meeting Time",
+    "active": true,
+    "nodes": [
+      {
+        "parameters": {
+          "options": {}
+        },
+        "type": "n8n-nodes-base.splitInBatches",
+        "typeVersion": 3,
+        "position": [
+          2240,
+          608
+        ],
+        "id": "5849d4db-9fb3-435a-8072-7d0c5a1e6108",
+        "name": "Split into batches"
+      },
+      {
+        "parameters": {},
+        "type": "n8n-nodes-base.noOp",
+        "name": "Replace Me",
+        "typeVersion": 1,
+        "position": [
+          2464,
+          656
+        ],
+        "id": "e10ad020-1122-4363-9e9b-044425e6e9ef"
+      },
+      {
+        "parameters": {
+          "jsCode": "// This script is designed for the 'busy_slots' workflow.\n// It takes the single new busy slot and finds ALL interviews that conflict with it.\n\n// 1. Get the new busy slot from the first node in our workflow.\nconst busySlotItem = $('Get Last Busy Slot').first();\nif (!busySlotItem) {\n  throw new Error(\"No document found in busy_slots collection.\");\n}\nconst busySlot = busySlotItem.json;\nconst busySlotStart = new Date(busySlot.startTime);\nconst busySlotEnd = new Date(busySlot.endTime);\n\n// 2. Get the complete list of all future interviews.\nconst allInterviews = $('Standardize Interview Data').all();\n\n// 3. Filter this list to find every interview that overlaps with the new busy slot.\nconst conflictingInterviews = allInterviews.filter(interviewItem => {\n  const interview = interviewItem.json;\n  \n  if (!interview.startTimeISO || !interview.endTimeISO) {\n    return false;\n  }\n  \n  const interviewStart = new Date(interview.startTimeISO);\n  const interviewEnd = new Date(interview.endTimeISO);\n\n  // Standard overlap check: (StartA < EndB) and (StartB < EndA)\n  return (interviewStart < busySlotEnd) && (busySlotStart < interviewEnd);\n});\n\n// 4. Return the complete list of all conflicting interviews.\n// If this list is empty, the workflow will correctly stop.\nreturn conflictingInterviews;\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          0,
+          224
+        ],
+        "id": "0d4ee7aa-979a-4732-9b12-10cbfb68d923",
+        "name": "Find All Conflicting Interviews"
+      },
+      {
+        "parameters": {
+          "collection": "unavailable_slots",
+          "options": {},
+          "query": "={\n  \"userId\": \"{{ $('Webhook').item.json.body.userId }}\"\n}"
+        },
+        "type": "n8n-nodes-base.mongoDb",
+        "typeVersion": 1.2,
+        "position": [
+          1792,
+          608
+        ],
+        "id": "5a633328-c79b-40c7-969d-3d7d6e76d06f",
+        "name": "Get All Unavailable Slots",
+        "alwaysOutputData": true,
+        "executeOnce": false,
+        "credentials": {
+          "mongoDb": {
+            "id": "czLWond9VcLqtcLi",
+            "name": "Database Account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "collection": "candidates",
+          "options": {},
+          "query": "={\n  \"Interview Start\": {\n    \"$gte\": \"{{ $now.toISO() }}\"\n  },\n  \"userId\": \"{{ $('Webhook').item.json.body.userId }}\"\n}"
+        },
+        "type": "n8n-nodes-base.mongoDb",
+        "typeVersion": 1.2,
+        "position": [
+          1120,
+          608
+        ],
+        "id": "e0d69b6c-d532-44fc-a67e-76684952360b",
+        "name": "Get All Future Interviews",
+        "alwaysOutputData": true,
+        "credentials": {
+          "mongoDb": {
+            "id": "czLWond9VcLqtcLi",
+            "name": "Database Account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// This is the corrected version of the reliable \"end of the queue\" script.\n// It fixes the bug that caused one-hour slots and skipping of available times.\n\n// =============================================================================\n// HELPER FUNCTIONS\n// =============================================================================\n// (All your helper functions are correct and should remain here)\n\nfunction formatToReadableTime(date) {\n    if (!date) return 'Invalid Date';\n    return date.toLocaleTimeString('en-US', {\n        timeZone: 'Asia/Karachi',\n        hour: '2-digit',\n        minute: '2-digit',\n        hour12: true\n    });\n}\n\nfunction formatToReadableDate(date) {\n    if (!date) return 'Invalid Date';\n    return date.toLocaleDateString('en-US', {\n        timeZone: 'Asia/Karachi',\n        weekday: 'long',\n        year: 'numeric',\n        month: 'long',\n        day: 'numeric'\n    });\n}\n\nfunction formatToISOString(date) {\n    if (!date) return null;\n    const pktDate = new Date(date.toLocaleString(\"en-US\", { timeZone: \"Asia/Karachi\" }));\n    const year = pktDate.getFullYear();\n    const month = String(pktDate.getMonth() + 1).padStart(2, '0');\n    const day = String(pktDate.getDate()).padStart(2, '0');\n    const hours = String(pktDate.getHours()).padStart(2, '0');\n    const minutes = String(pktDate.getMinutes()).padStart(2, '0');\n    const seconds = String(pktDate.getSeconds()).padStart(2, '0');\n    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.000+05:00`;\n}\n\nfunction isValidBusinessTime(dateTime) {\n    if (!dateTime || !(dateTime instanceof Date) || isNaN(dateTime)) {\n        return false;\n    }\n    const pktDay = dateTime.toLocaleDateString('en-US', { timeZone: 'Asia/Karachi', weekday: 'short' });\n    if (pktDay === 'Sat' || pktDay === 'Sun') {\n        return false;\n    }\n    const pktHour = parseInt(dateTime.toLocaleTimeString('en-US', { timeZone: 'Asia/Karachi', hour12: false, hour: '2-digit' }));\n    if (pktHour < 10 || pktHour >= 16) {\n        return false;\n    }\n    return true;\n}\n\nfunction moveToNextBusinessDay(currentTime) {\n    let nextDay = new Date(currentTime);\n    nextDay.setUTCDate(nextDay.getUTCDate() + 1);\n    const dayOfWeek = nextDay.toLocaleDateString('en-US', { timeZone: 'Asia/Karachi', weekday: 'short' });\n    if (dayOfWeek === 'Sat') {\n        nextDay.setUTCDate(nextDay.getUTCDate() + 2); // Move to Monday\n    } else if (dayOfWeek === 'Sun') {\n        nextDay.setUTCDate(nextDay.getUTCDate() + 1); // Move to Monday\n    }\n    // Set to 10:00 AM Pakistan time (which is 5:00 AM UTC)\n    nextDay.setUTCHours(5, 0, 0, 0);\n    return nextDay;\n}\n\n\n// =============================================================================\n// MAIN LOGIC\n// =============================================================================\n\n// 1. Get all existing conflicts from the nodes that run before this one.\nconst calendarEvents = $('Get many events1').all().map(item => ({ startDateTime: new Date(item.json.start.dateTime), endDateTime: new Date(item.json.end.dateTime) }));\nconst unavailableSlots = $('Get All Unavailable Slots').all().map(item => ({ startDateTime: new Date(item.json.startTime), endDateTime: new Date(item.json.endTime) }));\nconst allInterviews = $('Standardize Interview Data').all().map(item => ({ startDateTime: new Date(item.json.startTimeISO), endDateTime: new Date(item.json.endTimeISO) }));\n\nconst allScheduledSlots = [...calendarEvents, ...unavailableSlots, ...allInterviews];\n\n// 2. Find the very last moment anything is scheduled to determine the \"end of the queue\".\nlet lastEndTime = new Date(); // Start with the current time as a baseline\nallScheduledSlots.forEach(slot => {\n    if (slot.endDateTime && !isNaN(slot.endDateTime.getTime()) && slot.endDateTime > lastEndTime) {\n        lastEndTime = slot.endDateTime;\n    }\n});\n\n// 3. The search for a new slot will start from this last known time.\nlet searchTime = new Date(lastEndTime);\n\n// 4. Start searching for the next available 30-minute slot.\nlet attemptCount = 0;\nfor (let i = 0; i < 2000; i++) {\n    attemptCount++;\n\n    // ** THIS IS THE FIX **\n    // First, round up to the next 30-minute mark. This ensures we start on a clean boundary.\n    const currentMinutes = searchTime.getMinutes();\n    if (currentMinutes % 30 !== 0) {\n        const minutesToAdd = 30 - (currentMinutes % 30);\n        searchTime = new Date(searchTime.getTime() + minutesToAdd * 60000);\n    }\n    searchTime.setSeconds(0, 0);\n    \n    // Now, check if this clean time is valid.\n    if (!isValidBusinessTime(searchTime)) {\n        searchTime = moveToNextBusinessDay(searchTime);\n        continue;\n    }\n\n    const proposedEnd = new Date(searchTime.getTime() + 30 * 60000);\n\n    if (!isValidBusinessTime(new Date(proposedEnd.getTime() - 1000))) {\n        searchTime = moveToNextBusinessDay(searchTime);\n        continue;\n    }\n\n    // Check for conflicts with ALL existing events.\n    const hasConflict = allScheduledSlots.some(slot =>\n        slot.startDateTime && !isNaN(slot.startDateTime.getTime()) &&\n        slot.endDateTime && !isNaN(slot.endDateTime.getTime()) &&\n        (searchTime < slot.endDateTime) && (slot.startDateTime < proposedEnd)\n    );\n\n    // If no conflict is found, we have our slot!\n    if (!hasConflict) {\n        const conflictingInterview = $input.first().json;\n        \n        return [{\n            json: {\n                ...conflictingInterview,\n                newStartTimeISO: formatToISOString(searchTime),\n                newEndTimeISO: formatToISOString(proposedEnd),\n                newDateReadable: formatToReadableDate(searchTime),\n                newTimeReadable: formatToReadableTime(searchTime),\n                oldDateReadable: formatToReadableDate(new Date(conflictingInterview.startTimeISO)),\n                oldTimeReadable: formatToReadableTime(new Date(conflictingInterview.startTimeISO)),\n            }\n        }];\n    }\n    \n    // ** THIS IS THE FIX **\n    // If a conflict was found, THEN we advance the time by 30 minutes for the next loop.\n    searchTime = new Date(searchTime.getTime() + 30 * 60000);\n}\n\nthrow new Error(`Could not find a reschedule slot within ${attemptCount} attempts.`);\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2464,
+          464
+        ],
+        "id": "968c0f2c-6a9c-411a-997d-78803462006c",
+        "name": "Find Next Available Slot (Reschedule)"
+      },
+      {
+        "parameters": {
+          "jsCode": "// This node reads the data from your MongoDB collection and\n// creates the 'startTimeISO' and 'endTimeISO' fields that the\n// rest of the workflow needs.\n\nconst items = $input.all();\n\n// Loop through each interview record fetched from the database.\nconst standardizedItems = items.map(item => {\n  const interview = item.json;\n\n  // Create the new, standardized fields from your existing ones.\n  const standardizedInterview = {\n    ...interview, // Keep all the original data\n    startTimeISO: interview['Interview Start'], // Create 'startTimeISO' from 'Interview Start'\n    endTimeISO: interview['Interview End']      // Create 'endTimeISO' from 'Interview End'\n  };\n\n  return {\n    json: standardizedInterview\n  };\n});\n\n// Return the corrected items for the next node to use.\nreturn standardizedItems;\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1344,
+          608
+        ],
+        "id": "3c794204-f7bc-4916-94df-e7fe8e1b549a",
+        "name": "Standardize Interview Data"
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "93244220-00d2-4dcc-ae0a-3c86dbd5d605",
+                "name": "Interview Start",
+                "value": "={{ $json.start.dateTime }}",
+                "type": "string"
+              },
+              {
+                "id": "982e12bc-dfec-4d3d-856e-7711aa082c86",
+                "name": "Interview End",
+                "value": "={{ $json.end.dateTime }}",
+                "type": "string"
+              },
+              {
+                "id": "73bfd6e1-effc-4849-97b1-239551c34c4a",
+                "name": "status",
+                "value": "\"Rescheduled - Extension\"",
+                "type": "string"
+              },
+              {
+                "id": "afc0fd8a-0ed2-497e-959a-4d0d8d40f771",
+                "name": "Calendar Event ID",
+                "value": "={{ $('Find Next Available Slot (Reschedule)').item.json['Calendar Event ID'] }}",
+                "type": "string"
+              },
+              {
+                "id": "9625d313-b78d-48fa-8b58-9b8f0634baff",
+                "name": "_id",
+                "value": "={{ $('Find Next Available Slot (Reschedule)').item.json._id }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          2912,
+          464
+        ],
+        "id": "d1bc44c8-5508-451e-a33b-d86850262cda",
+        "name": "Prepare Update Fields"
+      },
+      {
+        "parameters": {
+          "operation": "update",
+          "collection": "candidates",
+          "updateKey": "_id",
+          "fields": "Interview Start, Interview End, status",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.mongoDb",
+        "typeVersion": 1.2,
+        "position": [
+          3136,
+          464
+        ],
+        "id": "9bea084c-0128-4047-a2b3-2a1013e50489",
+        "name": "Update Candidate Record",
+        "alwaysOutputData": true,
+        "credentials": {
+          "mongoDb": {
+            "id": "czLWond9VcLqtcLi",
+            "name": "Database Account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "update",
+          "calendar": {
+            "__rl": true,
+            "value": "maxpace94@gmail.com",
+            "mode": "list",
+            "cachedResultName": "maxpace94@gmail.com"
+          },
+          "eventId": "={{ $json[\"Calendar Event ID\"] }}",
+          "updateFields": {
+            "end": "={{ $json.newEndTimeISO }}",
+            "start": "={{ $json.newStartTimeISO }}"
+          }
+        },
+        "type": "n8n-nodes-base.googleCalendar",
+        "typeVersion": 1.3,
+        "position": [
+          2688,
+          464
+        ],
+        "id": "404c8b8e-142c-48db-ae86-36551a51d8f4",
+        "name": "Update Event",
+        "credentials": {
+          "googleCalendarOAuth2Api": {
+            "id": "TwyEij61n5ehN9wQ",
+            "name": "Google Calendar - maxpace94@gmail.com"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "getAll",
+          "calendar": {
+            "__rl": true,
+            "value": "maxpace94@gmail.com",
+            "mode": "list",
+            "cachedResultName": "maxpace94@gmail.com"
+          },
+          "timeMax": "={{ $now.plus({ month: 1 }) }}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleCalendar",
+        "typeVersion": 1.3,
+        "position": [
+          1568,
+          608
+        ],
+        "id": "45f1589e-f8fb-4b34-882c-e76a49286a34",
+        "name": "Get many events1",
+        "alwaysOutputData": true,
+        "credentials": {
+          "googleCalendarOAuth2Api": {
+            "id": "TwyEij61n5ehN9wQ",
+            "name": "Google Calendar - maxpace94@gmail.com"
+          }
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "sendTo": "={{ $('Find Next Available Slot (Reschedule)').item.json.Email }}",
+          "subject": "Important Update: Your Interview with Ideofuzion has been Rescheduled",
+          "message": "=<div style=\"font-family: Arial, sans-serif; line-height: 1.6; color: #333;\">\n  <p>Dear <strong>{{ $('Find Next Available Slot (Reschedule)').item.json['Candidate Name'] }}</strong>,</p>\n  <p>We are writing to inform you of a slight delay regarding your upcoming interview for the <strong>{{ $('Find Next Available Slot (Reschedule)').item.json['Job Title'] }}</strong> position. The preceding interview has run longer than expected, and to ensure your discussion receives the full, dedicated time it deserves, we have had to shift your start time.</p>\n  <p>We sincerely apologize for this last-minute change and any inconvenience it may cause. Your new interview details are below:</p>\n  \n  <table style=\"width: 100%; border-collapse: collapse; margin: 20px 0;\">\n    <tr style=\"border-bottom: 1px solid #ddd;\">\n      <td style=\"padding: 8px; text-align: left;\"><strong>Original Time:</strong></td>\n      <td style=\"padding: 8px; text-align: left;\">{{ $('Find Next Available Slot (Reschedule)').item.json.oldDateReadable }}, at {{ $('Find Next Available Slot (Reschedule)').item.json.oldTimeReadable }} PKT</td>\n    </tr>\n    <tr style=\"background-color: #e8f0fe;\">\n      <td style=\"padding: 8px; text-align: left;\"><strong>New Time:</strong></td>\n      <td style=\"padding: 8px; text-align: left;\"><strong>{{ $('Find Next Available Slot (Reschedule)').item.json.newDateReadable }}, at {{ $('Find Next Available Slot (Reschedule)').item.json.newTimeReadable }} PKT</strong></td>\n    </tr>\n  </table>\n\n  <p>An updated calendar invitation reflecting this new time has been sent to your email. Please accept it to confirm.</p>\n  <p>Thank you for your understanding. We are looking forward to our conversation.</p>\n  <p>\n    Best regards,<br>\n    <strong>The HR Team</strong><br>\n    Ideofuzion\n  </p>\n</div>\n",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.gmail",
+        "typeVersion": 2.1,
+        "position": [
+          3360,
+          464
+        ],
+        "id": "7fe0b161-42be-4b51-994d-b64ba4436f82",
+        "name": "Email to Candidate1",
+        "webhookId": "d0ce039a-3a82-4b4c-8f54-65a6a007488f",
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "9tI5tKl8dpmBDjV0",
+            "name": "Gmail - maxpace94@gmail.com"
+          }
+        }
+      },
+      {
+        "parameters": {},
+        "type": "n8n-nodes-base.manualTrigger",
+        "typeVersion": 1,
+        "position": [
+          0,
+          880
+        ],
+        "id": "d8a02a93-4766-4e1e-a62f-9f458741d8f6",
+        "name": "When clicking ‘Execute workflow’"
+      },
+      {
+        "parameters": {
+          "collection": "extended_meetings",
+          "options": {},
+          "query": "={\n  \"userId\": \"{{ $('Webhook').item.json.body.userId }}\",\n  \"calendarEventId\": \"{{ $('Webhook').item.json.body.calendarEventId }}\"\n}"
+        },
+        "type": "n8n-nodes-base.mongoDb",
+        "typeVersion": 1.2,
+        "position": [
+          896,
+          608
+        ],
+        "id": "d75c6e71-ca83-4426-baa2-21f81c57c57e",
+        "name": "Get Last Extended Meeting",
+        "alwaysOutputData": true,
+        "credentials": {
+          "mongoDb": {
+            "id": "czLWond9VcLqtcLi",
+            "name": "Database Account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// This script finds the one interview immediately affected by an extension.\n\n// 1. Get the data from the node that fetched the latest extended meeting.\nconst extensionRequest = $('Get Last Extended Meeting').first().json;\n\nif (!extensionRequest) {\n  throw new Error(\"No document found in extended_meetings collection.\");\n}\n\n// MODIFICATION: Get the candidate ID of the extended meeting\nconst extendedMeetingCandidateId = extensionRequest.candidateId; \nconst newEndTime = new Date(extensionRequest.newEndTime);\n\n// 2. Get all future interviews that have been standardized.\nconst allInterviews = $('Standardize Interview Data').all();\n\n// 3. Find the single interview that starts before the new end time of the extended one.\n//    We sort by start time to ensure we find the very next one in the schedule.\nconst conflictingInterview = allInterviews\n  .map(item => item.json)\n  .sort((a, b) => new Date(a.startTimeISO) - new Date(b.startTimeISO))\n  .find(interview => {\n    if (!interview.startTimeISO) return false;\n    const interviewStart = new Date(interview.startTimeISO);\n    \n    // MODIFICATION: Compare the MongoDB _id instead of the Calendar Event ID\n    return (interviewStart < newEndTime) && (interview._id !== extendedMeetingCandidateId);\n  });\n\n// 4. If a conflict is found, return its data for rescheduling.\nif (conflictingInterview) {\n  return [{\n      json: conflictingInterview\n  }];\n}\n\n// Return an empty item to stop the workflow if no subsequent interview is affected.\nreturn [];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2016,
+          608
+        ],
+        "id": "58a9ec14-8437-4fc3-89aa-9a7321fae3fb",
+        "name": "Find Immediately Conflicting Interview"
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "Extendmeeting-ideofuzion",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          400,
+          608
+        ],
+        "id": "bb9f7314-b46f-4a26-998c-8838391b8812",
+        "name": "Webhook",
+        "webhookId": "4b63beb1-c7d1-4118-8bbb-3a2252298a1d"
+      }
+    ],
+    "connections": {
+      "Split into batches": {
+        "main": [
+          [
+            {
+              "node": "Replace Me",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Find Next Available Slot (Reschedule)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get All Unavailable Slots": {
+        "main": [
+          [
+            {
+              "node": "Find Immediately Conflicting Interview",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get All Future Interviews": {
+        "main": [
+          [
+            {
+              "node": "Standardize Interview Data",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Find Next Available Slot (Reschedule)": {
+        "main": [
+          [
+            {
+              "node": "Update Event",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Standardize Interview Data": {
+        "main": [
+          [
+            {
+              "node": "Get many events1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Update Fields": {
+        "main": [
+          [
+            {
+              "node": "Update Candidate Record",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Update Candidate Record": {
+        "main": [
+          [
+            {
+              "node": "Email to Candidate1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Update Event": {
+        "main": [
+          [
+            {
+              "node": "Prepare Update Fields",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get many events1": {
+        "main": [
+          [
+            {
+              "node": "Get All Unavailable Slots",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Last Extended Meeting": {
+        "main": [
+          [
+            {
+              "node": "Get All Future Interviews",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Find Immediately Conflicting Interview": {
+        "main": [
+          [
+            {
+              "node": "Split into batches",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Get Last Extended Meeting",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": {}
+  },
+  "Cv Processing Workflow": {
+    "id": "gshw8NOB3t8ZH1cL",
+    "name": "Cv Processing Workflow",
+    "active": false,
+    "nodes": [
+      {
+        "parameters": {
+          "options": {}
+        },
+        "type": "n8n-nodes-base.splitInBatches",
+        "typeVersion": 3,
+        "position": [
+          -8576,
+          128
+        ],
+        "id": "7cd04721-964c-43f3-be4b-cc09bf05c47f",
+        "name": "Loop Over Items3"
+      },
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "minutes",
+                "minutesInterval": 2
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.2,
+        "position": [
+          -9248,
+          128
+        ],
+        "id": "75ff8bed-bea4-4af6-85a8-28bf98ff810a",
+        "name": "Schedule Trigger1"
+      },
+      {
+        "parameters": {
+          "operation": "getAll",
+          "simple": false,
+          "filters": {
+            "q": "has:attachment is:unread"
+          },
+          "options": {
+            "downloadAttachments": true
+          }
+        },
+        "type": "n8n-nodes-base.gmail",
+        "typeVersion": 2.1,
+        "position": [
+          -9024,
+          128
+        ],
+        "id": "cd9590d0-7e0c-4862-aa32-5ddd9ecfab2c",
+        "name": "Get Emails",
+        "webhookId": "98f3ce75-e47c-499b-a4f8-fa4f99ed0e22",
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "9tI5tKl8dpmBDjV0",
+            "name": "Gmail - maxpace94@gmail.com"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "fca5cf7a-004e-4169-a2ae-2832e76e5d1d",
+                "leftValue": "={{ $binary.attachment_0.fileName }}",
+                "rightValue": ".pdf",
+                "operator": {
+                  "type": "string",
+                  "operation": "endsWith"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.2,
+        "position": [
+          -8800,
+          -16
+        ],
+        "id": "9692992a-b3c0-475f-8583-6991d8f60a5a",
+        "name": "Differentiating Between Mail msgs"
+      },
+      {
+        "parameters": {
+          "inputDataFieldName": "attachment_0",
+          "name": "={{ $binary.attachment_0.fileName }}|",
+          "driveId": {
+            "__rl": true,
+            "mode": "list",
+            "value": "My Drive"
+          },
+          "folderId": {
+            "__rl": true,
+            "value": "root",
+            "mode": "list",
+            "cachedResultName": "/ (Root folder)",
+            "cachedResultUrl": "https://drive.google.com/drive"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleDrive",
+        "typeVersion": 3,
+        "position": [
+          -8352,
+          -160
+        ],
+        "id": "cdb48ed0-2648-458e-9cae-4a930ae3330c",
+        "name": "Upload Cv",
+        "credentials": {
+          "googleDriveOAuth2Api": {
+            "id": "oxsis0UyHEuqLsjX",
+            "name": "Google Drive - maxpace94@gmail.com"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "markAsRead",
+          "messageId": "={{ $('Get Emails').item.json.id }}"
+        },
+        "type": "n8n-nodes-base.gmail",
+        "typeVersion": 2.1,
+        "position": [
+          -8128,
+          -160
+        ],
+        "id": "281969ae-a2c3-4a09-a8ea-db939d96fcc0",
+        "name": "Mark a message as read",
+        "webhookId": "03717270-0d73-4c94-afe2-63e191b948ca",
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "9tI5tKl8dpmBDjV0",
+            "name": "Gmail - maxpace94@gmail.com"
+          }
+        },
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "url": "\thttps://www.googleapis.com/drive/v3/files?q='1Hx2eKRWrwXLMMx7jEU5gr5JmZA26HZwM'+in+parents and trashed=false",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "googleDriveOAuth2Api",
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "fields",
+                "value": "files(id,name,mimeType)"
+              },
+              {
+                "name": "pageSize",
+                "value": "1"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          -7904,
+          -160
+        ],
+        "id": "4c6ce9ff-e222-44d5-9ddb-04e40c809307",
+        "name": "Getting Essential Info",
+        "credentials": {
+          "googleDriveOAuth2Api": {
+            "id": "oxsis0UyHEuqLsjX",
+            "name": "Google Drive - maxpace94@gmail.com"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "download",
+          "fileId": {
+            "__rl": true,
+            "value": "={{ $('Upload Cv').item.json.id }}",
+            "mode": "id"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleDrive",
+        "typeVersion": 3,
+        "position": [
+          -7680,
+          -160
+        ],
+        "id": "73068697-e2a0-4802-941e-a22637ba069c",
+        "name": "Download Cv",
+        "credentials": {
+          "googleDriveOAuth2Api": {
+            "id": "oxsis0UyHEuqLsjX",
+            "name": "Google Drive - maxpace94@gmail.com"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "pdf",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.extractFromFile",
+        "typeVersion": 1,
+        "position": [
+          -7456,
+          -160
+        ],
+        "id": "6a1a34ad-db83-4f4c-8079-95eb926c31f3",
+        "name": "Extracting Info"
+      },
+      {
+        "parameters": {
+          "collection": "jobCriteria",
+          "options": {},
+          "query": "={\n  \"$and\": [\n    {\n      \"userId\": \"{{ $json._id }}\"\n    },\n    {\n      \"Job Title\": {\n        \"$in\": {{ JSON.stringify($('Parse Ai Output').item.json.jobTitleVariations) }}\n      }\n    }\n  ]\n}"
+        },
+        "type": "n8n-nodes-base.mongoDb",
+        "typeVersion": 1.2,
+        "position": [
+          -6432,
+          -160
+        ],
+        "id": "cf0fd1ad-e320-434b-a933-22a59d06248f",
+        "name": "MongoDB JobPosted",
+        "alwaysOutputData": true,
+        "credentials": {
+          "mongoDb": {
+            "id": "czLWond9VcLqtcLi",
+            "name": "Database Account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// 1. Get all necessary inputs from previous nodes\nconst matchedJob = $input.first().json;\nconst candidateData = $('Parse Ai Output').first().json;\nconst jobSkillsLlmOutput = $('Ai variations2').first().json;\nconst emailData = $('Get Emails').first().json;\nconst fileData = $('Upload Cv').first().json;\n\n// 2. Handle the case where no job was found from MongoDB\nif (!matchedJob || Object.keys(matchedJob).length === 0) {\n  return [{\n    json: {\n      match: false,\n      error: `No matching job was found for the application with subject: \"${emailData.subject}\"`,\n      emailSubject: emailData.subject,\n      originalFilename: fileData.name\n    }\n  }];\n}\n\n// 3. Extract candidate info from the 'Parse Ai Output' node\nconst candidateName = candidateData.personName || 'N/A';\nconst candidateSkillsFromLLM = candidateData.skills || {};\n\n// 4. Parse the AI output for the JOB's required skill variations\nlet jobSkillVariations = {};\ntry {\n  // The raw output from this AI node is a string that needs to be cleaned and parsed\n  const rawText = jobSkillsLlmOutput.choices[0].message.content;\n  const cleanedText = rawText.replace(/^```json\\s*/, '').replace(/\\s*```$/, '').trim();\n  jobSkillVariations = JSON.parse(cleanedText);\n} catch (error) {\n  console.error(\"Error parsing AI variations for job skills:\", error);\n  // If parsing fails, we can continue with an empty object\n}\n\n// 5. Create a flattened set of all skill variations the CANDIDATE has for fast lookups\nconst candidateSkillVariationsSet = new Set();\nfor (const skillKey in candidateSkillsFromLLM) {\n  const variations = candidateSkillsFromLLM[skillKey];\n  if (Array.isArray(variations)) {\n    variations.forEach(variation => {\n      candidateSkillVariationsSet.add(variation.toLowerCase());\n    });\n  }\n}\n\n// 6. Function to check if a required skill is present in the candidate's skill set\nconst isSkillPresent = (requiredSkill, allJobSkillVariations, candidateSkills) => {\n  const normalizedRequiredSkill = requiredSkill.toLowerCase().trim();\n  // Get the list of variations for the required skill, or just use the skill itself if no variations exist\n  const variationsToFind = allJobSkillVariations[normalizedRequiredSkill] || [normalizedRequiredSkill];\n  \n  // Check if any of the variations exist in the candidate's skill set\n  return variationsToFind.some(variation => candidateSkills.has(variation.toLowerCase()));\n};\n\n// 7. Get the job's required and optional skills from the MongoDB result\nconst requiredSkills = (matchedJob['Required Skills'] || []).map(s => s.trim()).filter(Boolean);\nconst optionalSkills = (matchedJob['Optional Skills'] || []).map(s => s.trim()).filter(Boolean);\n\n// 8. Calculate matches\nconst foundRequiredSkills = requiredSkills.filter(skill => isSkillPresent(skill, jobSkillVariations, candidateSkillVariationsSet));\nconst missingRequiredSkills = requiredSkills.filter(skill => !isSkillPresent(skill, jobSkillVariations, candidateSkillVariationsSet));\nconst foundOptionalSkills = optionalSkills.filter(skill => isSkillPresent(skill, jobSkillVariations, candidateSkillVariationsSet));\n\nconst match = missingRequiredSkills.length === 0;\nconst matchPercentage = requiredSkills.length > 0 ? Math.round((foundRequiredSkills.length / requiredSkills.length) * 100) : 100;\n\n// 9. Return the final structured output\nreturn [{\n  json: {\n    match: match,\n    matchPercentage: matchPercentage,\n    candidateName: candidateName,\n    jobTitle: matchedJob[\"Job Title\"],\n    jobId: matchedJob[\"Job ID\"],\n    foundSkills: foundRequiredSkills,\n    missingSkills: missingRequiredSkills,\n    foundOptionalSkills: foundOptionalSkills,\n    totalRequiredSkills: requiredSkills.length,\n    totalOptionalSkills: optionalSkills.length,\n    candidateEmail: emailData.from.value[0].address,\n    originalFilename: fileData.name,\n    googleDriveFileId: fileData.id,\n  }\n}];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -6208,
+          -64
+        ],
+        "id": "d3e2b208-a5aa-4c30-bcd6-67cd65e051e1",
+        "name": "Matching Skills"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "0705b104-0012-41d4-8fef-04315abe8a8b",
+                "leftValue": "={{ $json.match }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          -5920,
+          -64
+        ],
+        "id": "682d7bd6-0cff-4df8-ba44-e579c4f77863",
+        "name": "If Candidate Qualifies"
+      },
+      {
+        "parameters": {
+          "collection": "candidates",
+          "options": {
+            "limit": "={{ 1 }}",
+            "sort": "={\n  \"_id\": -1\n}\n"
+          },
+          "query": "={\n  \"userId\": \"{{ $('Find documents').item.json._id }}\"\n}"
+        },
+        "type": "n8n-nodes-base.mongoDb",
+        "typeVersion": 1.2,
+        "position": [
+          -5184,
+          -160
+        ],
+        "id": "085b5d2d-9526-4aff-99e7-6b1dd2f19e48",
+        "name": "MongoDB Candidate records",
+        "alwaysOutputData": true,
+        "credentials": {
+          "mongoDb": {
+            "id": "czLWond9VcLqtcLi",
+            "name": "Database Account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// This script finds the next available 30-min slot using Google Calendar event data AND unavailable slots from MongoDB.\n\n\n\n// FIXED VERSION: Properly handles unavailable slots without skipping entire days\n\n\n\n// Helper to get current time in Pakistan timezone\n\nfunction getCurrentPakistanTime() {\n\n    const now = new Date();\n\n    return now;\n\n}\n\n\n\n// Helper to format a Date object into a readable time like \"10:30 AM\"\n\nfunction formatToReadableTime(date) {\n\n    return date.toLocaleTimeString('en-US', {\n\n        timeZone: 'Asia/Karachi',\n\n        hour: '2-digit',\n\n        minute: '2-digit',\n\n        hour12: true\n\n    });\n\n}\n\n\n\n// Helper to format a Date object into a readable date string like \"Tuesday, July 29, 2025\"\n\nfunction formatToReadableDate(date) {\n\n    return date.toLocaleDateString('en-US', {\n\n        timeZone: 'Asia/Karachi',\n\n        weekday: 'long',\n\n        year: 'numeric',\n\n        month: 'long',\n\n        day: 'numeric'\n\n    });\n\n}\n\n\n\n// Helper to check if a slot time is within business hours and weekdays (in Pakistan timezone)\n\nfunction isValidBusinessTime(dateTime) {\n\n    if (!dateTime || !(dateTime instanceof Date)) {\n\n        return false;\n\n    }\n\n    \n\n    // Get Pakistan timezone info\n\n    const pktDay = dateTime.toLocaleDateString('en-US', { timeZone: 'Asia/Karachi', weekday: 'short' });\n\n    const pktHour = parseInt(dateTime.toLocaleTimeString('en-US', { \n\n        timeZone: 'Asia/Karachi', \n\n        hour12: false,\n\n        hour: '2-digit'\n\n    }));\n\n\n\n    // Check if it's a weekend\n\n    if (pktDay === 'Sat' || pktDay === 'Sun') {\n\n        return false;\n\n    }\n\n    \n\n    // Check if it's within business hours (10 AM to 4 PM PKT)\n\n    if (pktHour < 10 || pktHour >= 16) {\n\n        return false;\n\n    }\n\n    \n\n    return true;\n\n}\n\n\n\n// Helper to check if a slot's END time is in the past\n\nfunction isPastCurrentTime(scheduleEndDateTime) {\n\n    if (!scheduleEndDateTime || !(scheduleEndDateTime instanceof Date)) {\n\n        return true;\n\n    }\n\n    return scheduleEndDateTime <= getCurrentPakistanTime();\n\n}\n\n\n\n// Helper to move to the next business day at 10:00 AM PKT\n\nfunction moveToNextBusinessDay(currentTime) {\n\n    let nextDay = new Date(currentTime);\n\n    nextDay.setUTCDate(nextDay.getUTCDate() + 1);\n\n    \n\n    // Skip weekends\n\n    const dayOfWeek = nextDay.toLocaleDateString('en-US', { timeZone: 'Asia/Karachi', weekday: 'short' });\n\n    if (dayOfWeek === 'Sat') {\n\n        nextDay.setUTCDate(nextDay.getUTCDate() + 2); // Move to Monday\n\n    } else if (dayOfWeek === 'Sun') {\n\n        nextDay.setUTCDate(nextDay.getUTCDate() + 1); // Move to Monday\n\n    }\n\n    \n\n    // Set to 10:00 AM Pakistan time (which is 5:00 AM UTC)\n\n    nextDay.setUTCHours(5, 0, 0, 0);\n\n    \n\n    return nextDay;\n\n}\n\n\n\n// Helper to format a Date object into a full ISO string for PKT\n\nfunction formatToISOString(date) {\n\n    // Convert to Pakistan timezone and format as ISO string\n\n    const pktDate = new Date(date.toLocaleString(\"en-US\", { timeZone: \"Asia/Karachi\" }));\n\n    const year = pktDate.getFullYear();\n\n    const month = String(pktDate.getMonth() + 1).padStart(2, '0');\n\n    const day = String(pktDate.getDate()).padStart(2, '0');\n\n    const hours = String(pktDate.getHours()).padStart(2, '0');\n\n    const minutes = String(pktDate.getMinutes()).padStart(2, '0');\n\n    const seconds = String(pktDate.getSeconds()).padStart(2, '0');\n\n    \n\n    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.000+05:00`;\n\n}\n\n\n\n// Main logic starts here\n\nconst allItems = items;\n\n\n\n// 1. Get calendar events from Google Calendar (from \"Get many events\" node)\n\nconst calendarEvents = $('Get many events').all();\n\nconst scheduledFromCalendar = calendarEvents\n\n    .filter(item => item.json && item.json.start && item.json.start.dateTime)\n\n    .map(item => {\n\n        const startDateTime = new Date(item.json.start.dateTime);\n\n        const endDateTime = item.json.end && item.json.end.dateTime \n\n            ? new Date(item.json.end.dateTime) \n\n            : new Date(startDateTime.getTime() + 30 * 60 * 1000);\n\n        return { \n\n            startDateTime, \n\n            endDateTime, \n\n            source: 'calendar',\n\n            id: item.json.id || 'unknown'\n\n        };\n\n    });\n\n\n\n// 2. Get unavailable slots from MongoDB (from \"Unavailable Slots\" node)\n\nconst unavailableSlots = $('Unavailable Slots').all();\n\nconst scheduledFromUnavailable = unavailableSlots\n\n    .filter(item => item.json && item.json.startTime && item.json.endTime)\n\n    .map(item => {\n\n        try {\n\n            // Clean the datetime strings to remove any extra quotes or backslashes\n\n            const cleanStartTime = item.json.startTime.toString().replace(/['\"\\\\]/g, '');\n\n            const cleanEndTime = item.json.endTime.toString().replace(/['\"\\\\]/g, '');\n\n            \n\n            const startDateTime = new Date(cleanStartTime);\n\n            const endDateTime = new Date(cleanEndTime);\n\n            \n\n            // Validate the dates\n\n            if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {\n\n                console.error('Invalid date found in unavailable slot:', {\n\n                    original: item.json,\n\n                    cleaned: { startTime: cleanStartTime, endTime: cleanEndTime }\n\n                });\n\n                return null;\n\n            }\n\n            \n\n            return { \n\n                startDateTime, \n\n                endDateTime, \n\n                source: 'unavailable',\n\n                reason: item.json.reason || 'Unavailable',\n\n                id: item.json._id || 'unknown'\n\n            };\n\n        } catch (error) {\n\n            console.error('Error parsing unavailable slot:', error, item.json);\n\n            return null;\n\n        }\n\n    })\n\n    .filter(Boolean); // Remove null entries\n\n\n\n// 3. Combine both calendar events and unavailable slots\n\nconst allScheduledSlots = [...scheduledFromCalendar, ...scheduledFromUnavailable];\n\n\n\n// 4. Filter out only past events (keep all future events regardless of business hours for conflict checking)\n\nconst allFutureSlots = allScheduledSlots.filter(slot =>\n\n    !isPastCurrentTime(slot.endDateTime)\n\n);\n\n\n\n// 5. Conflict checker - works with Date objects\n\nfunction hasTimeConflict(proposedStart, proposedEnd, existingSlots) {\n\n    return existingSlots.some(slot => {\n\n        const slotStart = slot.startDateTime;\n\n        const slotEnd = slot.endDateTime;\n\n        // Standard overlap check: (StartA < EndB) and (StartB < EndA)\n\n        return (proposedStart < slotEnd) && (slotStart < proposedEnd);\n\n    });\n\n}\n\n\n\n// 6. Find the next available 30-minute slot\n\nfunction getNextSlot(conflictingSlots) {\n\n    // Start with current Pakistan time\n\n    let searchTime = getCurrentPakistanTime();\n\n    const debugInfo = {\n\n        startingTime: searchTime.toISOString(),\n\n        startingTimeReadable: formatToReadableTime(searchTime),\n\n        isCurrentTimeBusinessHours: isValidBusinessTime(searchTime),\n\n        totalConflictingSlots: conflictingSlots.length,\n\n        calendarEvents: conflictingSlots.filter(s => s.source === 'calendar').length,\n\n        unavailableSlots: conflictingSlots.filter(s => s.source === 'unavailable').length\n\n    };\n\n    \n\n    // Round up to the next 30-minute mark\n\n    const currentMinutes = searchTime.getMinutes();\n\n    const minutesToAdd = currentMinutes % 30 === 0 ? 30 : 30 - (currentMinutes % 30);\n\n    searchTime = new Date(searchTime.getTime() + minutesToAdd * 60000);\n\n    searchTime.setSeconds(0, 0);\n\n    \n\n    debugInfo.roundedTime = searchTime.toISOString();\n\n    debugInfo.roundedTimeReadable = formatToReadableTime(searchTime);\n\n    debugInfo.isRoundedTimeBusinessHours = isValidBusinessTime(searchTime);\n\n    \n\n    // Search for available slot\n\n    let attemptCount = 0;\n\n    for (let i = 0; i < 2000; i++) { // Limit attempts to prevent infinite loops\n\n        attemptCount++;\n\n        \n\n        // First, check if this time slot is within business hours\n\n        if (!isValidBusinessTime(searchTime)) {\n\n            // If it's outside business hours, move to next 30-min slot or next business day\n\n            if (searchTime.toLocaleDateString('en-US', { timeZone: 'Asia/Karachi', weekday: 'short' }) === 'Sat' || \n\n                searchTime.toLocaleDateString('en-US', { timeZone: 'Asia/Karachi', weekday: 'short' }) === 'Sun') {\n\n                // If it's weekend, jump to next Monday\n\n                searchTime = moveToNextBusinessDay(searchTime);\n\n            } else {\n\n                // If it's just outside business hours but on a weekday, move to next day\n\n                const pktHour = parseInt(searchTime.toLocaleTimeString('en-US', { \n\n                    timeZone: 'Asia/Karachi', \n\n                    hour12: false,\n\n                    hour: '2-digit'\n\n                }));\n\n                \n\n                if (pktHour >= 16) {\n\n                    // After business hours, move to next business day\n\n                    searchTime = moveToNextBusinessDay(searchTime);\n\n                } else {\n\n                    // Before business hours, move to 10:00 AM same day\n\n                    searchTime = new Date(searchTime);\n\n                    searchTime.setUTCHours(5, 0, 0, 0); // 10:00 AM PKT = 5:00 AM UTC\n\n                }\n\n            }\n\n            continue;\n\n        }\n\n        \n\n        const proposedEnd = new Date(searchTime.getTime() + 30 * 60000);\n\n        \n\n        // Check if proposed end time goes beyond business hours\n\n        if (!isValidBusinessTime(new Date(proposedEnd.getTime() - 1000))) { // Check 1 second before end\n\n            // If end time is outside business hours, move to next business day\n\n            searchTime = moveToNextBusinessDay(searchTime);\n\n            continue;\n\n        }\n\n        \n\n        // Check for conflicts with existing events/unavailable slots\n\n        const conflictingSlot = conflictingSlots.find(slot => {\n\n            const slotStart = slot.startDateTime;\n\n            const slotEnd = slot.endDateTime;\n\n            return (searchTime < slotEnd) && (slotStart < proposedEnd);\n\n        });\n\n        \n\n        // If no conflict is found, we have our slot!\n\n        if (!conflictingSlot) {\n\n            debugInfo.foundSlot = {\n\n                start: searchTime.toISOString(),\n\n                end: proposedEnd.toISOString(),\n\n                attempts: attemptCount,\n\n                startPKT: formatToReadableTime(searchTime),\n\n                endPKT: formatToReadableTime(proposedEnd),\n\n                datePKT: formatToReadableDate(searchTime)\n\n            };\n\n            return { startDateTime: searchTime, endDateTime: proposedEnd, debugInfo };\n\n        } else {\n\n            // Log the conflict for debugging\n\n            if (attemptCount <= 10) { // Log more conflicts for better debugging\n\n                debugInfo[`conflict_${attemptCount}`] = {\n\n                    proposedStart: formatToReadableTime(searchTime),\n\n                    proposedEnd: formatToReadableTime(proposedEnd),\n\n                    proposedDate: formatToReadableDate(searchTime),\n\n                    conflictsWith: {\n\n                        source: conflictingSlot.source,\n\n                        start: formatToReadableTime(conflictingSlot.startDateTime),\n\n                        end: formatToReadableTime(conflictingSlot.endDateTime),\n\n                        date: formatToReadableDate(conflictingSlot.startDateTime),\n\n                        reason: conflictingSlot.reason || 'Calendar event'\n\n                    }\n\n                };\n\n            }\n\n        }\n\n        \n\n        // Move to next 30-minute slot\n\n        searchTime = new Date(searchTime.getTime() + 30 * 60000);\n\n    }\n\n\n\n    throw new Error(`Could not find an available slot within ${attemptCount} attempts.`);\n\n}\n\n\n\n// 7. Execute the logic and format the output\n\nconst nextAvailableSlot = getNextSlot(allFutureSlots);\n\n\n\n// Create all the different formats\n\nconst dateReadable = formatToReadableDate(nextAvailableSlot.startDateTime);\n\nconst startTimeReadable = formatToReadableTime(nextAvailableSlot.startDateTime);\n\nconst endTimeReadable = formatToReadableTime(nextAvailableSlot.endDateTime);\n\nconst startTimeISO = formatToISOString(nextAvailableSlot.startDateTime);\n\nconst endTimeISO = formatToISOString(nextAvailableSlot.endDateTime);\n\n\n\nreturn [{\n\n    json: {\n\n        // Human-readable date and time strings\n\n        date: dateReadable,\n\n        startTime: startTimeReadable,\n\n        endTime: endTimeReadable,\n\n        // Full ISO strings for machine use\n\n        startTimeISO: startTimeISO,\n\n        endTimeISO: endTimeISO,\n\n        // Debugging info\n\n        debug: {\n\n            currentPakistanTime: getCurrentPakistanTime().toISOString(),\n\n            currentPakistanTimeReadable: formatToReadableTime(getCurrentPakistanTime()),\n\n            totalFutureSlots: allFutureSlots.length,\n\n            calendarEventsCount: scheduledFromCalendar.length,\n\n            unavailableSlotsCount: scheduledFromUnavailable.length,\n\n            futureCalendarEvents: allFutureSlots.filter(s => s.source === 'calendar').length,\n\n            futureUnavailableSlots: allFutureSlots.filter(s => s.source === 'unavailable').length,\n\n            unavailableSlotsDetailed: scheduledFromUnavailable.map(s => ({\n\n                start: formatToReadableTime(s.startDateTime),\n\n                end: formatToReadableTime(s.endDateTime),\n\n                date: formatToReadableDate(s.startDateTime),\n\n                reason: s.reason,\n\n                startISO: s.startDateTime.toISOString(),\n\n                endISO: s.endDateTime.toISOString()\n\n            })),\n\n            searchProcess: nextAvailableSlot.debugInfo\n\n        }\n\n    }\n\n}];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -4960,
+          -160
+        ],
+        "id": "6f80c3d5-6fea-4a19-8fdd-1e8c3874bd3d",
+        "name": "Candidate Info Fetch"
+      },
+      {
+        "parameters": {
+          "calendar": {
+            "__rl": true,
+            "value": "maxpace94@gmail.com",
+            "mode": "list",
+            "cachedResultName": "maxpace94@gmail.com"
+          },
+          "start": "={{ $json.startTimeISO }}",
+          "end": "={{ $json.endTimeISO }}",
+          "additionalFields": {
+            "attendees": [
+              "={{ $('Matching Skills').first().json.candidateEmail }}"
+            ],
+            "conferenceDataUi": {
+              "conferenceDataValues": {
+                "conferenceSolution": "hangoutsMeet"
+              }
+            },
+            "description": "=The candidate has the required skills in: {{ $('If Candidate Qualifies').first().json.foundSkills }}\nResume Link: https://drive.google.com/open?id={{ $('If Candidate Qualifies').first().json.googleDriveFileId }}\nCandidate email: {{ $('If Candidate Qualifies').first().json.candidateEmail }}\n",
+            "summary": "=Interview With {{ $('Matching Skills').first().json.candidateName }} for {{ $('Matching Skills').first().json.jobTitle }}\n"
+          }
+        },
+        "type": "n8n-nodes-base.googleCalendar",
+        "typeVersion": 1.3,
+        "position": [
+          -4736,
+          -160
+        ],
+        "id": "b6da7c93-808b-4181-8cb2-0b2d4209f82b",
+        "name": "Schedule a meeting",
+        "credentials": {
+          "googleCalendarOAuth2Api": {
+            "id": "TwyEij61n5ehN9wQ",
+            "name": "Google Calendar - maxpace94@gmail.com"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "values": {
+            "string": [
+              {
+                "name": "Candidate Name",
+                "value": "={{ $('If Candidate Qualifies').first().json.candidateName }}"
+              },
+              {
+                "name": "Email",
+                "value": "={{ $('If Candidate Qualifies').first().json.candidateEmail }}"
+              },
+              {
+                "name": "Job Title",
+                "value": "={{ $('If Candidate Qualifies').first().json.jobTitle }}"
+              },
+              {
+                "name": "Interview Start",
+                "value": "={{ $('Candidate Info Fetch').item.json.startTimeISO }}"
+              },
+              {
+                "name": "Interview End",
+                "value": "={{ $('Candidate Info Fetch').item.json.endTimeISO }}"
+              },
+              {
+                "name": "Calendar Event ID",
+                "value": "={{ $('Schedule a meeting').item.json.id }}"
+              },
+              {
+                "name": "Calender Event Link",
+                "value": "={{ $('Schedule a meeting').item.json.htmlLink }}"
+              },
+              {
+                "name": "Google Meet Id",
+                "value": "={{ $('Schedule a meeting').item.json.conferenceData.entryPoints[0].label }}"
+              },
+              {
+                "name": "status",
+                "value": "Interview Scheduled"
+              },
+              {
+                "name": "Resume Link",
+                "value": "={{ $('Upload Cv').first().json.webViewLink }}"
+              },
+              {
+                "name": "userId",
+                "value": "={{ $('Find documents').first().json._id.toString().trim() }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "name": "Set All info",
+        "type": "n8n-nodes-base.set",
+        "position": [
+          -4288,
+          -160
+        ],
+        "typeVersion": 1,
+        "id": "d428daa6-d9ed-478c-8da6-b14e0bcaa028"
+      },
+      {
+        "parameters": {
+          "operation": "insert",
+          "collection": "candidates",
+          "fields": "=Candidate Name, Email, Job Title, Interview Start, Interview End, Calendar Event ID, Calender Event Link, Google Meet Id, status, Resume Link, userId",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.mongoDb",
+        "typeVersion": 1.2,
+        "position": [
+          -4064,
+          -160
+        ],
+        "id": "7837444c-eaca-40c9-a4b6-76cb16f1c24c",
+        "name": "MongoDB insert All Records",
+        "credentials": {
+          "mongoDb": {
+            "id": "czLWond9VcLqtcLi",
+            "name": "Database Account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "move",
+          "fileId": {
+            "__rl": true,
+            "value": "={{ $('Upload Cv').first().json.id }}",
+            "mode": "id"
+          },
+          "driveId": {
+            "__rl": true,
+            "mode": "list",
+            "value": "My Drive"
+          },
+          "folderId": {
+            "__rl": true,
+            "value": "1tEfuIpyO8nbw7qyuTFcgrzzp-d65wnw-",
+            "mode": "list",
+            "cachedResultName": "Processed",
+            "cachedResultUrl": "https://drive.google.com/drive/folders/1tEfuIpyO8nbw7qyuTFcgrzzp-d65wnw-"
+          }
+        },
+        "type": "n8n-nodes-base.googleDrive",
+        "typeVersion": 3,
+        "position": [
+          -3840,
+          8
+        ],
+        "id": "5e16fe09-1772-4cb8-9f84-4e0d956dab91",
+        "name": "Move to Processed",
+        "credentials": {
+          "googleDriveOAuth2Api": {
+            "id": "oxsis0UyHEuqLsjX",
+            "name": "Google Drive - maxpace94@gmail.com"
+          }
+        },
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "operation": "deleteFile",
+          "fileId": {
+            "__rl": true,
+            "value": "={{ $json.googleDriveFileId }}",
+            "mode": "id"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleDrive",
+        "typeVersion": 3,
+        "position": [
+          -5632,
+          32
+        ],
+        "id": "c2f5a3b6-9f54-4e3d-b7ce-af0560c9efb2",
+        "name": "Delete Unqualified Cv",
+        "credentials": {
+          "googleDriveOAuth2Api": {
+            "id": "oxsis0UyHEuqLsjX",
+            "name": "Google Drive - maxpace94@gmail.com"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "getAll",
+          "calendar": {
+            "__rl": true,
+            "value": "maxpace94@gmail.com",
+            "mode": "list",
+            "cachedResultName": "maxpace94@gmail.com"
+          },
+          "timeMax": "={{ $now.plus({ month: 1 }) }}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleCalendar",
+        "typeVersion": 1.3,
+        "position": [
+          -5632,
+          -160
+        ],
+        "id": "672396b0-9e38-418f-854c-80c58ba19bd5",
+        "name": "Get many events",
+        "alwaysOutputData": true,
+        "credentials": {
+          "googleCalendarOAuth2Api": {
+            "id": "TwyEij61n5ehN9wQ",
+            "name": "Google Calendar - maxpace94@gmail.com"
+          }
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Get the output from the AI node\n\n// The .first().json will get the first item from the incoming data\n\nconst aiNodeOutput = $('Processing Candidate info').first().json;\n\n\n\n// Directly access the content object from the correct path\n\n// The desired data is inside the 'choices' array, then 'message', then 'content'\n\nconst parsedJson = aiNodeOutput.choices[0].message.content;\n\n\n\n// Return the object for the next nodes to use\n\nreturn [{ json: parsedJson }];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -6880,
+          -160
+        ],
+        "id": "9228d40c-6633-47a7-a667-84781bc853d2",
+        "name": "Parse Ai Output"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Get the required skills from the input\nconst requiredSkills = $json['Required Skills'];\n\n// Construct the prompt text. We are keeping it simple to be safe.\nconst promptText = \"For each skill in the array \" + JSON.stringify(requiredSkills) + \", create a JSON object. The keys should be the lowercase skill names, and the values should be an array of their common variations and typos. Return ONLY the JSON object, with no other text or markdown.\";\n\n// Build the final request body object\nconst geminiBody = {\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": promptText\n    }]\n  }]\n};\n\n// Return the complete body for the next node to use\nreturn [{ json: geminiBody }];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -6208,
+          -256
+        ],
+        "id": "dbb63f79-15c6-4c33-ad84-69c559636b27",
+        "name": "Prepare Gemini Body"
+      },
+      {
+        "parameters": {
+          "collection": "unavailable_slots",
+          "options": {},
+          "query": "={\n  \"userId\": \"{{ $('Find documents').item.json._id }}\"\n}"
+        },
+        "type": "n8n-nodes-base.mongoDb",
+        "typeVersion": 1.2,
+        "position": [
+          -5408,
+          -160
+        ],
+        "id": "58d19714-180a-41fe-a7fb-73a621ae41b5",
+        "name": "Unavailable Slots",
+        "alwaysOutputData": true,
+        "executeOnce": false,
+        "credentials": {
+          "mongoDb": {
+            "id": "czLWond9VcLqtcLi",
+            "name": "Database Account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "sendTo": "={{ $('If Candidate Qualifies').first().json.candidateEmail }}",
+          "subject": "=Interview at Ideofuzion for {{ $('If Candidate Qualifies').first().json.jobTitle }}",
+          "message": "=<div style=\"font-family: Arial, sans-serif; line-height: 1.6; font-size: 15px; color: #333;\">\n  <p>Dear <strong>{{ $('If Candidate Qualifies').first().json.candidateName }}</strong>,</p>\n\n  <p>Thank you for applying for the position of <strong>{{ $('If Candidate Qualifies').first().json.jobTitle }}</strong> at our company.</p>\n\n  <p>We have reviewed your resume and would like to invite you for a virtual interview to further discuss your application.</p>\n\n  <p>\n    📅 <strong>Interview Date</strong>: {{ $('Candidate Info Fetch').item.json.date }}<br>\n    🕘 <strong>Time Slot</strong>:{{ $('Candidate Info Fetch').item.json.startTime }} - {{ $('Candidate Info Fetch').item.json.endTime }}<br>\n    📍 <strong>Location</strong>: \n    <a href=\"{{ $json.conferenceData.entryPoints[0].uri }}\" target=\"_blank\" style=\"color: #1a73e8;\">\n      Google Meet Link\n    </a><br>\n  </p>\n\n  <p>We look forward to speaking with you!</p>\n\n  <p>\n    Best regards,<br>\n    <strong>HR Team</strong><br>\n    Ideofuzion\n  </p>\n</div>\n",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.gmail",
+        "typeVersion": 2.1,
+        "position": [
+          -4512,
+          -160
+        ],
+        "id": "fd39df23-7c0e-4a4f-b08f-7bef28f046e7",
+        "name": "Email to Candidate",
+        "webhookId": "d0ce039a-3a82-4b4c-8f54-65a6a007488f",
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "9tI5tKl8dpmBDjV0",
+            "name": "Gmail - maxpace94@gmail.com"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "modelId": {
+            "__rl": true,
+            "value": "gpt-4.1-mini",
+            "mode": "list",
+            "cachedResultName": "GPT-4.1-MINI"
+          },
+          "messages": {
+            "values": [
+              {
+                "content": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"You are an AI assistant for an automated CV and Job Application processing system.\\n\\nYour task is to read the provided RESUME TEXT and EMAIL SUBJECT, then perform three actions:\\n1. Return the name of the person from the resume.\\n2. Identify *all* skills from the resume and provide a list of common variations for each skill.\\n3. Identify the core job title from the EMAIL SUBJECT, ignore extra words like 'Application for', and provide a list of its common standardized variations.\\n\\nThe response must be in the exact JSON format specified below. Do not include any explanations or extra text.\\n\\nHere is the resume text:\\n\\\"\\\"\\\"\\n{{ $json.text }}\\n\\\"\\\"\\\"\\n\\nHere is the email subject:\\n\\\"\\\"\\\"\\n{{ $('Get Emails').item.json.subject }}\\n\\\"\\\"\\\"\\n\\nAnd here is the desired output format:\\n```json\\n{\\n  \\\"personName\\\": \\\"[Extracted Person's Name]\\\",\\n  \\\"skills\\\": {\\n    \\\"skill1\\\": [\\\"variation1\\\", \\\"variation2\\\"],\\n    \\\"skill2\\\": [\\\"variationA\\\", \\\"variationB\\\"]\\n  },\\n  \\\"jobTitleVariations\\\": [\\n    \\\"jobTitleVariation1\\\",\\n    \\\"jobTitleVariation2\\\"\\n  ]\\n}\\n```\\n\\nFor example, if the resume is for 'John Doe' and mentions 'JS', and the email subject is 'Applying for the Sr. Backend Dev role', your output must look like this:\\n```json\\n{\\n  \\\"personName\\\": \\\"John Doe\\\",\\n  \\\"skills\\\": {\\n    \\\"javascript\\\": [\\\"js\\\", \\\"javascript\\\", \\\"java script\\\", \\\"ecmascript\\\"],\\n    \\\"python\\\": [\\\"python\\\", \\\"py\\\", \\\"python3\\\"]\\n  },\\n  \\\"jobTitleVariations\\\": [\\n    \\\"Senior Backend Developer\\\",\\n    \\\"Sr. Backend Developer\\\",\\n    \\\"Senior Backend Dev\\\"\\n  ]\\n}\\n```\"\n        }\n      ]\n    }\n  ]\n}",
+                "role": "assistant"
+              }
+            ]
+          },
+          "simplify": false,
+          "jsonOutput": true,
+          "options": {}
+        },
+        "type": "@n8n/n8n-nodes-langchain.openAi",
+        "typeVersion": 1.8,
+        "position": [
+          -7232,
+          -160
+        ],
+        "id": "cc0aba92-d77f-437c-b1c1-7bbdaa2ea769",
+        "name": "Processing Candidate info",
+        "credentials": {
+          "openAiApi": {
+            "id": "9TB9UR9WXn9AhCai",
+            "name": "Ideofuzion testing"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "modelId": {
+            "__rl": true,
+            "value": "gpt-4.1-mini",
+            "mode": "list",
+            "cachedResultName": "GPT-4.1-MINI"
+          },
+          "messages": {
+            "values": [
+              {
+                "content": "={{ JSON.stringify($json) }}",
+                "role": "assistant"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "@n8n/n8n-nodes-langchain.openAi",
+        "typeVersion": 1.8,
+        "position": [
+          -5984,
+          -256
+        ],
+        "id": "5aae6979-70ad-4090-9216-d5dd9f8eddfc",
+        "name": "Ai variations2",
+        "credentials": {
+          "openAiApi": {
+            "id": "9TB9UR9WXn9AhCai",
+            "name": "Ideofuzion testing"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "collection": "users",
+          "options": {},
+          "query": "={\n  \"email\": \"{{ $('Get Emails').first().json.to.value[0].address }}\"\n}\n"
+        },
+        "type": "n8n-nodes-base.mongoDb",
+        "typeVersion": 1.2,
+        "position": [
+          -6656,
+          -160
+        ],
+        "id": "5c99e082-4bc1-4d26-85e0-e0fd78c6cdc2",
+        "name": "Find documents",
+        "alwaysOutputData": true,
+        "credentials": {
+          "mongoDb": {
+            "id": "czLWond9VcLqtcLi",
+            "name": "Database Account"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Loop Over Items3": {
+        "main": [
+          [
+            {
+              "node": "Get Emails",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Upload Cv",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Schedule Trigger1": {
+        "main": [
+          [
+            {
+              "node": "Get Emails",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Emails": {
+        "main": [
+          [
+            {
+              "node": "Differentiating Between Mail msgs",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Differentiating Between Mail msgs": {
+        "main": [
+          [
+            {
+              "node": "Loop Over Items3",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Upload Cv": {
+        "main": [
+          [
+            {
+              "node": "Mark a message as read",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Mark a message as read": {
+        "main": [
+          [
+            {
+              "node": "Getting Essential Info",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Getting Essential Info": {
+        "main": [
+          [
+            {
+              "node": "Download Cv",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Download Cv": {
+        "main": [
+          [
+            {
+              "node": "Extracting Info",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Extracting Info": {
+        "main": [
+          [
+            {
+              "node": "Processing Candidate info",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "MongoDB JobPosted": {
+        "main": [
+          [
+            {
+              "node": "Prepare Gemini Body",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Matching Skills",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Matching Skills": {
+        "main": [
+          [
+            {
+              "node": "If Candidate Qualifies",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "If Candidate Qualifies": {
+        "main": [
+          [
+            {
+              "node": "Get many events",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Delete Unqualified Cv",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "MongoDB Candidate records": {
+        "main": [
+          [
+            {
+              "node": "Candidate Info Fetch",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Candidate Info Fetch": {
+        "main": [
+          [
+            {
+              "node": "Schedule a meeting",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Schedule a meeting": {
+        "main": [
+          [
+            {
+              "node": "Email to Candidate",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Set All info": {
+        "main": [
+          [
+            {
+              "node": "MongoDB insert All Records",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "MongoDB insert All Records": {
+        "main": [
+          [
+            {
+              "node": "Move to Processed",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Move to Processed": {
+        "main": [
+          [
+            {
+              "node": "Loop Over Items3",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Delete Unqualified Cv": {
+        "main": [
+          [
+            {
+              "node": "Loop Over Items3",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get many events": {
+        "main": [
+          [
+            {
+              "node": "Unavailable Slots",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parse Ai Output": {
+        "main": [
+          [
+            {
+              "node": "Find documents",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Gemini Body": {
+        "main": [
+          [
+            {
+              "node": "Ai variations2",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Unavailable Slots": {
+        "main": [
+          [
+            {
+              "node": "MongoDB Candidate records",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Email to Candidate": {
+        "main": [
+          [
+            {
+              "node": "Set All info",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Processing Candidate info": {
+        "main": [
+          [
+            {
+              "node": "Parse Ai Output",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Find documents": {
+        "main": [
+          [
+            {
+              "node": "MongoDB JobPosted",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": {
+      "node:Schedule Trigger1": {
+        "recurrenceRules": []
+      }
+    }
+  }
+}
